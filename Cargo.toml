@@ -1,0 +1,10 @@
+[package]
+name = "rux"
+version = "0.1.0"
+authors = ["Wei Tang <hi@beyond.codes>"]
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+rlibc = "0.1.4"

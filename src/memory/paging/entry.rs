@@ -1,4 +1,5 @@
 use memory::paging::{PhysicalAddress, VirtualAddress};
+use memory::Frame;
 
 pub struct Entry(u64);
 
@@ -15,7 +16,7 @@ impl Entry {
         EntryFlags::from_bits_truncate(self.0)
     }
 
-    pub fn address(&self) -> Option<PhysicalAddress> {
+    pub fn physical_address(&self) -> Option<PhysicalAddress> {
         if self.flags().contains(PRESENT) {
             Some(self.0 as usize & 0x000fffff_fffff000)
         } else {
@@ -23,9 +24,18 @@ impl Entry {
         }
     }
 
-    pub fn set(&mut self, address: PhysicalAddress, flags: EntryFlags) {
+    pub fn pointed_frame(&self) -> Option<Frame> {
+        self.physical_address()
+            .and_then(|addr| Some(Frame::containing_address(addr)))
+    }
+
+    pub fn set_address(&mut self, address: PhysicalAddress, flags: EntryFlags) {
         assert!(address & !0x000fffff_fffff000 == 0);
         self.0 = (address as u64) | flags.bits();
+    }
+
+    pub fn set_frame(&mut self, frame: Frame, flags: EntryFlags) {
+        self.set_address(frame.start_address(), flags)
     }
 }
 

@@ -14,6 +14,8 @@ extern crate spin;
 mod multiboot2;
 mod memory;
 
+use memory::{AreaFrameAllocator, FrameAllocator};
+
 #[no_mangle]
 pub extern fn rust_main(multiboot_information_address: usize) {
     // ATTENTION: we have a very small stack and no guard page
@@ -44,19 +46,20 @@ pub extern fn rust_main(multiboot_information_address: usize) {
                  section.addr, section.size, section.flags);
     }
 
+    let mut frame_allocator = AreaFrameAllocator::new(
+        kernel_start as usize, kernel_end as usize,
+        multiboot_start, multiboot_end, memory_map_tag.memory_areas());
+
+    for i in 0.. {
+        if let None = frame_allocator.allocate_frame() {
+            println!("allocated {} frames", i);
+            break;
+        }
+    }
+
     println!("Hello, world{}", "!");
 
-    test();
-
     loop{}
-}
-
-fn test() {
-    let p4 = unsafe { &*memory::paging::table::P4 };
-    p4.next_table(42)
-        .and_then(|p3| p3.next_table(1337))
-        .and_then(|p2| p2.next_table(0xdeadbeaf))
-        .and_then(|p1| p1.next_table(0xcafebabe))
 }
 
 #[lang = "eh_personality"] extern fn eh_personality() { }

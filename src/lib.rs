@@ -12,6 +12,7 @@ extern crate spin;
 
 #[macro_use] mod vga_buffer;
 mod multiboot2;
+mod memory;
 
 #[no_mangle]
 pub extern fn rust_main(multiboot_information_address: usize) {
@@ -37,9 +38,25 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     println!("Kernel start: 0x{:x}, end: 0x{:x}", kernel_start, kernel_end);
     println!("Multiboot start: 0x{:x}, end: 0x{:x}", multiboot_start, multiboot_end);
 
+    println!("Kernel sections:");
+    for section in elf_sections_tag.sections() {
+        println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
+                 section.addr, section.size, section.flags);
+    }
+
     println!("Hello, world{}", "!");
 
+    test();
+
     loop{}
+}
+
+fn test() {
+    let p4 = unsafe { &*memory::paging::table::P4 };
+    p4.next_table(42)
+        .and_then(|p3| p3.next_table(1337))
+        .and_then(|p2| p2.next_table(0xdeadbeaf))
+        .and_then(|p1| p1.next_table(0xcafebabe))
 }
 
 #[lang = "eh_personality"] extern fn eh_personality() { }

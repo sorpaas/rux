@@ -3,6 +3,7 @@ mod area_frame_allocator;
 
 pub const PAGE_SIZE: usize = 4096;
 pub use self::paging::test_paging;
+pub use self::paging::remap_kernel;
 
 use memory::paging::PhysicalAddress;
 
@@ -18,6 +19,10 @@ impl Frame {
 
     fn start_address(&self) -> PhysicalAddress {
         self.number * PAGE_SIZE
+    }
+
+    fn clone(&self) -> Frame {
+        Frame { number: self.number }
     }
 }
 

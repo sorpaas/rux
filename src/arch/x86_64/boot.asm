@@ -173,9 +173,9 @@ set_up_SSE:
 
 section .bss
 align 4096
-p4_table:
+p4_table:                       ; This will become a guard page to detect stack overflow
   resb 4096
-p3_table:
+p3_table:                       ; p3 and p2 will be part of the stack after page switching
   resb 4096
 p2_table:
   resb 4096

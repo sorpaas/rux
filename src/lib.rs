@@ -3,6 +3,7 @@
 #![feature(unique)]
 #![feature(custom_attribute)]
 #![feature(asm)]
+#![feature(step_by)]
 #![no_std]
 
 extern crate rlibc;
@@ -19,7 +20,8 @@ use memory::{AreaFrameAllocator, FrameAllocator};
 
 #[no_mangle]
 pub extern fn rust_main(multiboot_information_address: usize) {
-    // ATTENTION: we have a very small stack and no guard page
+    enable_nxe_bit();
+    enable_write_protect_bit();
 
     vga_buffer::clear_screen();
 
@@ -51,11 +53,31 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         kernel_start as usize, kernel_end as usize,
         multiboot_start, multiboot_end, memory_map_tag.memory_areas());
 
-    memory::test_paging(&mut frame_allocator);
-
-    println!("Hello, world{}", "!");
+    memory::remap_kernel(&mut frame_allocator, boot_info);
+    println!("Yeah, the kernel did not crash!");
 
     loop{}
+}
+
+fn stack_overflow(i: usize) {
+    stack_overflow(i+1)
+}
+
+fn enable_nxe_bit() {
+    use x86::msr::{IA32_EFER, rdmsr, wrmsr};
+
+    let nxe_bit = 1 << 11;
+    unsafe {
+        let efer = rdmsr(IA32_EFER);
+        wrmsr(IA32_EFER, efer | nxe_bit);
+    }
+}
+
+fn enable_write_protect_bit() {
+    use x86::controlregs::{cr0, cr0_write};
+
+    let wp_bit = 1 << 16;
+    unsafe { cr0_write(cr0() | wp_bit) };
 }
 
 #[lang = "eh_personality"] extern fn eh_personality() { }

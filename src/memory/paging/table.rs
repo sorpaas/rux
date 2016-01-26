@@ -1,9 +1,8 @@
-use memory::paging::entry::*;
+use super::entry::*;
+use super::ENTRY_COUNT;
 use memory::FrameAllocator;
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
-
-pub const ENTRY_COUNT: usize = 512;
 
 pub trait TableLevel { }
 

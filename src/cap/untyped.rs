@@ -1,8 +1,7 @@
 use common::*;
 use core::ops::Drop;
 
-use super::CapabilityUnion;
-use super::{AllocatableCapability, MemoryBlockCapability};
+use super::{MemoryBlockCapability};
 
 /// Untyped memory and page table are memory management tricks, those are not
 /// actually accessible in the virtual memory.
@@ -38,7 +37,7 @@ impl Drop for UntypedMemoryCapability {
 
 impl UntypedMemoryCapability {
     pub fn from_untyped(cap: UntypedMemoryCapability, size: usize)
-                        -> (UntypedMemoryCapability, Some<UntypedMemoryCapability>) {
+                        -> (UntypedMemoryCapability, Option<UntypedMemoryCapability>) {
         if cap.start_addr() + size + 1 >= cap.end_addr() {
             (cap, None)
         } else {
@@ -46,10 +45,26 @@ impl UntypedMemoryCapability {
                 start_addr: cap.start_addr(),
                 size: size,
             };
-            cap.start_addr = cap.start_addr() + size + 1;
-            cap.size = cap.size() - size;
 
-            (new_cap, Some(cap))
+            let cap = UntypedMemoryCapability::resize(cap, &new_cap);
+            (new_cap, cap)
+        }
+    }
+
+    pub fn resize<T: MemoryBlockCapability>(mut untyped: UntypedMemoryCapability, other: &T)
+                                            -> Option<UntypedMemoryCapability> {
+        assert!(untyped.physical_start_addr() == other.physical_start_addr(),
+                "To resize, two capability's starting physical address must be the same.");
+        assert!(untyped.physical_end_addr() >= other.physical_end_addr(),
+                "To resize, the other capability must be within the untyped.");
+
+        untyped.start_addr = other.physical_end_addr() + 1;
+        untyped.size = untyped.size - other.physical_size();
+
+        if untyped.size == 0 {
+            None
+        } else {
+            Some(untyped)
         }
     }
 }

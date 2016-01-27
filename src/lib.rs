@@ -6,20 +6,23 @@
 #![feature(box_patterns)]
 #![feature(asm)]
 #![feature(step_by)]
+#![feature(alloc)]
 #![no_std]
 
+#[macro_use]
+extern crate bitflags;
 extern crate rlibc;
 extern crate spin;
-#[macro_use] extern crate bitflags;
 extern crate x86;
+extern crate alloc;
 
-
-#[macro_use] mod vga_buffer;
+#[macro_use]
+mod vga_buffer;
 mod multiboot2;
 mod memory;
 mod common;
 mod cap;
-// mod alloc;
+mod paging;
 
 use memory::{AreaFrameAllocator, FrameAllocator};
 

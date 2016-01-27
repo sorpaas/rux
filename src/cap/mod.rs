@@ -18,14 +18,12 @@ pub trait MemoryBlockCapability {
 
     fn physical_start_addr(&self) -> PhysicalAddress;
     fn physical_size(&self) -> usize;
-}
 
-impl<T> MemoryBlockCapability for T {
-    pub fn end_addr(&self) -> PhysicalAddress {
+    fn end_addr(&self) -> PhysicalAddress {
         self.start_addr() + self.size()
     }
 
-    pub fn physical_end_addr(&self) -> PhysicalAddress {
+    fn physical_end_addr(&self) -> PhysicalAddress {
         self.physical_start_addr() + self.physical_size()
     }
 }

@@ -28,7 +28,7 @@ impl PageTableHierarchicalLevel for PageTableLevel3 {
     type NextLevel = PageTableLevel2;
 }
 impl PageTableHierarchicalLevel for PageTableLevel2 {
-    type NextLevel = PageTablLevel1;
+    type NextLevel = PageTableLevel1;
 }
 
 pub struct PageTable<L: PageTableLevel> {

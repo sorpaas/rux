@@ -2,6 +2,8 @@
 #![feature(const_fn)]
 #![feature(unique)]
 #![feature(custom_attribute)]
+#![feature(box_syntax)]
+#![feature(box_patterns)]
 #![feature(asm)]
 #![feature(step_by)]
 #![no_std]
@@ -17,7 +19,7 @@ mod multiboot2;
 mod memory;
 mod common;
 mod cap;
-mod alloc;
+// mod alloc;
 
 use memory::{AreaFrameAllocator, FrameAllocator};
 

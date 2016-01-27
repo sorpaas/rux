@@ -3,22 +3,15 @@ use core::mem::{align_of, replace};
 use alloc::boxed::Box;
 
 pub enum CapabilityUnion {
-    // Memory resources capabilities, all has its start and end address, and a
-    // next pointer to the next region (if available).
-    //
-    // A memory resources capability is essentially a pointer to a memory
-    // location.
-    UntypedMemory(UntypedMemoryCapability),
-    // PageTableLevel4(PageTableCapability<PageTableLevel4>),
-    // PageTableLevel3(PageTableCapability<PageTableLevel3>),
-    // PageTableLevel2(PageTableCapability<PageTableLevel2>),
-    // PageTableLevel1(PageTableCapability<PageTableLevel1>),
-    // CapabilityPool(CapabilityPoolCapability),
-    // KernelPage(KernelPageCapability),
 
-    // // Hardware primitives.
-    // VGABuffer(VGABufferCapability),
-    None
+    /// Memory resources capabilities, all has its start and end address, and a
+    /// next pointer to the next region (if available).
+    ///
+    /// A memory resources capability is essentially a pointer to a memory
+    /// location.
+
+    UntypedMemory(UntypedMemoryCapability),
+    CapabilityPool(CapabilityPoolCapability),
 }
 
 impl CapabilityUnion {
@@ -27,40 +20,10 @@ impl CapabilityUnion {
         { Some(cap) } else { None }
     }
 
-    // pub fn as_page_table_level4(&self) -> Option<PageTableCapability<PageTableLevel4>> {
-    //     if let PageTableLevel4(x) = *self
-    //     { Some(x) } else { None }
-    // }
-
-    // pub fn as_page_table_level3(&self) -> Option<PageTableCapability<PageTableLevel3>> {
-    //     if let PageTableLevel3(x) = *self
-    //     { Some(x) } else { None }
-    // }
-
-    // pub fn as_page_table_level2(&self) -> Option<PageTableCapability<PageTableLevel2>> {
-    //     if let PageTableLevel2(x) = *self
-    //     { Some(x) } else { None }
-    // }
-
-    // pub fn as_page_table_level1(&self) -> Option<PageTableCapability<PageTableLevel1>> {
-    //     if let PageTableLevel1(x) = *self
-    //     { Some(x) } else { None }
-    // }
-
-    // pub fn as_capability_pool(&self) -> Option<CapabilityPoolCapability> {
-    //     if let CapabilityPool(x) = *self
-    //     { Some(x) } else { None }
-    // }
-
-    // pub fn as_kernel_page(&self) -> Option<KernelPageCapability> {
-    //     if let KernelPage(x) = *self
-    //     { Some(x) } else { None }
-    // }
-
-    // pub fn as_vga_buffer(&self) -> Option<VGABufferCapability> {
-    //     if let VGABuffer(x) = *self
-    //     { Some(x) } else { None }
-    // }
+    pub fn as_capability_pool(&self) -> Option<CapabilityPoolCapability> {
+        if let CapabilityPool(x) = *self
+        { Some(x) } else { None }
+    }
 }
 
 pub struct CapabilityPool([CapabilityUnion; CAPABILITY_POOL_COUNT]);

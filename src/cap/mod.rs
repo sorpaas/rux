@@ -29,28 +29,3 @@ impl<T> MemoryBlockCapability for T {
         self.physical_start_addr() + self.physical_size()
     }
 }
-
-// // You can only access active page table using the recursive trick. Other page
-// // tables need to be temporarily mapped in order to be accessible.
-
-// pub struct PageTableCapability {
-//     start: PhysicalAddress,
-//     next: Option<Box<CapabilityUnion>>,
-// }
-
-// // Kernel page are created by retype untyped memory.
-
-// pub struct KernelPageCapability {
-//     start: PhysicalAddress,
-//     count: usize,
-//     mapped: bool,
-//     next: Option<Box<CapabilityUnion>>,
-// }
-
-// // VGA buffer is a pre-created capability in the main kernel capability pool.
-
-// pub struct VGABufferCapability {
-//     start: PhysicalAddress,
-//     size: usize,
-// }
-

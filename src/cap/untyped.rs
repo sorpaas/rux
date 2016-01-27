@@ -1,4 +1,5 @@
 use common::*;
+use core::ops::Drop;
 
 use super::CapabilityUnion;
 use super::{AllocatableCapability, MemoryBlockCapability};
@@ -26,6 +27,12 @@ impl MemoryBlockCapability for UntypedMemoryCapability {
 
     fn physical_size(&self) -> usize {
         self.size
+    }
+}
+
+impl Drop for UntypedMemoryCapability {
+    fn drop(&mut self) {
+        unimplemented!();
     }
 }
 

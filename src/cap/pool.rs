@@ -1,5 +1,6 @@
 use common::*;
 use core::mem::{align_of, replace};
+use core::ops::Drop;
 use alloc::boxed::Box;
 
 pub enum CapabilityUnion {
@@ -52,6 +53,12 @@ impl MemoryBlockCapability for CapabilityPoolCapability {
 
     fn physical_size(&self) -> usize {
         self.end_addr() - self.physical_start_add()
+    }
+}
+
+impl Drop for CapabilityPoolCapability {
+    fn drop(&mut self) {
+        unimplemented!();
     }
 }
 

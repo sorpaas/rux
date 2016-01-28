@@ -12,6 +12,7 @@ pub struct UntypedMemoryCapability {
     parent_pool_cap_ptr: *mut CapabilityUnion,
     next_block_ptr: Option<*mut CapabilityUnion>,
     prev_block_ptr: Option<*mut CapabilityUnion>,
+    first_child_block_ptr: Option<*mut CapabilityUnion>
     referred: bool,
 }
 
@@ -38,6 +39,23 @@ impl Capability for UntypedMemoryCapability {
 }
 
 impl UntypedMemoryCapability {
+    pub unsafe fn retype_to_untyped(&mut self, block_size: usize)
+                                    -> Option<UntypedMemoryCapability> {
+        if (self.block_start_addr() + block_size >= self.block_end_addr()) {
+            None
+        } else {
+            
+        }
+    }
+
+    pub fn find_free_start_addr(&mut self, block_size: usize) -> Option<usize> {
+        if self.
+    }
+
+    pub fn first_child_block(&mut self) -> Option<Referrer<CapabilityUnion>> {
+        
+    }
+
     pub fn from_untyped(cap: UntypedMemoryCapability, size: usize)
                         -> (UntypedMemoryCapability, Option<UntypedMemoryCapability>) {
         if cap.start_addr() + size + 1 >= cap.end_addr() {

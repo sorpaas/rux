@@ -7,32 +7,34 @@ use super::{MemoryBlockCapability};
 /// actually accessible in the virtual memory.
 
 pub struct UntypedMemoryCapability {
-    start_addr: PhysicalAddress,
-    size: usize,
+    block_start_addr: PhysicalAddress,
+    block_size: usize,
+    parent_pool_cap_ptr: *mut CapabilityUnion,
+    next_block_ptr: Option<*mut CapabilityUnion>,
+    prev_block_ptr: Option<*mut CapabilityUnion>,
+    referred: bool,
 }
 
 impl MemoryBlockCapability for UntypedMemoryCapability {
-    fn start_addr(&self) -> PhysicalAddress {
-        self.start_addr
-    }
+    fn block_start_addr(&self) -> PhysicalAddress { self.block_start_addr }
+    unsafe fn set_block_start_addr(&self, addr: PhysicalAddress) { self.block_start_addr = addr }
 
-    fn size(&self) -> usize {
-        self.size
-    }
+    fn block_size(&self) -> usize { self.physical_size }
+    unsafe fn set_block_size(&self, size: usize) { self.block_size = size }
 
-    fn physical_start_addr(&self) -> PhysicalAddress {
-        self.start_addr
-    }
+    unsafe fn next_block_ptr(&self) -> Option<*mut CapabilityUnion> { self.next_block_ptr }
+    unsafe fn set_next_block_ptr(&self, ptr: Option<*mut CapabilityUnion>) { self.next_block_ptr = ptr }
 
-    fn physical_size(&self) -> usize {
-        self.size
-    }
+    unsafe fn prev_block_ptr(&self) -> Option<*mut CapabilityUnion> { self.prev_block_ptr }
+    unsafe fn set_prev_block_ptr(&self, ptr: Option<*mut CapabilityUnion>) { self.prev_block_ptr = ptr }
 }
 
-impl Drop for UntypedMemoryCapability {
-    fn drop(&mut self) {
-        unimplemented!();
-    }
+impl Capability for UntypedMemoryCapability {
+    fn referred(&self) -> bool { self.referred }
+    unsafe fn set_referred(&self, x: bool) { self.referred = x }
+
+    unsafe fn parent_pool_cap_ptr(&self) -> *mut CapabilityUnion { self.parent_pool_cap_ptr }
+    unsafe fn set_parent_pool_cap_ptr(&self, ptr: *mut CapabilityUnion) { self.parent_pool_cap_ptr = ptr }
 }
 
 impl UntypedMemoryCapability {

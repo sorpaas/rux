@@ -1,0 +1,9 @@
+web:
+  build: .
+  restart: always
+  expose:
+    - "80"
+  environment:
+    VIRTUAL_HOST: rux.id.hn
+    LETSENCRYPT_HOST: rux.id.hn
+    LETSENCRYPT_EMAIL: hi@beyond.codes

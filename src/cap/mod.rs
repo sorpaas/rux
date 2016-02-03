@@ -1,9 +1,4 @@
 use common::*;
-use alloc::boxed::Box;
-use paging::table::PageTable;
-use paging::table::{PageTableLevel,
-                    PageTableLevel4, PageTableLevel3,
-                    PageTableLevel2, PageTableLevel1};
 use core::mem::size_of;
 
 use self::pool::CapabilityPool;
@@ -12,80 +7,69 @@ use self::untyped::UntypedMemoryCapability;
 pub mod pool;
 pub mod untyped;
 
-pub trait MemoryBlockCapability {
-    fn block_start_addr(&self) -> PhysicalAddress;
-    unsafe fn set_block_start_addr(&mut self, PhysicalAddress);
+//// A trait that represents all the capabilities.
+pub trait Capability { }
 
-    fn block_size(&self) -> usize;
-    unsafe fn set_block_size(&mut self, usize);
+/// Internal use that represents a memory block pointer, which is used to
+/// implement a memory block capability.
+trait MemoryBlockPtr {
+    fn get_block_start_addr(&self) -> PhysicalAddress;
+    fn set_block_start_addr(&self, PhysicalAddress);
+    fn get_block_size(&self) -> usize;
+    fn set_block_size(&self, usize);
+}
 
-    unsafe fn next_block_ptr(&self) -> Option<*mut CapabilityUnion>;
-    unsafe fn set_next_block_ptr(&mut self, Option<*mut CapabilityUnion>);
-
-    unsafe fn prev_block_ptr(&self) -> Option<*mut CapabilityUnion>;
-    unsafe fn set_prev_block_ptr(&mut self, Option<*mut CapabilityUnion>);
-
-    fn next_block(&self) -> Option<Referrer<CapabilityUnion>> {
-        unsafe { self.next_block_ptr()
-                 .and_then(|ptr| Referrer<CapabilityUnion>::new(ptr)) }
+/// A memory block capability represents a memory block.
+pub trait MemoryBlockCapability : MemoryBlockPtr {
+    fn block_start_addr(&self) -> PhysicalAddress {
+        self.get_block_start_addr()
     }
 
-    fn prev_block(&self) -> Option<Referrer<CapabilityUnion>> {
-        unsafe { self.prev_block_ptr()
-                 .and_then(|ptr| Referrer<CapabilityUnion>::new(ptr)) }
+    fn block_size(&self) -> usize {
+        self.get_block_size()
+    }
+
+    fn block_end_addr(&self) -> PhysicalAddress {
+        self.block_start_addr() + self.block_size() - 1
     }
 }
 
-pub trait Capability {
-    unsafe fn parent_pool_cap_ptr(&self) -> *mut CapabilityPoolCapability;
-    unsafe fn set_parent_pool_cap_ptr(&mut self, *mut CapabilityPoolCapability);
+/// Page block pointer.
+trait PageBlockPtr {
+    fn get_page_start_addr(&self) -> PhysicalAddress;
+    fn set_page_start_addr(&self, PhysicalAddress);
+    fn get_page_counts(&self) -> usize;
+    fn set_page_counts(&self, usize);
 
-    fn referred(&self) -> bool;
-    unsafe fn set_referred(&mut self);
+    fn get_mapped_start_addr(&self) -> Option<VirtualAddress>;
+    fn set_mapped_start_addr(&self, Option<VirtualAddress>);
 
-    fn refer(&mut self) {
-        assert!(!self.referred(), "Already referred to this object.");
-        unsafe { self.set_referred(true) }
-    }
-
-    fn unrefer(&mut self) {
-        assert!(self.referred(), "This object is not referred anywhere.");
-        unsafe { self.set_referred(false) }
-    }
-
-    fn parent_pool_cap(&self) -> Referrer<CapabilityUnion> {
-        unsafe {
-            Referrer<CapabilityUnion>::new(self.parent_pool_cap_ptr())
-        };
-    }
+    fn get_page_table_cap(&self) -> Option<Rc<PageTableCapability>>;
+    fn set_page_table_cap(&self, Option<Rc<PageTableCapability>>);
+    // Note that you won't be able to move a page table cap when it is
+    // referenced.
 }
 
-pub struct Referrer<T: Capability> {
-    ptr: NonZero<*mut T>,
-    _marker: PhantomData<T>,
-}
-
-impl<T: Capability> Referrer<T> {
-    pub const unsafe fn new(ptr: *mut T) -> Referrer<T> {
-        let unique = Referrer { ptr: NonZero::new(ptr),
-                                _marker: PhantomData<T>, };
-        unsafe { unique.borrow_mut().refer(); }
-        unique
+/// Page block capability.
+pub trait PageBlockCapability<T> : PageBlockPtr {
+    fn page_start_addr(&self) -> PhysicalAddress {
+        self.get_page_start_addr()
     }
 
-    pub fn borrow<'r>(&'r self) -> &'r T {
-        unsafe { &*self.ptr }
+    fn page_counts(&self) -> usize {
+        self.get_page_counts()
     }
 
-    pub fn borrow_mut<'r>(&'r mut self) -> &'r mut T {
-        unsafe { &mut *self.ptr }
+    fn page_size(&self) -> usize {
+        self.get_page_counts() * PAGE_SIZE
     }
-}
 
-#[unsafe_destructur]
-impl<T: Capability> Drop for Referrer<T> {
-    fn drop(&mut self) {
-        unsafe { self.borrow_mut().unrefer() }
+    fn page_end_addr(&self) -> PhysicalAddress {
+        self.page_start_addr() + self.page_size() - 1
+    }
+
+    fn map(&self, &PageTableCapability) -> AddressCapability<T> {
+        unimplemented!();
     }
 }
 
@@ -98,16 +82,29 @@ pub enum CapabilityUnion {
 
     UntypedMemory(UntypedMemoryCapability),
     CapabilityPool(CapabilityPoolCapability),
+    PageTable(PageTableCapability),
 }
 
-impl CapabilityUnion {
-    pub fn as_untyped_memory(cap: CapabilityUnion) -> Option<UntypedMemoryCapability> {
-        if let CapabilityUnion::UntypedMemory(x) = cap
-        { Some(x) } else { None }
-    }
+/// Untyped memory and page table are memory management tricks, those are not
+/// actually accessible in the virtual memory.
+pub struct UntypedCapability {
+    block_start_addr: PhysicalAddress,
+    block_size: usize,
+}
 
-    pub fn as_capability_pool(cap: CapabilityUnion) -> Option<CapabilityPoolCapability> {
-        if let CapabilityUnion::CapabilityPool(x) = cap
-        { Some(x) } else { None }
-    }
+/// The main kernel capability pool is static. Other capability pools are created
+/// by retype kernel page.
+pub struct CapabilityPoolCapability {
+    block_start_addr: PhysicalAddress,
+    block_size: usize,
+    page_start_addr: PhysicalAddress,
+    page_counts: usize,
+    page_table_cap: Rc<PageTableCapability>,
+}
+
+/// Page table capability represents a P4 table.
+pub struct PageTableCapability {
+    block_start_addr: PhysicalAddress,
+    block_size: usize,
+    table_start_addr: PhysicalAddress,
 }

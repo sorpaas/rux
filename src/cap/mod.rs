@@ -61,6 +61,26 @@ pub trait PageBlockCapability<T> : PageBlockPtr {
     fn map(&self, &PageTableCapability) -> AddressCapability<T> {
         unimplemented!();
     }
+
+    fn object_size() -> usize {
+        size_of::<UniqueBox<T>>()
+    }
+
+    fn necessary_page_counts() -> usize {
+        Self.object_size() / 1024 + 1
+    }
+
+    fn necessary_block_size(addr: PhysicalAddress) -> usize {
+        let page_start_addr = Self.necessary_page_start_addr(addr);
+        let page_counts = Self.necessary_page_counts();
+        let page_size = page_counts * PAGE_SIZE;
+
+        (page_start_addr - addr) + page_size
+    }
+
+    fn necessary_page_start_addr(addr: PhysicalAddress) -> PhysicalAddress {
+        addr + (PAGE_SIZE - addr % PAGE_SIZE)
+    }
 }
 
 pub enum CapabilityUnion {
@@ -89,7 +109,6 @@ pub struct CapabilityPoolCapability {
     block_size: usize,
     page_start_addr: PhysicalAddress,
     page_counts: usize,
-    page_table_cap: Rc<PageTableCapability>,
 }
 
 /// Page table capability represents a P4 table.

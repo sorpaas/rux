@@ -12,33 +12,45 @@ pub struct CapabilityPool {
     referred: bool,
 }
 
-impl PageBlockCapability for CapabilityPoolCapability {
-    fn page_start_addr(&self) -> PhysicalAddress {
-        self.page_start_addr
-    }
-
-    unsafe fn set_mapped_ptr(&mut self, ptr: Option<usize>) {
-        self.ptr = ptr.and_then(|ptr| Some(ptr as *mut CapabilityPool))
-    }
-
-    unsafe fn set_mapped_p4_table_addr(&mut self, addr: Option<PhysicalAddress>) {
-        self.mapped_p4_table_addr = addr
-    }
-
-    unsafe fn mapped_p4_table_addr(&self) {
-        self.mapped_p4_table_addr
-    }
-}
-
-impl MemoryBlockCapability for CapabilityPoolCapability {
-    fn block_start_addr(&self) -> PhysicalAddress {
+impl MemoryBlockPtr for CapabilityPoolCapability {
+    fn get_block_start_addr(&self) -> PhysicalAddress {
         self.block_start_addr
     }
 
-    fn block_size(&self) -> usize {
+    fn set_block_start_addr(&self, addr: PhysicalAddress) {
+        self.block_start_addr = addr
+    }
+
+    fn get_block_size(&self) -> usize {
         self.block_size
     }
+
+    fn set_block_size(&self, size: usize) {
+        self.block_size = size
+    }
 }
+
+impl MemoryBlockCapability for CapabilityPoolCapability { }
+
+impl PageBlockPtr for CapabilityPoolCapability {
+    fn get_page_start_addr(&self) -> PhysicalAddress {
+        self.page_start_addr
+    }
+
+    fn set_page_start_addr(&self, addr: PhysicalAddress) {
+        self.page_start_addr = addr;
+    }
+
+    fn get_page_counts(&self) -> usize {
+        self.page_counts
+    }
+
+    fn set_page_counts(&self, counts: usize) {
+        self.page_counts = counts;
+    }
+}
+
+impl PageBlockCapability<[Option<CapabilityUnion>; CAPABILITY_POOL_COUNT]> for CapabilityPoolCapability { }
 
 impl Drop for CapabilityPoolCapability {
     fn drop(&mut self) {
@@ -47,44 +59,37 @@ impl Drop for CapabilityPoolCapability {
 }
 
 impl CapabilityPoolCapability {
-    pub fn from_untyped(cap: UntypedMemoryCapability)
+    pub fn from_untyped_switching(untyped: UntypedMemoryCapability) -> CapabilityPoolCapability {
+        let page_start_addr = Self.necessary_page_start_addr(untyped.block_start_addr());
+        let page_counts = Self.necessary_page_counts();
+        let block_size = Self.necessary_block_size();
+        let page_size = page_counts * PAGE_SIZE;
+
+        assert!("The untyped capability must fit exactly.", untyped.block_size() == block_size);
+
+        let pool_cap = CapabilityPoolCapability {
+            block_start_addr: untyped.block_start_addr(),
+            block_size: block_size,
+            page_start_addr: page_start_addr,
+            page_counts: page_counts,
+        };
+        untyped.block_size = 0;
+
+        pool_cap
+    }
+
+    pub fn from_untyped(untyped: UntypedMemoryCapability)
                         -> (Option<CapabilityPoolCapability>, Option<UntypedMemoryCapability>) {
-        let size = PAGE_SIZE;
-        let align = PAGE_SIZE;
-        let block_start_addr = cap.block_start_addr();
-        let page_start_addr = cap.start_addr() + (align - cap.start_addr() % align);
-        let page_end_addr = page_start_addr + size - 1;
-        let block_size = page_end_addr - cap.start_addr() + 1;
+        let page_counts = Self.necessary_page_counts();
+        let block_size = Self.necessary_block_size();
 
-        if page_end_addr > cap.end_addr() {
-            (None, Some(cap))
+        let (u1, u2) = UntypedMemoryCapability.from_untyped(untyped, block_size);
+
+        if u1.block_size() < block_size {
+            assert!("According to logic, u2 should be none.", u2.is_none());
+            (None, Some(u1))
         } else {
-            cap.block_start_addr = cap.block_start_addr + block_size;
-            cap.block_size = cap.block_size - block_size;
-
-            let poolcap = CapabilityPoolCapability {
-                block_start_addr: block_start_addr,
-                block_size: block_size,
-                page_start_addr: page_start_addr,
-                mapped_p4_table_addr: None,
-                ptr: None,
-            };
-
-            poolcap.active_identity_map();
-
-            let pool = unsafe { &*self.ptr };
-            pool.referred = false;
-
-            for (i, element) in pool.iter_mut().enumerate() {
-                let cap: Option<CapabilityUnion> = None;
-                ptr::write(element, cap);
-            }
-
-            if cap.block_size() == 0 {
-                (Some(pool_cap), None)
-            } else {
-                (Some(pool_cap), Some(cap))
-            }
+            (Self.from_untyped_switching(u1), u2)
         }
     }
 }

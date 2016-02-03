@@ -3,9 +3,9 @@ use core::mem::{align_of, replace, uninitialized, size_of};
 
 use super::{MemoryBlockPtr, MemoryBlockCapability};
 use super::{PageBlockPtr, PageBlockCapability};
-
 use super::{UntypedCapability};
 use super::{CapabilityPoolCapability, CapabilityUnion};
+use super::utils;
 
 pub struct CapabilityPool {
     capabilities: [Option<CapabilityUnion>; CAPABILITY_POOL_COUNT],
@@ -60,9 +60,9 @@ impl Drop for CapabilityPoolCapability {
 
 impl CapabilityPoolCapability {
     pub fn from_untyped_switching(untyped: UntypedCapability) -> CapabilityPoolCapability {
-        let page_start_addr = Self::necessary_page_start_addr(untyped.block_start_addr());
-        let page_counts = Self::necessary_page_counts();
-        let block_size = Self::necessary_block_size(untyped.block_start_addr());
+        let page_start_addr = utils::necessary_page_start_addr(untyped.block_start_addr());
+        let page_counts = utils::necessary_page_counts(Self::object_size());
+        let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_counts);
         let page_size = page_counts * PAGE_SIZE;
 
         assert!(untyped.block_size() == block_size);
@@ -82,8 +82,8 @@ impl CapabilityPoolCapability {
 
     pub fn from_untyped(untyped: UntypedCapability)
                         -> (Option<CapabilityPoolCapability>, Option<UntypedCapability>) {
-        let page_counts = Self::necessary_page_counts();
-        let block_size = Self::necessary_block_size(untyped.block_start_addr());
+        let page_counts = utils::necessary_page_counts(Self::object_size());
+        let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_counts);
 
         let (u1, u2) = UntypedCapability::from_untyped(untyped, block_size);
 

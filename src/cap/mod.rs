@@ -4,6 +4,8 @@ use core::mem::size_of;
 mod pool;
 mod untyped;
 mod alloc;
+mod paging;
+mod utils;
 
 pub use self::alloc::AddressCapability;
 pub use self::alloc::UniqueBox;
@@ -67,22 +69,6 @@ pub trait PageBlockCapability<T> : PageBlockPtr {
 
     fn object_size() -> usize {
         size_of::<UniqueBox<T>>()
-    }
-
-    fn necessary_page_counts() -> usize {
-        Self::object_size() / 1024 + 1
-    }
-
-    fn necessary_block_size(addr: PhysicalAddress) -> usize {
-        let page_start_addr = Self::necessary_page_start_addr(addr);
-        let page_counts = Self::necessary_page_counts();
-        let page_size = page_counts * PAGE_SIZE;
-
-        (page_start_addr - addr) + page_size
-    }
-
-    fn necessary_page_start_addr(addr: PhysicalAddress) -> PhysicalAddress {
-        addr + (PAGE_SIZE - addr % PAGE_SIZE)
     }
 }
 

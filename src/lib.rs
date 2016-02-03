@@ -22,7 +22,6 @@ mod multiboot2;
 mod memory;
 mod common;
 mod cap;
-mod paging;
 
 use memory::{AreaFrameAllocator, FrameAllocator};
 

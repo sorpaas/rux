@@ -1,7 +1,5 @@
 use core::mem::size_of;
 
-use cap::pool::CapabilityPool;
-
 pub type PhysicalAddress = usize;
 pub type VirtualAddress = usize;
 

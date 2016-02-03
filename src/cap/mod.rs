@@ -5,6 +5,9 @@ mod pool;
 mod untyped;
 mod alloc;
 
+pub use self::alloc::AddressCapability;
+pub use self::alloc::UniqueBox;
+
 //// A trait that represents all the capabilities.
 pub trait Capability { }
 
@@ -12,9 +15,9 @@ pub trait Capability { }
 /// implement a memory block capability.
 trait MemoryBlockPtr {
     fn get_block_start_addr(&self) -> PhysicalAddress;
-    fn set_block_start_addr(&self, PhysicalAddress);
+    fn set_block_start_addr(&mut self, PhysicalAddress);
     fn get_block_size(&self) -> usize;
-    fn set_block_size(&self, usize);
+    fn set_block_size(&mut self, usize);
 }
 
 /// A memory block capability represents a memory block.
@@ -35,9 +38,9 @@ pub trait MemoryBlockCapability : MemoryBlockPtr {
 /// Page block pointer.
 trait PageBlockPtr {
     fn get_page_start_addr(&self) -> PhysicalAddress;
-    fn set_page_start_addr(&self, PhysicalAddress);
+    fn set_page_start_addr(&mut self, PhysicalAddress);
     fn get_page_counts(&self) -> usize;
-    fn set_page_counts(&self, usize);
+    fn set_page_counts(&mut self, usize);
 }
 
 /// Page block capability.
@@ -67,12 +70,12 @@ pub trait PageBlockCapability<T> : PageBlockPtr {
     }
 
     fn necessary_page_counts() -> usize {
-        Self.object_size() / 1024 + 1
+        Self::object_size() / 1024 + 1
     }
 
     fn necessary_block_size(addr: PhysicalAddress) -> usize {
-        let page_start_addr = Self.necessary_page_start_addr(addr);
-        let page_counts = Self.necessary_page_counts();
+        let page_start_addr = Self::necessary_page_start_addr(addr);
+        let page_counts = Self::necessary_page_counts();
         let page_size = page_counts * PAGE_SIZE;
 
         (page_start_addr - addr) + page_size
@@ -90,7 +93,7 @@ pub enum CapabilityUnion {
     /// A memory resources capability is essentially a pointer to a memory
     /// location.
 
-    UntypedMemory(UntypedMemoryCapability),
+    UntypedMemory(UntypedCapability),
     CapabilityPool(CapabilityPoolCapability),
     PageTable(PageTableCapability),
 }

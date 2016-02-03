@@ -12,7 +12,7 @@ pub struct AddressCapability<T> {
 
 impl<T> AddressCapability<T> {
     pub unsafe fn new(addr: VirtualdAdress, page_table_addr: PhysicalAddress) -> Self {
-        AddressCapability<T> {
+        AddressCapability::<T> {
             addr: addr,
             page_table_addr: page_table_addr,
             _marker: PhantomData,
@@ -27,7 +27,7 @@ impl<T> AddressCapability<T> {
         assert!("A gettable address capability must be actively mapped.",
                 self.is_active());
 
-        Unique<T>::new(unsafe { &mut *(self.addr as *mut _) })
+        Unique::<T>::new(unsafe { &mut *(self.addr as *mut _) })
     }
 }
 

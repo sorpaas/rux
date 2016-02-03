@@ -1,11 +1,9 @@
 use common::*;
 use core::mem::size_of;
 
-use self::pool::CapabilityPool;
-use self::untyped::UntypedMemoryCapability;
-
-pub mod pool;
-pub mod untyped;
+mod pool;
+mod untyped;
+mod alloc;
 
 //// A trait that represents all the capabilities.
 pub trait Capability { }
@@ -40,14 +38,6 @@ trait PageBlockPtr {
     fn set_page_start_addr(&self, PhysicalAddress);
     fn get_page_counts(&self) -> usize;
     fn set_page_counts(&self, usize);
-
-    fn get_mapped_start_addr(&self) -> Option<VirtualAddress>;
-    fn set_mapped_start_addr(&self, Option<VirtualAddress>);
-
-    fn get_page_table_cap(&self) -> Option<Rc<PageTableCapability>>;
-    fn set_page_table_cap(&self, Option<Rc<PageTableCapability>>);
-    // Note that you won't be able to move a page table cap when it is
-    // referenced.
 }
 
 /// Page block capability.

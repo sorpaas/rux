@@ -1,7 +1,6 @@
 use core::mem::size_of;
 
 pub type PhysicalAddress = usize;
-pub type VirtualAddress = usize;
 
 pub enum PageTableType {
     PageMapLevel4,

@@ -3,12 +3,8 @@ use core::mem::size_of;
 
 mod pool;
 mod untyped;
-mod alloc;
 mod paging;
 mod utils;
-
-pub use self::alloc::AddressCapability;
-pub use self::alloc::UniqueBox;
 
 //// A trait that represents all the capabilities.
 pub trait Capability { }
@@ -63,12 +59,8 @@ pub trait PageBlockCapability<T> : PageBlockPtr {
         self.page_start_addr() + self.page_size() - 1
     }
 
-    fn map(&self, &PageTableCapability) -> AddressCapability<T> {
-        unimplemented!();
-    }
-
     fn object_size() -> usize {
-        size_of::<UniqueBox<T>>()
+        size_of::<T>()
     }
 }
 

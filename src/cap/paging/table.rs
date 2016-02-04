@@ -60,6 +60,9 @@ impl<L> PageTable<L> where L: PageTableLevel {
     }
 }
 
+/// WARNING: This implementation will work as long as the P4 table follows
+/// recursive page mapping.
+
 impl<L> PageTable<L> where L: PageTableHierarchicalLevel {
     fn next_table_address(&self, index: usize) -> Option<usize> {
         let entry_flags = self[index].flags();

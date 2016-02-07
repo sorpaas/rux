@@ -25,4 +25,8 @@ SECTIONS {
     *(.gcc_except_table)
   }
 
+  .got : ALIGN(4K) {
+    *(.got) *(.got.*)
+  }
+
 }

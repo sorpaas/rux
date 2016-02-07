@@ -1,7 +1,11 @@
 use common::*;
 
 pub fn necessary_page_count(object_size: usize) -> usize {
-    object_size / 1024 + 1
+    if object_size % PAGE_SIZE == 0 {
+        object_size / PAGE_SIZE
+    } else {
+        object_size / PAGE_SIZE + 1
+    }
 }
 
 pub fn necessary_block_size(addr: PhysicalAddress, page_counts: usize) -> usize {

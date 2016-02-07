@@ -7,7 +7,7 @@ stdenv.mkDerivation {
 
   buildInputs = [
     gnumake
-    binutils
+    binutils-raw 
     grub2
     nasm
     xorriso

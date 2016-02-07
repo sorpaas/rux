@@ -28,7 +28,10 @@ use cap::{MemoryBlockCapability, PageFrameCapability};
 use cap::{CapabilityPool, CapabilityUnion, CapabilityMove};
 use cap::UntypedCapability;
 use cap::KernelReservedBlockCapability;
+use cap::KernelReservedFrameCapability;
 use memory::{AreaFrameAllocator, FrameAllocator};
+
+use core::mem;
 
 #[no_mangle]
 pub extern fn rust_main(multiboot_information_address: usize) {
@@ -50,7 +53,6 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         cap_pool.put(unsafe { UntypedCapability::new(area.base_addr as usize, area.length as usize) });
     }
 
-    println!("Available slots in kernel's capability pool: {}.", cap_pool.available_count());
 
     let kernel_start = elf_sections_tag.sections().map(|s| s.addr).min().unwrap() as usize;
     let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size - 1).max().unwrap() as usize;
@@ -70,22 +72,34 @@ pub extern fn rust_main(multiboot_information_address: usize) {
 
     println!("Kernel sections:");
     for section in elf_sections_tag.sections() {
+        use multiboot2::ELF_SECTION_ALLOCATED;
+
         println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
                  section.addr, section.size, section.flags);
 
-        // let (reserved, untyped) = KernelReservedBlockCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize);
-        // target_untyped = untyped.expect("Out of memory.");
+        if !section.flags().contains(ELF_SECTION_ALLOCATED) {
+            // section is not loaded to memory
+            let (reserved, untyped) = KernelReservedBlockCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize);
+            target_untyped = untyped.expect("Out of memory.");
+            cap_pool.put(reserved.expect("Reserved should be allocated."));
+        } else {
 
-        // println!("New untyped start address: 0x{:x}.", target_untyped.block_start_addr());
-        // println!("New untyped size: 0x{:x}.", target_untyped.block_size());
+            let (reserved, untyped) = KernelReservedFrameCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize);
+            target_untyped = untyped.expect("Out of memory.");
 
-        // let reserved = reserved.expect("Reserved should be allocated.");
+            // println!("New untyped start address: 0x{:x}.", target_untyped.block_start_addr());
+            // println!("New untyped size: 0x{:x}.", target_untyped.block_size());
 
-        // println!("Reserved frame start address: 0x{:x}.", reserved.frame_start_addr());
-        // println!("Reserved frame count: {}.", reserved.frame_count());
+            let reserved = reserved.expect("Reserved should be allocated.");
 
-        // cap_pool.put(reserved);
+            // println!("Reserved frame start address: 0x{:x}.", reserved.frame_start_addr());
+            // println!("Reserved frame size: 0x{:x}.", reserved.frame_size());
+
+            cap_pool.put(reserved);
+        }
     }
+
+    println!("Available slots in kernel's capability pool: {}.", cap_pool.available_count());
 
     // let mut frame_allocator = AreaFrameAllocator::new(
     //     kernel_start as usize, kernel_end as usize,

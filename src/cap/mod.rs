@@ -73,7 +73,8 @@ pub enum CapabilityUnion {
     Untyped(UntypedCapability),
     CapabilityPool(PageObjectCapability<CapabilityPool>),
     PageTable(PageTableCapability),
-    KernelReserved(KernelReservedBlockCapability),
+    KernelReservedBlock(KernelReservedBlockCapability),
+    KernelReservedFrame(KernelReservedFrameCapability),
 }
 
 pub trait CapabilityMove<T: Capability> {
@@ -110,6 +111,12 @@ pub struct PageTableCapability {
 
 impl Capability for KernelReservedBlockCapability { }
 pub struct KernelReservedBlockCapability {
+    block_start_addr: PhysicalAddress,
+    block_size: usize,
+}
+
+impl Capability for KernelReservedFrameCapability { }
+pub struct KernelReservedFrameCapability {
     block_start_addr: PhysicalAddress,
     block_size: usize,
     frame_start_addr: PhysicalAddress,

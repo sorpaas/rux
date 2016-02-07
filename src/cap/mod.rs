@@ -1,7 +1,8 @@
 use common::*;
 use core::mem::size_of;
+use core::marker::PhantomData;
 
-mod pool;
+mod frame;
 mod untyped;
 mod paging;
 mod utils;
@@ -33,36 +34,7 @@ pub trait MemoryBlockCapability : MemoryBlockPtr {
     }
 }
 
-/// Page block pointer.
-trait PageBlockPtr {
-    fn get_page_start_addr(&self) -> PhysicalAddress;
-    fn set_page_start_addr(&mut self, PhysicalAddress);
-    fn get_page_counts(&self) -> usize;
-    fn set_page_counts(&mut self, usize);
-}
-
-/// Page block capability.
-pub trait PageBlockCapability<T> : PageBlockPtr {
-    fn page_start_addr(&self) -> PhysicalAddress {
-        self.get_page_start_addr()
-    }
-
-    fn page_counts(&self) -> usize {
-        self.get_page_counts()
-    }
-
-    fn page_size(&self) -> usize {
-        self.get_page_counts() * PAGE_SIZE
-    }
-
-    fn page_end_addr(&self) -> PhysicalAddress {
-        self.page_start_addr() + self.page_size() - 1
-    }
-
-    fn object_size() -> usize {
-        size_of::<T>()
-    }
-}
+pub struct CapabilityPool([CapabilityUnion; CAPABILITY_POOL_COUNT]);
 
 pub enum CapabilityUnion {
     /// Memory resources capabilities, all has its start and end address, and a
@@ -72,7 +44,7 @@ pub enum CapabilityUnion {
     /// location.
 
     UntypedMemory(UntypedCapability),
-    CapabilityPool(CapabilityPoolCapability),
+    CapabilityPool(PageFrameCapability<CapabilityPool>),
     PageTable(PageTableCapability),
 }
 
@@ -83,13 +55,13 @@ pub struct UntypedCapability {
     block_size: usize,
 }
 
-/// The main kernel capability pool is static. Other capability pools are created
-/// by retype kernel page.
-pub struct CapabilityPoolCapability {
+/// Represent a page frame.
+pub struct PageFrameCapability<T> {
     block_start_addr: PhysicalAddress,
     block_size: usize,
-    page_start_addr: PhysicalAddress,
-    page_counts: usize,
+    frame_start_addr: PhysicalAddress,
+    frame_counts: usize,
+    _marker: PhantomData<T>,
 }
 
 /// Page table capability represents a P4 table.

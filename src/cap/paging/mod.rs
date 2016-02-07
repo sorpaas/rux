@@ -5,7 +5,7 @@ mod mapper;
 use common::*;
 use core::marker::PhantomData;
 
-use super::PageBlockCapability;
+use super::PageFrameCapability;
 use super::UntypedCapability;
 use self::mapper::{Mapper, ActiveMapper};
 
@@ -27,9 +27,8 @@ pub type ActivePageTableCapability = PageTableCapability<ActivePageTableStatus>;
 pub type InactivePageTableCapability = PageTableCapability<InactivePageTableStatus>;
 
 impl<L> PageTableCapability<L> where L: PageTableStatus {
-    pub fn map<T, U>(&self, block: &T, dest_addr: usize, untyped: UntypedCapability)
-                     -> (VirtualAddress<U>, Option<UntypedCapability>)
-        where T: PageBlockCapability<U> {
+    pub fn map<U>(&self, block: &PageFrameCapability<U>, dest_addr: usize, untyped: UntypedCapability)
+                     -> (VirtualAddress<U>, Option<UntypedCapability>) {
         use self::entry::PRESENT;
 
         let mut mapper = unsafe { ActiveMapper::new() };
@@ -41,7 +40,7 @@ impl<L> PageTableCapability<L> where L: PageTableStatus {
         };
 
         let untyped_r = unsafe {
-            mapper.with(block.page_start_addr(), |mapper| {
+            mapper.with(self.table_start_addr, |mapper| {
                 mapper.map_to(&virt, block, PRESENT, untyped)
             })
         };

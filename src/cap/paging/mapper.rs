@@ -2,7 +2,7 @@ use core::ptr::Unique;
 use core::marker::PhantomData;
 
 use common::*;
-use cap::PageBlockCapability;
+use cap::PageFrameCapability;
 use cap::UntypedCapability;
 use super::VirtualAddress;
 use super::table::{PageTable, PageTableLevel4};
@@ -54,13 +54,12 @@ pub trait Mapper {
             .and_then(|p1| p1[page.p1_index()].physical_address())
     }
 
-    fn map_to<T, U>(&mut self,
+    fn map_to<U>(&mut self,
                     virt: &VirtualAddress<U>,
-                    block: &T,
+                    block: &PageFrameCapability<U>,
                     flags: EntryFlags,
                     untyped: UntypedCapability)
-        -> Option<UntypedCapability>
-        where T: PageBlockCapability<U> {
+        -> Option<UntypedCapability> {
         use super::entry::PRESENT;
 
         let page = Page::new(virt);
@@ -73,7 +72,7 @@ pub trait Mapper {
         let (mut p1, untyped) = p2.next_table_create(page.p2_index(), untyped);
 
         assert!(p1[page.p1_index()].is_unused());
-        p1[page.p1_index()].set_address(block.page_start_addr(), flags | PRESENT);
+        p1[page.p1_index()].set_address(block.frame_start_addr(), flags | PRESENT);
 
         untyped
     }

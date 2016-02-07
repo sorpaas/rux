@@ -23,6 +23,11 @@ mod memory;
 mod common;
 mod cap;
 
+use common::*;
+use cap::MemoryBlockCapability;
+use cap::{CapabilityPool, CapabilityUnion, CapabilityMove};
+use cap::UntypedCapability;
+use cap::KernelReservedBlockCapability;
 use memory::{AreaFrameAllocator, FrameAllocator};
 
 #[no_mangle]
@@ -32,6 +37,8 @@ pub extern fn rust_main(multiboot_information_address: usize) {
 
     vga_buffer::clear_screen();
 
+    let mut cap_pool = CapabilityPool::new();
+
     let boot_info = unsafe { multiboot2::load(multiboot_information_address) };
     let memory_map_tag = boot_info.memory_map_tag().expect("Memory map tag required");
     let elf_sections_tag = boot_info.elf_sections_tag().expect("Elf-sections tag required");
@@ -39,28 +46,43 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     println!("Memory areas:");
     for area in memory_map_tag.memory_areas() {
         println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
+
+        cap_pool.put(unsafe { UntypedCapability::new(area.base_addr as usize, area.length as usize) });
     }
 
-    let kernel_start = elf_sections_tag.sections().map(|s| s.addr).min().unwrap();
-    let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size).max().unwrap();
+    println!("Available slots in kernel's capability pool: {}.", cap_pool.available_count());
 
-    let multiboot_start = multiboot_information_address;
-    let multiboot_end = multiboot_start + (boot_info.total_size as usize);
+    let kernel_start = elf_sections_tag.sections().map(|s| s.addr).min().unwrap() as usize;
+    let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size - 1).max().unwrap() as usize;
+
+    let multiboot_start = multiboot_information_address as usize;
+    let multiboot_end = multiboot_start + (boot_info.total_size as usize) - 1;
 
     println!("Kernel start: 0x{:x}, end: 0x{:x}", kernel_start, kernel_end);
     println!("Multiboot start: 0x{:x}, end: 0x{:x}", multiboot_start, multiboot_end);
+
+    let mut target_untyped: UntypedCapability = cap_pool.select(|x: &UntypedCapability| {
+        x.block_start_addr() <= kernel_start &&
+            x.block_end_addr() >= kernel_end &&
+            x.block_start_addr() <= multiboot_start &&
+            x.block_end_addr() >= multiboot_end
+    }).expect("Illegal memory allocation.");
 
     println!("Kernel sections:");
     for section in elf_sections_tag.sections() {
         println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
                  section.addr, section.size, section.flags);
+
+        let (reserved, untyped) = KernelReservedBlockCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize);
+        cap_pool.put(reserved.expect(""));
+        target_untyped = untyped.expect("")
     }
 
-    let mut frame_allocator = AreaFrameAllocator::new(
-        kernel_start as usize, kernel_end as usize,
-        multiboot_start, multiboot_end, memory_map_tag.memory_areas());
+    // let mut frame_allocator = AreaFrameAllocator::new(
+    //     kernel_start as usize, kernel_end as usize,
+    //     multiboot_start, multiboot_end, memory_map_tag.memory_areas());
 
-    memory::remap_kernel(&mut frame_allocator, boot_info);
+    // memory::remap_kernel(&mut frame_allocator, boot_info);
     println!("Yeah, the kernel did not crash!");
 
     loop{}

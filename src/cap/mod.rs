@@ -6,6 +6,8 @@ mod frame;
 mod untyped;
 mod paging;
 mod utils;
+mod pool;
+mod reserved;
 
 //// A trait that represents all the capabilities.
 pub trait Capability { }
@@ -34,7 +36,32 @@ pub trait MemoryBlockCapability : MemoryBlockPtr {
     }
 }
 
-pub struct CapabilityPool([CapabilityUnion; CAPABILITY_POOL_COUNT]);
+trait PageFramePtr {
+    fn get_frame_start_addr(&self) -> PhysicalAddress;
+    fn set_frame_start_addr(&mut self, PhysicalAddress);
+    fn get_frame_count(&self) -> usize;
+    fn set_frame_count(&mut self, usize);
+}
+
+pub trait PageFrameCapability : PageFramePtr {
+    fn frame_start_addr(&self) -> PhysicalAddress {
+        self.get_frame_start_addr()
+    }
+
+    fn frame_counts(&self) -> usize {
+        self.get_frame_count()
+    }
+
+    fn frame_size(&self) -> usize {
+        self.get_frame_count() * PAGE_SIZE
+    }
+
+    fn frame_end_addr(&self) -> PhysicalAddress {
+        self.frame_start_addr() + self.frame_size() - 1
+    }
+}
+
+pub struct CapabilityPool([Option<CapabilityUnion>; CAPABILITY_POOL_COUNT]);
 
 pub enum CapabilityUnion {
     /// Memory resources capabilities, all has its start and end address, and a
@@ -43,30 +70,48 @@ pub enum CapabilityUnion {
     /// A memory resources capability is essentially a pointer to a memory
     /// location.
 
-    UntypedMemory(UntypedCapability),
-    CapabilityPool(PageFrameCapability<CapabilityPool>),
+    Untyped(UntypedCapability),
+    CapabilityPool(PageObjectCapability<CapabilityPool>),
     PageTable(PageTableCapability),
+    KernelReserved(KernelReservedBlockCapability),
+}
+
+pub trait CapabilityMove<T: Capability> {
+    fn put(&mut self, T);
+    fn take_one(&mut self) -> Option<T>;
+    fn select<F>(&mut self, f: F) -> Option<T> where F: Fn(&T) -> bool;
 }
 
 /// Untyped memory and page table are memory management tricks, those are not
 /// actually accessible in the virtual memory.
+impl Capability for UntypedCapability { }
 pub struct UntypedCapability {
     block_start_addr: PhysicalAddress,
     block_size: usize,
 }
 
 /// Represent a page frame.
-pub struct PageFrameCapability<T> {
+impl<T> Capability for PageObjectCapability<T> { }
+pub struct PageObjectCapability<T> {
     block_start_addr: PhysicalAddress,
     block_size: usize,
     frame_start_addr: PhysicalAddress,
-    frame_counts: usize,
+    frame_count: usize,
     _marker: PhantomData<T>,
 }
 
 /// Page table capability represents a P4 table.
+impl Capability for PageTableCapability { }
 pub struct PageTableCapability {
     block_start_addr: PhysicalAddress,
     block_size: usize,
     table_start_addr: PhysicalAddress,
+}
+
+impl Capability for KernelReservedBlockCapability { }
+pub struct KernelReservedBlockCapability {
+    block_start_addr: PhysicalAddress,
+    block_size: usize,
+    frame_start_addr: PhysicalAddress,
+    frame_size: usize,
 }

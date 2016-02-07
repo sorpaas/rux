@@ -33,6 +33,10 @@ impl Drop for UntypedCapability {
 }
 
 impl UntypedCapability {
+    pub unsafe fn new(block_start_addr: usize, block_size: usize) -> UntypedCapability {
+        UntypedCapability { block_start_addr: block_start_addr, block_size: block_size }
+    }
+
     pub fn from_untyped_three(cap: UntypedCapability, block_start_addr: usize, block_size: usize)
                               -> (UntypedCapability, Option<UntypedCapability>, Option<UntypedCapability>) {
         assert!(block_start_addr >= cap.block_start_addr(),

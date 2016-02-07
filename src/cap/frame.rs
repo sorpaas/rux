@@ -3,11 +3,12 @@ use core::marker::PhantomData;
 use core::mem::{align_of, replace, uninitialized, size_of};
 
 use super::{MemoryBlockPtr, MemoryBlockCapability};
-use super::{PageFrameCapability};
+use super::{PageFramePtr, PageFrameCapability};
+use super::{PageObjectCapability};
 use super::{UntypedCapability};
 use super::utils;
 
-impl<T> MemoryBlockPtr for PageFrameCapability<T> {
+impl<T> MemoryBlockPtr for PageObjectCapability<T> {
     fn get_block_start_addr(&self) -> PhysicalAddress {
         self.block_start_addr
     }
@@ -25,38 +26,40 @@ impl<T> MemoryBlockPtr for PageFrameCapability<T> {
     }
 }
 
-impl<T> MemoryBlockCapability for PageFrameCapability<T> { }
+impl<T> MemoryBlockCapability for PageObjectCapability<T> { }
 
-impl<T> PageFrameCapability<T> {
-    pub fn frame_start_addr(&self) -> PhysicalAddress {
+impl<T> PageFramePtr for PageObjectCapability<T> {
+    fn get_frame_start_addr(&self) -> PhysicalAddress {
         self.frame_start_addr
     }
 
-    pub fn frame_counts(&self) -> usize {
-        self.frame_counts
+    fn set_frame_start_addr(&mut self, addr: PhysicalAddress) {
+        self.frame_start_addr = addr;
     }
 
-    pub fn frame_size(&self) -> usize {
-        self.frame_counts * PAGE_SIZE
+    fn get_frame_count(&self) -> usize {
+        self.frame_count
     }
 
-    pub fn frame_end_addr(&self) -> PhysicalAddress {
-        self.frame_start_addr() + self.frame_size() - 1
-    }
-
-    pub fn object_size() -> usize {
-        size_of::<T>()
+    fn set_frame_count(&mut self, count: usize) {
+        self.frame_count = count
     }
 }
 
-impl<T> Drop for PageFrameCapability<T> {
+impl<T> PageFrameCapability for PageObjectCapability<T> { }
+
+impl<T> Drop for PageObjectCapability<T> {
     fn drop(&mut self) {
         unimplemented!();
     }
 }
 
-impl<T> PageFrameCapability<T> {
-    pub fn from_untyped_switching(untyped: UntypedCapability) -> PageFrameCapability<T> {
+impl<T> PageObjectCapability<T> {
+    pub fn object_size() -> usize {
+        size_of::<T>()
+    }
+
+    pub fn from_untyped_switching(untyped: UntypedCapability) -> PageObjectCapability<T> {
         let page_start_addr = utils::necessary_page_start_addr(untyped.block_start_addr());
         let page_counts = utils::necessary_page_counts(Self::object_size());
         let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_counts);
@@ -64,11 +67,11 @@ impl<T> PageFrameCapability<T> {
 
         assert!(untyped.block_size() == block_size);
 
-        let pool_cap = PageFrameCapability::<T> {
+        let pool_cap = PageObjectCapability::<T> {
             block_start_addr: untyped.block_start_addr(),
             block_size: block_size,
             frame_start_addr: page_start_addr,
-            frame_counts: page_counts,
+            frame_count: page_counts,
             _marker: PhantomData::<T>
         };
 
@@ -79,7 +82,7 @@ impl<T> PageFrameCapability<T> {
     }
 
     pub fn from_untyped(untyped: UntypedCapability)
-                        -> (Option<PageFrameCapability<T>>, Option<UntypedCapability>) {
+                        -> (Option<PageObjectCapability<T>>, Option<UntypedCapability>) {
         let page_counts = utils::necessary_page_counts(Self::object_size());
         let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_counts);
 

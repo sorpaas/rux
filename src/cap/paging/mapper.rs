@@ -54,12 +54,13 @@ pub trait Mapper {
             .and_then(|p1| p1[page.p1_index()].physical_address())
     }
 
-    fn map_to<U>(&mut self,
+    fn map_to<T, U>(&mut self,
                     virt: &VirtualAddress<U>,
-                    block: &PageFrameCapability<U>,
+                    block: &T,
                     flags: EntryFlags,
                     untyped: UntypedCapability)
-        -> Option<UntypedCapability> {
+                 -> Option<UntypedCapability>
+        where T: PageFrameCapability {
         use super::entry::PRESENT;
 
         let page = Page::new(virt);

@@ -27,7 +27,7 @@ pub type ActivePageTableCapability = PageTableCapability<ActivePageTableStatus>;
 pub type InactivePageTableCapability = PageTableCapability<InactivePageTableStatus>;
 
 impl<L> PageTableCapability<L> where L: PageTableStatus {
-    pub fn map<U>(&self, block: &PageFrameCapability<U>, dest_addr: usize, untyped: UntypedCapability)
+    pub fn map<T: PageFrameCapability, U>(&self, block: &T, dest_addr: usize, untyped: UntypedCapability)
                      -> (VirtualAddress<U>, Option<UntypedCapability>) {
         use self::entry::PRESENT;
 

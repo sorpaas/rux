@@ -61,9 +61,9 @@ impl<T> PageObjectCapability<T> {
 
     pub fn from_untyped_switching(untyped: UntypedCapability) -> PageObjectCapability<T> {
         let page_start_addr = utils::necessary_page_start_addr(untyped.block_start_addr());
-        let page_counts = utils::necessary_page_counts(Self::object_size());
-        let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_counts);
-        let page_size = page_counts * PAGE_SIZE;
+        let page_count = utils::necessary_page_count(Self::object_size());
+        let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_count);
+        let page_size = page_count * PAGE_SIZE;
 
         assert!(untyped.block_size() == block_size);
 
@@ -71,7 +71,7 @@ impl<T> PageObjectCapability<T> {
             block_start_addr: untyped.block_start_addr(),
             block_size: block_size,
             frame_start_addr: page_start_addr,
-            frame_count: page_counts,
+            frame_count: page_count,
             _marker: PhantomData::<T>
         };
 
@@ -83,8 +83,8 @@ impl<T> PageObjectCapability<T> {
 
     pub fn from_untyped(untyped: UntypedCapability)
                         -> (Option<PageObjectCapability<T>>, Option<UntypedCapability>) {
-        let page_counts = utils::necessary_page_counts(Self::object_size());
-        let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_counts);
+        let page_count = utils::necessary_page_count(Self::object_size());
+        let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_count);
 
         let (u1, u2) = UntypedCapability::from_untyped(untyped, block_size);
 

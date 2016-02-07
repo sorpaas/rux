@@ -1,6 +1,6 @@
 use common::*;
 
-pub fn necessary_page_counts(object_size: usize) -> usize {
+pub fn necessary_page_count(object_size: usize) -> usize {
     object_size / 1024 + 1
 }
 

@@ -24,7 +24,7 @@ mod common;
 mod cap;
 
 use common::*;
-use cap::MemoryBlockCapability;
+use cap::{MemoryBlockCapability, PageFrameCapability};
 use cap::{CapabilityPool, CapabilityUnion, CapabilityMove};
 use cap::UntypedCapability;
 use cap::KernelReservedBlockCapability;
@@ -73,9 +73,18 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
                  section.addr, section.size, section.flags);
 
-        let (reserved, untyped) = KernelReservedBlockCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize);
-        cap_pool.put(reserved.expect(""));
-        target_untyped = untyped.expect("")
+        // let (reserved, untyped) = KernelReservedBlockCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize);
+        // target_untyped = untyped.expect("Out of memory.");
+
+        // println!("New untyped start address: 0x{:x}.", target_untyped.block_start_addr());
+        // println!("New untyped size: 0x{:x}.", target_untyped.block_size());
+
+        // let reserved = reserved.expect("Reserved should be allocated.");
+
+        // println!("Reserved frame start address: 0x{:x}.", reserved.frame_start_addr());
+        // println!("Reserved frame count: {}.", reserved.frame_count());
+
+        // cap_pool.put(reserved);
     }
 
     // let mut frame_allocator = AreaFrameAllocator::new(

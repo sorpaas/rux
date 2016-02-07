@@ -48,7 +48,7 @@ pub trait PageFrameCapability : PageFramePtr {
         self.get_frame_start_addr()
     }
 
-    fn frame_counts(&self) -> usize {
+    fn frame_count(&self) -> usize {
         self.get_frame_count()
     }
 
@@ -113,5 +113,5 @@ pub struct KernelReservedBlockCapability {
     block_start_addr: PhysicalAddress,
     block_size: usize,
     frame_start_addr: PhysicalAddress,
-    frame_size: usize,
+    frame_count: usize,
 }

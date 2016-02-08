@@ -11,6 +11,9 @@ mod reserved;
 
 use self::paging::{Frame};
 use self::paging::{EntryFlags};
+use self::paging::VirtualAddress;
+
+pub use self::paging::{ActivePageTableCapability, InactivePageTableCapability};
 
 //// A trait that represents all the capabilities.
 pub trait Capability { }
@@ -56,6 +59,21 @@ pub trait CapabilityMove<T: Capability> {
     fn take_one(&mut self) -> Option<T>;
     fn select<F>(&mut self, f: F) -> Option<T> where F: Fn(&T) -> bool;
     fn collect<F>(&mut self, mut f: F) where F: FnMut(T) -> Option<T>;
+}
+
+pub trait BorrowableCapability {
+    type Borrowable;
+    fn frame_start_addr(&self) -> PhysicalAddress;
+
+    fn borrow<'r>(&self, virt: &VirtualAddress, table_cap: &'r ActivePageTableCapability) -> &'r Self::Borrowable {
+        assert!(virt.table_addr() == table_cap.frame_start_addr());
+        unsafe { &*(virt.addr() as *mut _) }
+    }
+
+    fn borrow_mut<'r>(&self, virt: &mut VirtualAddress, table_cap: &'r ActivePageTableCapability) -> &'r mut Self::Borrowable {
+        assert!(virt.table_addr() == table_cap.frame_start_addr());
+        unsafe { &mut *(virt.addr() as *mut _) }
+    }
 }
 
 /// Untyped memory and page table are memory management tricks, those are not

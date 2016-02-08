@@ -22,7 +22,6 @@ impl PageTableLevel for PageTableLevel1 { }
 trait PageTableHierarchicalLevel: PageTableLevel {
     type NextLevel: PageTableLevel;
 }
-
 impl PageTableHierarchicalLevel for PageTableLevel4 {
     type NextLevel = PageTableLevel3;
 }
@@ -88,7 +87,7 @@ impl<L> PageTable<L> where L: PageTableHierarchicalLevel {
                              index: usize,
                              untyped: UntypedCapability) -> (&mut PageTable<L::NextLevel>, Option<UntypedCapability>) {
         if self.next_table(index).is_none() {
-            assert!(!self.entries[index].flags().contains(HUGE_PAGE),
+            assert!(!self[index].flags().contains(HUGE_PAGE),
                     "mapping code does not support huge pages");
 
             let page_start_addr = utils::necessary_page_start_addr(untyped.block_start_addr());
@@ -96,7 +95,7 @@ impl<L> PageTable<L> where L: PageTableHierarchicalLevel {
             let (mut u1, u2) = UntypedCapability::from_untyped(untyped, block_size);
 
             assert!(u1.block_size() == block_size, "No frames available.");
-            self.entries[index].set_address(page_start_addr, PRESENT | WRITABLE);
+            self[index].set_address(page_start_addr, PRESENT | WRITABLE);
             self.next_table_mut(index).unwrap().zero();
 
             u1.block_size = 0;

@@ -28,6 +28,14 @@ impl PageTableEntry {
         assert!(address & !0x000fffff_fffff000 == 0);
         self.0 = (address as u64) | flags.bits();
     }
+
+    pub fn raw(&self) -> u64 {
+        self.0
+    }
+
+    pub unsafe fn set_raw(&mut self, raw: u64) {
+        self.0 = raw;
+    }
 }
 
 bitflags! {

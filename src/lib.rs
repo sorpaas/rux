@@ -82,9 +82,14 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     let mut kernel_untyped = otkernel;
     let mut page_untyped = otpage.expect("Out of memory");
 
+    println!("Page untyped start address: 0x{:x}.", page_untyped.block_start_addr());
+
     let cr3 = unsafe { controlregs::cr3() } as usize;
-    let (page_table, ou) = InactivePageTableCapability::from_untyped(page_untyped);
+    let cur_page_table = unsafe { ActivePageTableCapability::bootstrap() };
+    println!("Cr3 value: 0x{:x}.", unsafe { controlregs::cr3() } as usize);
+    let (page_table, ou) = InactivePageTableCapability::from_untyped(page_untyped, &cur_page_table);
     let page_table = page_table.expect("Initialize page table failed.");
+    println!("Inactive page table capability address: 0x{:x}.", (&page_table as *const _) as usize);
     page_untyped = ou.expect("Out of memory");
 
     println!("Kernel sections:");
@@ -108,7 +113,7 @@ pub extern fn rust_main(multiboot_information_address: usize) {
             let reserved = reserved.expect("Reserved should be allocated.");
             kernel_untyped = ou.expect("Out of memory.");
 
-            let (virt, ou): (VirtualAddress<Nothing>, _) = page_table.identity_map(&reserved, page_untyped);
+            let (virt, ou): (VirtualAddress, _) = page_table.identity_map(&reserved, page_untyped);
             page_untyped = ou.expect("Out of memory.");
 
             // println!("New untyped start address: 0x{:x}.", target_untyped.block_start_addr());
@@ -122,13 +127,9 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         }
     }
 
+    // let (page_table, old_page_table) = ActivePageTableCapability::switch(page_table, cur_page_table);
+
     println!("Available slots in kernel's capability pool: {}.", cap_pool.available_count());
-
-    // let mut frame_allocator = AreaFrameAllocator::new(
-    //     kernel_start as usize, kernel_end as usize,
-    //     multiboot_start, multiboot_end, memory_map_tag.memory_areas());
-
-    // memory::remap_kernel(&mut frame_allocator, boot_info);
     println!("Yeah, the kernel did not crash!");
 
     loop{}

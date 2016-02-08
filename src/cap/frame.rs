@@ -7,6 +7,7 @@ use super::{PageFrameCapability};
 use super::{PageObjectCapability};
 use super::{UntypedCapability};
 use super::utils;
+use super::utils::ContinuousFrameIterator;
 use super::paging::EntryFlags;
 use super::paging::{Frame};
 
@@ -20,40 +21,10 @@ impl<T> MemoryBlockCapability for PageObjectCapability<T> {
     }
 }
 
-struct ContinuousFrameIterator {
-    addr: PhysicalAddress,
-    offset: usize,
-    count: usize,
-    flags: EntryFlags,
-}
-
-impl Iterator for ContinuousFrameIterator {
-    type Item = Frame;
-    fn next(&mut self) -> Option<Frame> {
-        if self.count == 0 {
-            None
-        } else {
-            let addr = self.addr;
-            let offset = self.offset;
-
-            self.addr = self.addr + PAGE_SIZE;
-            self.offset = self.offset + 1;
-            self.count = self.count - 1;
-
-            Some(Frame::new(addr, offset, self.flags))
-        }
-    }
-}
-
 impl<T> PageFrameCapability for PageObjectCapability<T> {
     type FrameIterator = ContinuousFrameIterator;
     fn frames(&self) -> ContinuousFrameIterator {
-        ContinuousFrameIterator {
-            addr: self.frame_start_addr,
-            offset: 0,
-            count: self.frame_count,
-            flags: self.flags,
-        }
+        ContinuousFrameIterator::new(self.frame_start_addr, self.frame_count, self.flags)
     }
 }
 

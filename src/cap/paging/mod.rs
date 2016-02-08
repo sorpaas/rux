@@ -202,7 +202,7 @@ impl ActivePageTableCapability {
         current.ignore_drop = true;
 
         unsafe {
-            controlregs::cr3_write(new.block_start_addr as u64);
+            controlregs::cr3_write(new.frame_start_addr as u64);
         }
 
         (new_active, new_inactive)

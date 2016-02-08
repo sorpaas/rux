@@ -8,6 +8,7 @@ pub mod paging;
 pub mod utils;
 mod pool;
 mod reserved;
+mod vga;
 
 use self::paging::{Frame};
 use self::paging::{EntryFlags};
@@ -118,3 +119,5 @@ pub struct KernelReservedFrameCapability {
     guarded_frame_start_addr: Option<PhysicalAddress>,
     flags: EntryFlags,
 }
+
+pub struct VGABufferCapability;

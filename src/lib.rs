@@ -29,6 +29,7 @@ use cap::{CapabilityPool, CapabilityUnion, CapabilityMove};
 use cap::UntypedCapability;
 use cap::KernelReservedBlockCapability;
 use cap::KernelReservedFrameCapability;
+use cap::VGABufferCapability;
 use cap::paging;
 use cap::paging::EntryFlags;
 use cap::paging::VirtualAddress;
@@ -90,7 +91,7 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     let (page_table, ou) = InactivePageTableCapability::from_untyped(page_untyped, &cur_page_table);
     let page_table = page_table.expect("Initialize page table failed.");
     println!("Inactive page table capability address: 0x{:x}.", (&page_table as *const _) as usize);
-    page_untyped = ou.expect("Out of memory");
+    page_untyped = ou.expect("Out of memory.");
 
     println!("Kernel sections:");
     for section in elf_sections_tag.sections() {
@@ -113,7 +114,7 @@ pub extern fn rust_main(multiboot_information_address: usize) {
             let reserved = reserved.expect("Reserved should be allocated.");
             kernel_untyped = ou.expect("Out of memory.");
 
-            let (virt, ou): (VirtualAddress, _) = page_table.identity_map(&reserved, page_untyped);
+            let (virt, ou) = page_table.identity_map(&reserved, page_untyped);
             page_untyped = ou.expect("Out of memory.");
 
             // println!("New untyped start address: 0x{:x}.", target_untyped.block_start_addr());
@@ -127,7 +128,12 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         }
     }
 
-    // let (page_table, old_page_table) = ActivePageTableCapability::switch(page_table, cur_page_table);
+    {
+        let (virt, ou) = page_table.identity_map(vga_buffer::WRITER.lock().cap(), page_untyped);
+        page_untyped = ou.expect("Out of memory.");
+    }
+
+    let (page_table, old_page_table) = ActivePageTableCapability::switch(page_table, cur_page_table);
 
     println!("Available slots in kernel's capability pool: {}.", cap_pool.available_count());
     println!("Yeah, the kernel did not crash!");

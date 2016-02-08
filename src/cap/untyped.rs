@@ -1,28 +1,18 @@
 use common::*;
 use core::ops::Drop;
 
-use super::{MemoryBlockPtr, MemoryBlockCapability};
+use super::{MemoryBlockCapability};
 use super::UntypedCapability;
 
-impl MemoryBlockPtr for UntypedCapability {
-    fn get_block_start_addr(&self) -> PhysicalAddress {
+impl MemoryBlockCapability for UntypedCapability {
+    fn block_start_addr(&self) -> PhysicalAddress {
         self.block_start_addr
     }
 
-    fn set_block_start_addr(&mut self, addr: PhysicalAddress) {
-        self.block_start_addr = addr
-    }
-
-    fn get_block_size(&self) -> usize {
+    fn block_size(&self) -> usize {
         self.block_size
     }
-
-    fn set_block_size(&mut self, size: usize) {
-        self.block_size = size
-    }
 }
-
-impl MemoryBlockCapability for UntypedCapability { }
 
 impl Drop for UntypedCapability {
     fn drop(&mut self) {

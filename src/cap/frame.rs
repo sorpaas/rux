@@ -2,51 +2,60 @@ use common::*;
 use core::marker::PhantomData;
 use core::mem::{align_of, replace, uninitialized, size_of};
 
-use super::{MemoryBlockPtr, MemoryBlockCapability};
-use super::{PageFramePtr, PageFrameCapability};
+use super::{MemoryBlockCapability};
+use super::{PageFrameCapability};
 use super::{PageObjectCapability};
 use super::{UntypedCapability};
 use super::utils;
+use super::paging::EntryFlags;
+use super::paging::{Frame};
 
-impl<T> MemoryBlockPtr for PageObjectCapability<T> {
-    fn get_block_start_addr(&self) -> PhysicalAddress {
+impl<T> MemoryBlockCapability for PageObjectCapability<T> {
+    fn block_start_addr(&self) -> PhysicalAddress {
         self.block_start_addr
     }
 
-    fn set_block_start_addr(&mut self, addr: PhysicalAddress) {
-        self.block_start_addr = addr
-    }
-
-    fn get_block_size(&self) -> usize {
+    fn block_size(&self) -> usize {
         self.block_size
     }
+}
 
-    fn set_block_size(&mut self, size: usize) {
-        self.block_size = size
+struct ContinuousFrameIterator {
+    addr: PhysicalAddress,
+    offset: usize,
+    count: usize,
+    flags: EntryFlags,
+}
+
+impl Iterator for ContinuousFrameIterator {
+    type Item = Frame;
+    fn next(&mut self) -> Option<Frame> {
+        if self.count == 0 {
+            None
+        } else {
+            let addr = self.addr;
+            let offset = self.offset;
+
+            self.addr = self.addr + PAGE_SIZE;
+            self.offset = self.offset + 1;
+            self.count = self.count - 1;
+
+            Some(Frame::new(addr, offset, self.flags))
+        }
     }
 }
 
-impl<T> MemoryBlockCapability for PageObjectCapability<T> { }
-
-impl<T> PageFramePtr for PageObjectCapability<T> {
-    fn get_frame_start_addr(&self) -> PhysicalAddress {
-        self.frame_start_addr
-    }
-
-    fn set_frame_start_addr(&mut self, addr: PhysicalAddress) {
-        self.frame_start_addr = addr;
-    }
-
-    fn get_frame_count(&self) -> usize {
-        self.frame_count
-    }
-
-    fn set_frame_count(&mut self, count: usize) {
-        self.frame_count = count
+impl<T> PageFrameCapability for PageObjectCapability<T> {
+    type FrameIterator = ContinuousFrameIterator;
+    fn frames(&self) -> ContinuousFrameIterator {
+        ContinuousFrameIterator {
+            addr: self.frame_start_addr,
+            offset: 0,
+            count: self.frame_count,
+            flags: self.flags,
+        }
     }
 }
-
-impl<T> PageFrameCapability for PageObjectCapability<T> { }
 
 impl<T> Drop for PageObjectCapability<T> {
     fn drop(&mut self) {
@@ -59,7 +68,7 @@ impl<T> PageObjectCapability<T> {
         size_of::<T>()
     }
 
-    pub fn from_untyped_switching(untyped: UntypedCapability) -> PageObjectCapability<T> {
+    pub fn from_untyped_switching(untyped: UntypedCapability, flags: EntryFlags) -> PageObjectCapability<T> {
         let page_start_addr = utils::necessary_page_start_addr(untyped.block_start_addr());
         let page_count = utils::necessary_page_count(Self::object_size());
         let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_count);
@@ -72,6 +81,7 @@ impl<T> PageObjectCapability<T> {
             block_size: block_size,
             frame_start_addr: page_start_addr,
             frame_count: page_count,
+            flags: flags,
             _marker: PhantomData::<T>
         };
 
@@ -81,7 +91,7 @@ impl<T> PageObjectCapability<T> {
         pool_cap
     }
 
-    pub fn from_untyped(untyped: UntypedCapability)
+    pub fn from_untyped(untyped: UntypedCapability, flags: EntryFlags)
                         -> (Option<PageObjectCapability<T>>, Option<UntypedCapability>) {
         let page_count = utils::necessary_page_count(Self::object_size());
         let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_count);
@@ -92,7 +102,7 @@ impl<T> PageObjectCapability<T> {
             assert!(u2.is_none());
             (None, Some(u1))
         } else {
-            (Some(Self::from_untyped_switching(u1)), u2)
+            (Some(Self::from_untyped_switching(u1, flags)), u2)
         }
     }
 }

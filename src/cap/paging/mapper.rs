@@ -2,20 +2,17 @@ use core::ptr::Unique;
 use core::marker::PhantomData;
 
 use common::*;
-use cap::PageFrameCapability;
 use cap::UntypedCapability;
-use super::VirtualAddress;
 use super::table::{PageTable, PageTableLevel4};
 use super::entry::EntryFlags;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Page {
+#[derive(Clone, Copy)]
+struct Page {
     number: usize,
 }
 
 impl Page {
-    pub fn new<U>(virt: &VirtualAddress<U>) -> Page {
-        let address = virt.addr;
+    pub fn new(address: usize) -> Page {
         assert!(address < 0x0000_8000_0000_0000 || address >= 0xffff_8000_0000_0000, "invalid address: 0x{:x}", address);
         Page { number: address / PAGE_SIZE }
     }
@@ -45,8 +42,8 @@ pub trait Mapper {
     fn p4(&self) -> &PageTable<PageTableLevel4>;
     fn p4_mut(&mut self) -> &mut PageTable<PageTableLevel4>;
 
-    fn translate<U>(&self, virt: &VirtualAddress<U>) -> Option<PhysicalAddress> {
-        let page = Page::new(virt);
+    fn translate<U>(&self, virt_addr: usize) -> Option<PhysicalAddress> {
+        let page = Page::new(virt_addr);
 
         self.p4().next_table(page.p4_index())
             .and_then(|p3| p3.next_table(page.p3_index()))
@@ -54,16 +51,15 @@ pub trait Mapper {
             .and_then(|p1| p1[page.p1_index()].physical_address())
     }
 
-    fn map_to<T, U>(&mut self,
-                    virt: &VirtualAddress<U>,
-                    block: &T,
-                    flags: EntryFlags,
-                    untyped: UntypedCapability)
-                 -> Option<UntypedCapability>
-        where T: PageFrameCapability {
+    fn map_to(&mut self,
+                 virt_addr: usize,
+                 frame_start_addr: usize,
+                 flags: EntryFlags,
+                 untyped: UntypedCapability)
+                 -> Option<UntypedCapability> {
         use super::entry::PRESENT;
 
-        let page = Page::new(virt);
+        let page = Page::new(virt_addr);
 
         let mut p4 = self.p4_mut();
         let (mut p3, untyped) = p4.next_table_create(page.p4_index(), untyped);
@@ -73,7 +69,7 @@ pub trait Mapper {
         let (mut p1, untyped) = p2.next_table_create(page.p2_index(), untyped);
 
         assert!(p1[page.p1_index()].is_unused());
-        p1[page.p1_index()].set_address(block.frame_start_addr(), flags | PRESENT);
+        p1[page.p1_index()].set_address(frame_start_addr, flags | PRESENT);
 
         untyped
     }

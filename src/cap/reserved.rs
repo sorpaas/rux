@@ -1,72 +1,84 @@
 use common::*;
 
-use super::{MemoryBlockPtr, MemoryBlockCapability};
-use super::{PageFramePtr, PageFrameCapability};
+use super::{MemoryBlockCapability};
+use super::{PageFrameCapability};
 use super::KernelReservedBlockCapability;
 use super::KernelReservedFrameCapability;
 use super::UntypedCapability;
 
+use super::paging::EntryFlags;
+use super::paging::{Frame};
 use super::utils;
 
-impl MemoryBlockPtr for KernelReservedFrameCapability {
-    fn get_block_start_addr(&self) -> PhysicalAddress {
+impl MemoryBlockCapability for KernelReservedFrameCapability {
+    fn block_start_addr(&self) -> PhysicalAddress {
         self.block_start_addr
     }
 
-    fn set_block_start_addr(&mut self, addr: PhysicalAddress) {
-        self.block_start_addr = addr
-    }
-
-    fn get_block_size(&self) -> usize {
+    fn block_size(&self) -> usize {
         self.block_size
-    }
-
-    fn set_block_size(&mut self, size: usize) {
-        self.block_size = size
     }
 }
 
-impl MemoryBlockCapability for KernelReservedFrameCapability { }
-
-impl MemoryBlockPtr for KernelReservedBlockCapability {
-    fn get_block_start_addr(&self) -> PhysicalAddress {
+impl MemoryBlockCapability for KernelReservedBlockCapability {
+    fn block_start_addr(&self) -> PhysicalAddress {
         self.block_start_addr
     }
 
-    fn set_block_start_addr(&mut self, addr: PhysicalAddress) {
-        self.block_start_addr = addr
-    }
-
-    fn get_block_size(&self) -> usize {
+    fn block_size(&self) -> usize {
         self.block_size
     }
+}
 
-    fn set_block_size(&mut self, size: usize) {
-        self.block_size = size
+struct KernelReservedFrameIterator {
+    addr: PhysicalAddress,
+    offset: usize,
+    count: usize,
+    flags: EntryFlags,
+    guarded: Option<PhysicalAddress>,
+}
+
+impl Iterator for KernelReservedFrameIterator {
+    type Item = Frame;
+    fn next(&mut self) -> Option<Frame> {
+        if self.count == 0 {
+            None
+        } else {
+            let addr = self.addr;
+            let offset = self.offset;
+
+            self.offset = self.offset + 1;
+            self.count = self.count - 1;
+            self.addr = self.addr + PAGE_SIZE;
+
+            match self.guarded {
+                Some(x) => {
+                    if x == addr {
+                        self.next()
+                    } else {
+                        Some(Frame::new(addr, offset, self.flags))
+                    }
+                },
+                None => {
+                    Some(Frame::new(addr, offset, self.flags))
+                }
+            }
+        }
     }
 }
 
-impl MemoryBlockCapability for KernelReservedBlockCapability { }
-
-impl PageFramePtr for KernelReservedFrameCapability {
-    fn get_frame_start_addr(&self) -> PhysicalAddress {
-        self.frame_start_addr
-    }
-
-    fn set_frame_start_addr(&mut self, addr: PhysicalAddress) {
-        self.frame_start_addr = addr;
-    }
-
-    fn get_frame_count(&self) -> usize {
-        self.frame_count
-    }
-
-    fn set_frame_count(&mut self, count: usize) {
-        self.frame_count = count
+impl PageFrameCapability for KernelReservedFrameCapability {
+    type FrameIterator = KernelReservedFrameIterator;
+    fn frames(&self) -> KernelReservedFrameIterator {
+        KernelReservedFrameIterator {
+            addr: self.frame_start_addr,
+            offset: 0,
+            count: self.frame_count,
+            flags: self.flags,
+            guarded: self.guarded_frame_start_addr,
+        }
     }
 }
-
-impl PageFrameCapability for KernelReservedFrameCapability { }
 
 impl Drop for KernelReservedFrameCapability {
     fn drop(&mut self) {
@@ -74,12 +86,28 @@ impl Drop for KernelReservedFrameCapability {
     }
 }
 
+impl Drop for KernelReservedBlockCapability {
+    fn drop(&mut self) {
+        unimplemented!();
+    }
+}
+
 impl KernelReservedFrameCapability {
-    pub fn from_untyped(cap: UntypedCapability, frame_start_addr: PhysicalAddress, object_size: usize)
+    pub fn from_untyped(cap: UntypedCapability, frame_start_addr: PhysicalAddress, object_size: usize,
+                        guarded_frame_start_addr: Option<PhysicalAddress>, flags: EntryFlags)
                         -> (Option<KernelReservedFrameCapability>, Option<UntypedCapability>) {
         assert!(frame_start_addr % PAGE_SIZE == 0);
         let frame_count = utils::necessary_page_count(object_size);
         let frame_size = frame_count * PAGE_SIZE;
+
+        match guarded_frame_start_addr {
+            Some(x) => {
+                assert!(x % PAGE_SIZE == 0);
+                assert!(x >= frame_start_addr);
+                assert!(x <= frame_start_addr + (frame_count - 1) * PAGE_SIZE);
+            },
+            None => { }
+        }
 
         if frame_start_addr < cap.block_start_addr() || frame_start_addr + frame_size - 1 > cap.block_end_addr() {
             (None, Some(cap))
@@ -94,7 +122,10 @@ impl KernelReservedFrameCapability {
                 block_start_addr: block_start_addr,
                 block_size: block_size,
                 frame_start_addr: frame_start_addr,
-                frame_count: frame_count }), ou2)
+                frame_count: frame_count,
+                guarded_frame_start_addr: guarded_frame_start_addr,
+                flags: flags,
+            }), ou2)
         }
     }
 }

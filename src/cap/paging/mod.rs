@@ -1,6 +1,6 @@
 mod table;
-mod entry;
 mod mapper;
+pub mod entry;
 
 use common::*;
 use core::marker::PhantomData;
@@ -8,6 +8,8 @@ use core::marker::PhantomData;
 use super::PageFrameCapability;
 use super::UntypedCapability;
 use self::mapper::{Mapper, ActiveMapper};
+
+pub use self::entry::EntryFlags;
 
 pub trait PageTableStatus { }
 pub enum ActivePageTableStatus { }
@@ -27,8 +29,8 @@ pub type ActivePageTableCapability = PageTableCapability<ActivePageTableStatus>;
 pub type InactivePageTableCapability = PageTableCapability<InactivePageTableStatus>;
 
 impl<L> PageTableCapability<L> where L: PageTableStatus {
-    pub fn map<T: PageFrameCapability, U>(&self, block: &T, dest_addr: usize, untyped: UntypedCapability)
-                     -> (VirtualAddress<U>, Option<UntypedCapability>) {
+    pub fn map<T: PageFrameCapability, U>(&self, frame_cap: &T, dest_addr: usize, untyped: UntypedCapability)
+                                          -> (VirtualAddress<U>, Option<UntypedCapability>) {
         use self::entry::PRESENT;
 
         let mut mapper = unsafe { ActiveMapper::new() };
@@ -39,17 +41,28 @@ impl<L> PageTableCapability<L> where L: PageTableStatus {
             _marker: PhantomData::<U>,
         };
 
-        let untyped_r = unsafe {
+        let untyped_q = unsafe {
             mapper.with(self.table_start_addr, |mapper| {
-                mapper.map_to(&virt, block, PRESENT, untyped)
+                let mut untyped_r = Some(untyped);
+                for frame in frame_cap.frames() {
+                    untyped_r = mapper.map_to(dest_addr + frame.offset * PAGE_SIZE, frame.addr, frame.flags,
+                                              untyped_r.expect("Out of memory."))
+                }
+                untyped_r
             })
         };
 
-        (virt, untyped_r)
+        (virt, untyped_q)
     }
 
     pub fn unmap<U>(&self, addr: VirtualAddress<U>)
                     -> Option<UntypedCapability> {
+        unimplemented!();
+    }
+}
+
+impl<L> Drop for PageTableCapability<L> where L: PageTableStatus {
+    fn drop(&mut self) {
         unimplemented!();
     }
 }
@@ -88,6 +101,22 @@ impl ActivePageTableCapability {
     pub fn borrow_mut<'r, U>(&'r self, virt: &mut VirtualAddress<U>) -> &'r U {
         assert!(virt.table_start_addr == self.table_start_addr);
         unsafe { &mut *(virt.addr as *mut _) }
+    }
+}
+
+pub struct Frame {
+    addr: PhysicalAddress,
+    offset: usize,
+    flags: EntryFlags,
+}
+
+impl Frame {
+    pub fn new(addr: PhysicalAddress, offset: usize, flags: EntryFlags) -> Frame {
+        Frame {
+            addr: addr,
+            offset: offset,
+            flags: flags,
+        }
     }
 }
 

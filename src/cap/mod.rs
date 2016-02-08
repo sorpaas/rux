@@ -4,31 +4,25 @@ use core::marker::PhantomData;
 
 mod frame;
 mod untyped;
-mod paging;
-mod utils;
+pub mod paging;
+pub mod utils;
 mod pool;
 mod reserved;
+
+use self::paging::{Frame};
+use self::paging::{EntryFlags};
 
 //// A trait that represents all the capabilities.
 pub trait Capability { }
 
-/// Internal use that represents a memory block pointer, which is used to
-/// implement a memory block capability.
-trait MemoryBlockPtr {
-    fn get_block_start_addr(&self) -> PhysicalAddress;
-    fn set_block_start_addr(&mut self, PhysicalAddress);
-    fn get_block_size(&self) -> usize;
-    fn set_block_size(&mut self, usize);
-}
-
 /// A memory block capability represents a memory block.
-pub trait MemoryBlockCapability : MemoryBlockPtr {
+pub trait MemoryBlockCapability {
     fn block_start_addr(&self) -> PhysicalAddress {
-        self.get_block_start_addr()
+        self.block_end_addr() - self.block_size() + 1
     }
 
     fn block_size(&self) -> usize {
-        self.get_block_size()
+        self.block_end_addr() - self.block_start_addr() + 1
     }
 
     fn block_end_addr(&self) -> PhysicalAddress {
@@ -36,29 +30,9 @@ pub trait MemoryBlockCapability : MemoryBlockPtr {
     }
 }
 
-trait PageFramePtr {
-    fn get_frame_start_addr(&self) -> PhysicalAddress;
-    fn set_frame_start_addr(&mut self, PhysicalAddress);
-    fn get_frame_count(&self) -> usize;
-    fn set_frame_count(&mut self, usize);
-}
-
-pub trait PageFrameCapability : PageFramePtr {
-    fn frame_start_addr(&self) -> PhysicalAddress {
-        self.get_frame_start_addr()
-    }
-
-    fn frame_count(&self) -> usize {
-        self.get_frame_count()
-    }
-
-    fn frame_size(&self) -> usize {
-        self.get_frame_count() * PAGE_SIZE
-    }
-
-    fn frame_end_addr(&self) -> PhysicalAddress {
-        self.frame_start_addr() + self.frame_size() - 1
-    }
+pub trait PageFrameCapability {
+    type FrameIterator: Iterator<Item=Frame>;
+    fn frames(&self) -> Self::FrameIterator;
 }
 
 pub struct CapabilityPool([Option<CapabilityUnion>; CAPABILITY_POOL_COUNT]);
@@ -98,6 +72,7 @@ pub struct PageObjectCapability<T> {
     block_size: usize,
     frame_start_addr: PhysicalAddress,
     frame_count: usize,
+    flags: EntryFlags,
     _marker: PhantomData<T>,
 }
 
@@ -121,4 +96,6 @@ pub struct KernelReservedFrameCapability {
     block_size: usize,
     frame_start_addr: PhysicalAddress,
     frame_count: usize,
+    guarded_frame_start_addr: Option<PhysicalAddress>,
+    flags: EntryFlags,
 }

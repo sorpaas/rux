@@ -7,6 +7,7 @@
 #![feature(asm)]
 #![feature(step_by)]
 #![feature(alloc)]
+#![feature(associated_type_defaults)]
 #![no_std]
 
 #[macro_use]
@@ -19,7 +20,6 @@ extern crate alloc;
 #[macro_use]
 mod vga_buffer;
 mod multiboot2;
-mod memory;
 mod common;
 mod cap;
 
@@ -29,9 +29,10 @@ use cap::{CapabilityPool, CapabilityUnion, CapabilityMove};
 use cap::UntypedCapability;
 use cap::KernelReservedBlockCapability;
 use cap::KernelReservedFrameCapability;
-use memory::{AreaFrameAllocator, FrameAllocator};
+use cap::paging::EntryFlags;
 
 use core::mem;
+use x86::{controlregs, tlb};
 
 #[no_mangle]
 pub extern fn rust_main(multiboot_information_address: usize) {
@@ -53,7 +54,6 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         cap_pool.put(unsafe { UntypedCapability::new(area.base_addr as usize, area.length as usize) });
     }
 
-
     let kernel_start = elf_sections_tag.sections().map(|s| s.addr).min().unwrap() as usize;
     let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size - 1).max().unwrap() as usize;
 
@@ -70,6 +70,7 @@ pub extern fn rust_main(multiboot_information_address: usize) {
             x.block_end_addr() >= multiboot_end
     }).expect("Illegal memory allocation.");
 
+    let cr3 = unsafe { controlregs::cr3() } as usize;
     println!("Kernel sections:");
     for section in elf_sections_tag.sections() {
         use multiboot2::ELF_SECTION_ALLOCATED;
@@ -83,8 +84,11 @@ pub extern fn rust_main(multiboot_information_address: usize) {
             target_untyped = untyped.expect("Out of memory.");
             cap_pool.put(reserved.expect("Reserved should be allocated."));
         } else {
-
-            let (reserved, untyped) = KernelReservedFrameCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize);
+            let flags = EntryFlags::from_elf_section_flags(&section);
+            let guarded_frame = if cr3 >= section.addr as usize &&
+                cr3 < section.addr as usize + (cap::utils::necessary_page_count(section.size as usize) - 1) * PAGE_SIZE
+                { Some(cr3) } else { None };
+            let (reserved, untyped) = KernelReservedFrameCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize, guarded_frame, flags);
             target_untyped = untyped.expect("Out of memory.");
 
             // println!("New untyped start address: 0x{:x}.", target_untyped.block_start_addr());

@@ -55,6 +55,7 @@ pub trait CapabilityMove<T: Capability> {
     fn put(&mut self, T);
     fn take_one(&mut self) -> Option<T>;
     fn select<F>(&mut self, f: F) -> Option<T> where F: Fn(&T) -> bool;
+    fn collect<F>(&mut self, mut f: F) where F: FnMut(T) -> Option<T>;
 }
 
 /// Untyped memory and page table are memory management tricks, those are not

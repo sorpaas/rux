@@ -80,6 +80,23 @@ macro_rules! impl_move(
                 }
                 None
             }
+
+            fn collect<F>(&mut self, mut f: F) where F: FnMut($cap_type) -> Option<$cap_type> {
+                for i in 0..CAPABILITY_POOL_COUNT {
+                    match self.0[i] {
+                        Some($union_type(..)) => {
+                            let union = unsafe { mem::replace(&mut self.0[i], None) };
+                            match union.expect("") {
+                                $union_type(x) => {
+                                    unsafe { mem::replace(&mut self.0[i], f(x).and_then(|x| Some($union_type(x)))) };
+                                }
+                                _ => { panic!() }
+                            }
+                        }
+                        _ => { }
+                    }
+                }
+            }
         }
     )
 );

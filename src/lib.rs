@@ -29,13 +29,20 @@ use cap::{CapabilityPool, CapabilityUnion, CapabilityMove};
 use cap::UntypedCapability;
 use cap::KernelReservedBlockCapability;
 use cap::KernelReservedFrameCapability;
+use cap::paging;
 use cap::paging::EntryFlags;
+use cap::paging::VirtualAddress;
+use cap::paging::{InactivePageTableCapability, ActivePageTableCapability};
 
 use core::mem;
 use x86::{controlregs, tlb};
 
+struct Target(UntypedCapability);
+
 #[no_mangle]
 pub extern fn rust_main(multiboot_information_address: usize) {
+    use cap::paging::entry::WRITABLE;
+
     enable_nxe_bit();
     enable_write_protect_bit();
 
@@ -63,14 +70,23 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     println!("Kernel start: 0x{:x}, end: 0x{:x}", kernel_start, kernel_end);
     println!("Multiboot start: 0x{:x}, end: 0x{:x}", multiboot_start, multiboot_end);
 
-    let mut target_untyped: UntypedCapability = cap_pool.select(|x: &UntypedCapability| {
+    let target_untyped: UntypedCapability = cap_pool.select(|x: &UntypedCapability| {
         x.block_start_addr() <= kernel_start &&
             x.block_end_addr() >= kernel_end &&
             x.block_start_addr() <= multiboot_start &&
             x.block_end_addr() >= multiboot_end
     }).expect("Illegal memory allocation.");
+    let target_block_start_addr = target_untyped.block_start_addr();
+    let (otkernel, otpage) = UntypedCapability::from_untyped(target_untyped, multiboot_end - target_block_start_addr + 1);
+
+    let mut kernel_untyped = otkernel;
+    let mut page_untyped = otpage.expect("Out of memory");
 
     let cr3 = unsafe { controlregs::cr3() } as usize;
+    let (page_table, ou) = InactivePageTableCapability::from_untyped(page_untyped);
+    let page_table = page_table.expect("Initialize page table failed.");
+    page_untyped = ou.expect("Out of memory");
+
     println!("Kernel sections:");
     for section in elf_sections_tag.sections() {
         use multiboot2::ELF_SECTION_ALLOCATED;
@@ -80,21 +96,24 @@ pub extern fn rust_main(multiboot_information_address: usize) {
 
         if !section.flags().contains(ELF_SECTION_ALLOCATED) {
             // section is not loaded to memory
-            let (reserved, untyped) = KernelReservedBlockCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize);
-            target_untyped = untyped.expect("Out of memory.");
+            let (reserved, ou) = KernelReservedBlockCapability::from_untyped(kernel_untyped, section.addr as usize, section.size as usize);
+            kernel_untyped = ou.expect("Out of memory.");
             cap_pool.put(reserved.expect("Reserved should be allocated."));
         } else {
             let flags = EntryFlags::from_elf_section_flags(&section);
             let guarded_frame = if cr3 >= section.addr as usize &&
                 cr3 < section.addr as usize + (cap::utils::necessary_page_count(section.size as usize) - 1) * PAGE_SIZE
                 { Some(cr3) } else { None };
-            let (reserved, untyped) = KernelReservedFrameCapability::from_untyped(target_untyped, section.addr as usize, section.size as usize, guarded_frame, flags);
-            target_untyped = untyped.expect("Out of memory.");
+            let (reserved, ou) = KernelReservedFrameCapability::from_untyped(kernel_untyped, section.addr as usize, section.size as usize, guarded_frame, flags);
+            let reserved = reserved.expect("Reserved should be allocated.");
+            kernel_untyped = ou.expect("Out of memory.");
+
+            let (virt, ou): (VirtualAddress<Nothing>, _) = page_table.identity_map(&reserved, page_untyped);
+            page_untyped = ou.expect("Out of memory.");
 
             // println!("New untyped start address: 0x{:x}.", target_untyped.block_start_addr());
             // println!("New untyped size: 0x{:x}.", target_untyped.block_size());
 
-            let reserved = reserved.expect("Reserved should be allocated.");
 
             // println!("Reserved frame start address: 0x{:x}.", reserved.frame_start_addr());
             // println!("Reserved frame size: 0x{:x}.", reserved.frame_size());

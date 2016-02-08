@@ -180,7 +180,7 @@ p3_table:                       ; p3 and p2 will be part of the stack after page
 p2_table:
   resb 4096
 stack_bottom:
-  resb 4096 * 2
+  resb 4096 * 4
 stack_top:
 
 section .rodata

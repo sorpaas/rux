@@ -1,9 +1,9 @@
 use common::*;
 use core::mem;
 
-use super::Capability;
-use super::{CapabilityPool, CapabilityUnion, CapabilityMove};
-use super::{UntypedCapability, KernelReservedBlockCapability, KernelReservedFrameCapability};
+use super::{MemoryBlock, UntypedCapability,
+            FrameCapability, GuardedFrameCapability,
+            Capability};
 
 macro_rules! init_array(
     ($ty:ty, $len:expr, $val:expr) => (
@@ -16,6 +16,27 @@ macro_rules! init_array(
         }
     )
 );
+
+pub struct CapabilityPool([Option<CapabilityUnion>; CAPABILITY_POOL_COUNT]);
+
+pub enum CapabilityUnion {
+    /// Memory resources capabilities, all has its start and end address, and a
+    /// next pointer to the next region (if available).
+    ///
+    /// A memory resources capability is essentially a pointer to a memory
+    /// location.
+
+    Untyped(UntypedCapability),
+    Frame(FrameCapability),
+    GuardedFrame(GuardedFrameCapability),
+}
+
+pub trait CapabilityMove<T: Capability> {
+    fn put(&mut self, T);
+    fn take_one(&mut self) -> Option<T>;
+    fn select<F>(&mut self, f: F) -> Option<T> where F: Fn(&T) -> bool;
+    fn collect<F>(&mut self, mut f: F) where F: FnMut(T) -> Option<T>;
+}
 
 impl CapabilityPool {
     pub fn new() -> CapabilityPool {
@@ -102,5 +123,5 @@ macro_rules! impl_move(
 );
 
 impl_move!(UntypedCapability, CapabilityUnion::Untyped);
-impl_move!(KernelReservedFrameCapability, CapabilityUnion::KernelReservedFrame);
-impl_move!(KernelReservedBlockCapability, CapabilityUnion::KernelReservedBlock);
+impl_move!(FrameCapability, CapabilityUnion::Frame);
+impl_move!(GuardedFrameCapability, CapabilityUnion::GuardedFrame);

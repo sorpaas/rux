@@ -1,7 +1,7 @@
 [package]
 name = "rux"
 version = "0.1.0"
-authors = ["Wei Tang <hi@beyond.codes>"]
+authors = ["Wei Tang <hi@that.world>"]
 
 [lib]
 crate-type = ["staticlib"]

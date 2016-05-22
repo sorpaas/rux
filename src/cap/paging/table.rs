@@ -3,8 +3,7 @@ use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 
 use super::entry::*;
-use super::super::{MemoryBlockCapability};
-use super::super::UntypedCapability;
+use super::super::{MemoryBlock, UntypedCapability};
 use super::super::utils;
 
 pub trait PageTableLevel { }
@@ -85,22 +84,20 @@ impl<L> PageTable<L> where L: PageTableHierarchicalLevel {
 
     pub fn next_table_create(&mut self,
                              index: usize,
-                             untyped: UntypedCapability) -> (&mut PageTable<L::NextLevel>, Option<UntypedCapability>) {
+                             untyped: UntypedCapability)
+                             -> (&mut PageTable<L::NextLevel>, Option<UntypedCapability>) {
         if self.next_table(index).is_none() {
             assert!(!self[index].flags().contains(HUGE_PAGE),
                     "mapping code does not support huge pages");
 
-            let page_start_addr = utils::necessary_page_start_addr(untyped.block_start_addr());
-            let block_size = utils::necessary_block_size(untyped.block_start_addr(), 1);
-            let (mut u1, u2) = UntypedCapability::from_untyped(untyped, block_size);
+            let (mut block, remained) = UntypedCapability::retype(untyped, PAGE_SIZE, PAGE_SIZE);
 
-            assert!(u1.block_size() == block_size, "No frames available.");
-            self[index].set_address(page_start_addr, PRESENT | WRITABLE);
+            self[index].set_address(block.start_addr(), PRESENT | WRITABLE);
             self.next_table_mut(index).unwrap().zero();
 
-            u1.block_size = 0;
+            unsafe { block.mark_useless() }
 
-            return (self.next_table_mut(index).unwrap(), u2);
+            return (self.next_table_mut(index).unwrap(), remained);
         } else {
             return (self.next_table_mut(index).unwrap(), Some(untyped));
         }

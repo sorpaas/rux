@@ -1,79 +1,63 @@
 use common::*;
-use core::marker::PhantomData;
-use core::mem::{align_of, replace, uninitialized, size_of};
 
-use super::{MemoryBlockCapability};
-use super::{PageFrameCapability};
-use super::{PageObjectCapability};
-use super::{UntypedCapability};
-use super::utils;
-use super::utils::ContinuousFrameIterator;
-use super::paging::EntryFlags;
-use super::paging::{Frame};
+use super::{MemoryBlock, UntypedCapability,
+            Capability};
 
-impl<T> MemoryBlockCapability for PageObjectCapability<T> {
-    fn block_start_addr(&self) -> PhysicalAddress {
-        self.block_start_addr
+pub struct FrameCapability {
+    block: MemoryBlock,
+    count: usize,
+    flags: EntryFlags,
+}
+
+impl Capability for FrameCapability { }
+
+impl FrameCapability {
+    pub fn from_untyped(cap: UntypedCapability, count: usize, flags: EntryFlags)
+                        -> (FrameCapability, Option<UntypedCapability>) {
+        let (block, remained) = UntypedCapability::retype(cap, PAGE_SIZE, count * PAGE_SIZE);
+        (FrameCapability { block: block, count: count, flags: flags }, remained)
     }
 
-    fn block_size(&self) -> usize {
-        self.block_size
+    pub fn from_untyped_fixed(cap: UntypedCapability, start_addr: PhysicalAddress, count: usize, flags: EntryFlags)
+                              -> (FrameCapability, Option<UntypedCapability>) {
+        assert!(start_addr % PAGE_SIZE == 0);
+        let (block, remained) = UntypedCapability::retype_fixed(cap, start_addr, count * PAGE_SIZE);
+        (FrameCapability { block: block, count: count, flags: flags }, remained)
+    }
+
+    pub fn block(&self) -> &MemoryBlock {
+        &self.block
+    }
+
+    pub fn count(&self) -> usize {
+        self.count
+    }
+
+    pub fn flags(&self) -> EntryFlags {
+        self.flags
     }
 }
 
-impl<T> PageFrameCapability for PageObjectCapability<T> {
-    type FrameIterator = ContinuousFrameIterator;
-    fn frames(&self) -> ContinuousFrameIterator {
-        ContinuousFrameIterator::new(self.frame_start_addr, self.frame_count, self.flags)
-    }
+pub struct GuardedFrameCapability {
+    block: MemoryBlock,
 }
 
-impl<T> Drop for PageObjectCapability<T> {
-    fn drop(&mut self) {
-        unimplemented!();
-    }
-}
+impl Capability for GuardedFrameCapability { }
 
-impl<T> PageObjectCapability<T> {
-    pub fn object_size() -> usize {
-        size_of::<T>()
+impl GuardedFrameCapability {
+    pub fn from_untyped(cap: UntypedCapability, size: usize)
+                        -> (GuardedFrameCapability, Option<UntypedCapability>) {
+        let (block, remained) = UntypedCapability::retype(cap, 1, size);
+        (GuardedFrameCapability { block: block }, remained)
     }
 
-    pub fn from_untyped_switching(untyped: UntypedCapability, flags: EntryFlags) -> PageObjectCapability<T> {
-        let page_start_addr = utils::necessary_page_start_addr(untyped.block_start_addr());
-        let page_count = utils::necessary_page_count(Self::object_size());
-        let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_count);
-        let page_size = page_count * PAGE_SIZE;
-
-        assert!(untyped.block_size() == block_size);
-
-        let pool_cap = PageObjectCapability::<T> {
-            block_start_addr: untyped.block_start_addr(),
-            block_size: block_size,
-            frame_start_addr: page_start_addr,
-            frame_count: page_count,
-            flags: flags,
-            _marker: PhantomData::<T>
-        };
-
-        let mut untyped = untyped;
-        untyped.block_size = 0;
-
-        pool_cap
+    pub fn from_untyped_fixed(cap: UntypedCapability, start_addr: PhysicalAddress, size: usize)
+                              -> (GuardedFrameCapability, Option<UntypedCapability>) {
+        let (block, remained) = UntypedCapability::retype(cap, start_addr, size);
+        (GuardedFrameCapability { block: block }, remained)
     }
 
-    pub fn from_untyped(untyped: UntypedCapability, flags: EntryFlags)
-                        -> (Option<PageObjectCapability<T>>, Option<UntypedCapability>) {
-        let page_count = utils::necessary_page_count(Self::object_size());
-        let block_size = utils::necessary_block_size(untyped.block_start_addr(), page_count);
-
-        let (u1, u2) = UntypedCapability::from_untyped(untyped, block_size);
-
-        if u1.block_size() < block_size {
-            assert!(u2.is_none());
-            (None, Some(u1))
-        } else {
-            (Some(Self::from_untyped_switching(u1, flags)), u2)
-        }
+    pub fn block(&self) -> &MemoryBlock {
+        &self.block
     }
 }

@@ -1,77 +1,117 @@
 use common::*;
 use core::ops::Drop;
 
-use super::{MemoryBlockCapability};
-use super::UntypedCapability;
+use super::{Capability};
+use super::utils;
 
-impl MemoryBlockCapability for UntypedCapability {
-    fn block_start_addr(&self) -> PhysicalAddress {
-        self.block_start_addr
+pub struct MemoryBlock {
+    physical_start_addr: PhysicalAddress,
+    start_addr: PhysicalAddress,
+    size: usize,
+    useless: bool,
+}
+
+impl MemoryBlock {
+    pub fn start_addr(&self) -> PhysicalAddress {
+        self.start_addr
     }
 
-    fn block_size(&self) -> usize {
-        self.block_size
+    pub fn physical_start_addr(&self) -> PhysicalAddress {
+        self.physical_start_addr
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn physical_size(&self) -> usize {
+        self.size + (self.start_addr - self.physical_start_addr)
+    }
+
+    pub fn end_addr(&self) -> PhysicalAddress {
+        self.start_addr + self.size - 1
+    }
+
+    pub unsafe fn mark_useless(&mut self) {
+        self.useless = true;
+    }
+
+    const fn new(physical_start_addr: PhysicalAddress, start_addr: PhysicalAddress, size: usize) -> MemoryBlock {
+        MemoryBlock { start_addr: start_addr, physical_start_addr: physical_start_addr, size: size,
+                      useless: false }
+    }
+
+    pub const unsafe fn bootstrap(physical_start_addr: PhysicalAddress, size: usize) -> MemoryBlock {
+        MemoryBlock::new(physical_start_addr, physical_start_addr, size)
+    }
+}
+
+impl Drop for MemoryBlock {
+    fn drop(&mut self) {
+        if self.useless { return; }
+    }
+}
+
+pub struct UntypedCapability {
+    block: MemoryBlock,
+    useless: bool
+}
+
+impl Capability for UntypedCapability { }
+
+impl UntypedCapability {
+    pub fn block(&self) -> &MemoryBlock {
+        &self.block
+    }
+
+    pub const fn from_block(block: MemoryBlock) -> UntypedCapability {
+        UntypedCapability { block: block, useless: false }
+    }
+
+    fn mark_useless(&mut self) {
+        self.useless = true;
+    }
+
+    pub fn retype(mut cap: UntypedCapability, alignment: usize, size: usize)
+                  -> (MemoryBlock, Option<UntypedCapability>) {
+        let target_physical_start_addr = cap.block().start_addr();
+        UntypedCapability::retype_fixed(cap, utils::align(target_physical_start_addr, alignment), size)
+    }
+
+    pub fn retype_fixed(mut cap: UntypedCapability, start_addr: usize, size: usize)
+                        -> (MemoryBlock, Option<UntypedCapability>) {
+        let target_physical_start_addr = cap.block().start_addr();
+        let target_start_addr = start_addr;
+        let target_size = size;
+        let target = MemoryBlock::new(target_physical_start_addr, target_start_addr, target_size);
+        assert!(target.end_addr() <= cap.block().end_addr());
+
+        let remained = if target.end_addr() < cap.block().end_addr() {
+            let start_addr = target.end_addr() + 1;
+            Some(UntypedCapability::from_block(
+                MemoryBlock::new(start_addr, start_addr, cap.block().end_addr() - start_addr + 1)))
+        } else { None };
+
+        cap.mark_useless();
+
+        (target, remained)
+    }
+
+    pub fn merge(mut a: UntypedCapability, mut b: UntypedCapability) -> UntypedCapability {
+        assert!(a.block().end_addr() + 1 == b.block().physical_start_addr());
+        a.mark_useless();
+        b.mark_useless();
+        UntypedCapability::from_block(
+            MemoryBlock::new(a.block().physical_start_addr(), a.block().start_addr(),
+                             a.block().size() + b.block().physical_size()))
     }
 }
 
 impl Drop for UntypedCapability {
     fn drop(&mut self) {
-        if self.block_size() == 0 { return }
+        unsafe { self.block.mark_useless(); }
+        if self.useless { return; }
 
         unimplemented!();
-    }
-}
-
-impl UntypedCapability {
-    pub unsafe fn new(block_start_addr: usize, block_size: usize) -> UntypedCapability {
-        UntypedCapability { block_start_addr: block_start_addr, block_size: block_size }
-    }
-
-    pub fn from_untyped_three(cap: UntypedCapability, block_start_addr: usize, block_size: usize)
-                              -> (UntypedCapability, Option<UntypedCapability>, Option<UntypedCapability>) {
-        assert!(block_start_addr >= cap.block_start_addr(),
-                "Requested block start address must be after the original capability.");
-        assert!(block_start_addr + block_size <= cap.block_end_addr(),
-                "Requested block end address must be before the original capability.");
-        assert!(block_size > 0,
-                "Block size must be greater than 0.");
-
-        let u1_start_addr = cap.block_start_addr();
-        let u1_size = block_start_addr - cap.block_start_addr();
-        let u2_start_addr = block_start_addr;
-        let u2_size = block_size;
-        let u3_start_addr = u2_start_addr + u2_size;
-        let u3_size = cap.block_end_addr() - u3_start_addr + 1;
-
-        let mut cap = cap;
-        cap.block_start_addr = u2_start_addr;
-        cap.block_size = u2_size;
-
-        if u1_size > 0 && u3_size > 0 {
-            (cap,
-             Some(UntypedCapability { block_start_addr: u1_start_addr, block_size: u1_size }),
-             Some(UntypedCapability { block_start_addr: u3_start_addr, block_size: u3_size }))
-        } else if u1_size > 0 {
-            (cap,
-             Some(UntypedCapability { block_start_addr: u1_start_addr, block_size: u1_size }),
-             None)
-        } else if u3_size > 0 {
-            (cap,
-             Some(UntypedCapability { block_start_addr: u3_start_addr, block_size: u3_size}),
-             None)
-        } else {
-            (cap,
-             None,
-             None)
-        }
-    }
-
-    pub fn from_untyped(cap: UntypedCapability, block_size: usize)
-                        -> (UntypedCapability, Option<UntypedCapability>) {
-        let block_start_addr = cap.block_start_addr();
-        let tuple = UntypedCapability::from_untyped_three(cap, block_start_addr, block_size);
-        assert!(tuple.2.is_none(), "According to logic, the third item of the tuple should be none.");
-
-        (tuple.0, tuple.1)
     }
 }

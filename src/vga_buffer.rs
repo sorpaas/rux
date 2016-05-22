@@ -1,8 +1,7 @@
+use common::*;
 use core::ptr::Unique;
 use core::fmt::Write;
 use spin::Mutex;
-
-use cap::VGABufferCapability;
 
 #[cfg(any(target_arch = "x86_64"))]
 unsafe fn outportb(port: u16, val: u8)
@@ -79,14 +78,9 @@ pub struct Writer {
     column_position: usize,
     color_code: ColorCode,
     buffer: Unique<Buffer>,
-    cap: VGABufferCapability,
 }
 
 impl Writer {
-    pub fn cap(&self) -> &VGABufferCapability {
-        &self.cap
-    }
-
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
             b'\n' => self.new_line(),
@@ -163,7 +157,6 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     row_position: 0,
     color_code: ColorCode::new(Color::LightGreen, Color::Black),
     buffer: unsafe { Unique::new(0xb8000 as *mut _) },
-    cap: unsafe { VGABufferCapability },
 });
 
 pub fn clear_screen() {

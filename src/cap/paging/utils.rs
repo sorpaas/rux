@@ -23,7 +23,7 @@ pub unsafe fn unmap_in_active(dest_addr: usize) {
     let mut p2 = p3.next_table_mut_in_active(page.p3_index()).unwrap();
     let mut p1 = p2.next_table_mut_in_active(page.p2_index()).unwrap();
 
-    assert!(p1[page.p1_index()].is_unused());
+    assert!(!p1[page.p1_index()].is_unused());
     p1[page.p1_index()].set_unused();
 }
 

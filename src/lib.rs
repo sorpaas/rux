@@ -138,11 +138,15 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         kernel_page_table.switch_on();
     }
 
-    cap_pool.put(page_untyped);
-    cap_pool.put(kernel_untyped);
-
     println!("Available slots in kernel's capability pool: {}.", cap_pool.available_count());
     println!("Yeah, the kernel did not crash!");
+
+    let test_page_table = PageTableCapability::from_untyped(&mut page_untyped, 0x7e0000000, 512);
+
+    println!("Test page table created successfullly.");
+
+    cap_pool.put(page_untyped);
+    cap_pool.put(kernel_untyped);
 
     loop{}
 }

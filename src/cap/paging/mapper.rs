@@ -70,11 +70,11 @@ impl Mapper {
             f(mapped_addr, self);
 
             for i in (0..frame_count).rev() {
+                self.mapped_count -= 1;
+
                 unsafe {
                     utils::unmap_in_active(self.mappable_virtual_start_addr + self.mapped_count * PAGE_SIZE);
                 }
-
-                self.mapped_count -= 1;
             }
         }
 

@@ -29,7 +29,8 @@ use common::*;
 use cap::{MemoryBlock, UntypedCapability,
           FrameCapability, GuardedFrameCapability,
           CapabilityPool, CapabilityMove,
-          PageTableCapability};
+          // PageTableCapability
+};
 
 use core::mem;
 use x86::{controlregs, tlb};
@@ -41,8 +42,6 @@ pub extern fn rust_main(multiboot_information_address: usize) {
 
     vga_buffer::clear_screen();
 
-    println!("Hello, world!\n");
-
     let mut cap_pool = CapabilityPool::new();
 
     let boot_info = unsafe { multiboot2::load(multiboot_information_address) };
@@ -52,9 +51,7 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     println!("Memory areas:");
     for area in memory_map_tag.memory_areas() {
         println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
-
-        let area_block = unsafe { MemoryBlock::bootstrap(area.base_addr as PhysicalAddress, area.length as usize) };
-        cap_pool.put(UntypedCapability::from_block(area_block));
+        cap_pool.put(unsafe { UntypedCapability::bootstrap(area.base_addr as PhysicalAddress, area.length as usize) });
     }
 
     let kernel_start = elf_sections_tag.sections().map(|s| s.addr).min().unwrap() as usize;
@@ -66,63 +63,66 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     println!("Kernel start: 0x{:x}, end: 0x{:x}", kernel_start, kernel_end);
     println!("Multiboot start: 0x{:x}, end: 0x{:x}", multiboot_start, multiboot_end);
 
-    let target_untyped: UntypedCapability = cap_pool.select(|x: &UntypedCapability| {
+    let mut page_untyped = cap_pool.select(|x: &UntypedCapability| {
         x.block().start_addr() <= kernel_start &&
             x.block().end_addr() >= kernel_end &&
             x.block().start_addr() <= multiboot_start &&
             x.block().end_addr() >= multiboot_end
-    }).expect("Illegal memory allocation.");
-    let target_block_start_addr = target_untyped.block().start_addr();
-    let (otkernel_block, otpage) =
-        UntypedCapability::retype(target_untyped, 1, multiboot_end - target_block_start_addr + 1);
+    }).expect("Unexcepted multiboot memory allocation.");
 
-    let mut kernel_untyped = UntypedCapability::from_block(otkernel_block);
-    let mut page_untyped = otpage.expect("Out of memory");
+
+    let mut kernel_untyped = {
+        let target_block_start_addr = page_untyped.block().physical_start_addr();
+        UntypedCapability::from_untyped(&mut page_untyped, multiboot_end - target_block_start_addr + 1)
+    };
 
     println!("Page untyped start address: 0x{:x}.", page_untyped.block().start_addr());
 
-    let (page_table, ou) = unsafe { PageTableCapability::bootstrap(page_untyped) };
-    println!("Inactive page table capability address: 0x{:x}.", page_table.p4_block().start_addr());
-    page_untyped = ou.expect("Out of memory.");
+    cap_pool.put(page_untyped);
+    cap_pool.put(kernel_untyped);
 
-    println!("Kernel sections:");
-    for section in elf_sections_tag.sections() {
-        use multiboot2::ELF_SECTION_ALLOCATED;
+    // let (page_table, ou) = unsafe { PageTableCapability::bootstrap(page_untyped) };
+    // println!("Inactive page table capability address: 0x{:x}.", page_table.p4_block().start_addr());
+    // page_untyped = ou.expect("Out of memory.");
 
-        println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
-                 section.addr, section.size, section.flags);
+    // println!("Kernel sections:");
+    // for section in elf_sections_tag.sections() {
+    //     use multiboot2::ELF_SECTION_ALLOCATED;
 
-        if !section.flags().contains(ELF_SECTION_ALLOCATED) {
-            // section is not loaded to memory
-            let untyped_start_addr = kernel_untyped.block().start_addr();
-            assert!(untyped_start_addr <= section.addr as usize);
-            let (reserved, ou) =
-                GuardedFrameCapability::from_untyped(kernel_untyped,
-                                                     (section.size + section.addr) as usize -
-                                                     untyped_start_addr);
-            kernel_untyped = ou.expect("Out of memory.");
-            cap_pool.put(reserved);
-        } else {
-            let section_addr = section.addr as usize;
-            let section_size = section.size as usize;
+    //     println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
+    //              section.addr, section.size, section.flags);
 
-            let flags = EntryFlags::from_elf_section_flags(&section);
-            let cr3 = unsafe { controlregs::cr3() as usize };
+    //     if !section.flags().contains(ELF_SECTION_ALLOCATED) {
+    //         // section is not loaded to memory
+    //         let untyped_start_addr = kernel_untyped.block().start_addr();
+    //         assert!(untyped_start_addr <= section.addr as usize);
+    //         let (reserved, ou) =
+    //             GuardedFrameCapability::from_untyped(kernel_untyped,
+    //                                                  (section.size + section.addr) as usize -
+    //                                                  untyped_start_addr);
+    //         kernel_untyped = ou.expect("Out of memory.");
+    //         cap_pool.put(reserved);
+    //     } else {
+    //         let section_addr = section.addr as usize;
+    //         let section_size = section.size as usize;
 
-            assert!(section_addr % PAGE_SIZE == 0);
-            let (reserved, ou) =
-                FrameCapability::from_untyped_fixed(kernel_untyped, section_addr,
-                                                    utils::necessary_page_count(section_size),
-                                                    flags);
-            kernel_untyped = ou.expect("Out of memory.");
+    //         let flags = EntryFlags::from_elf_section_flags(&section);
+    //         let cr3 = unsafe { controlregs::cr3() as usize };
 
-            // println!("Identity mapping ...");
-            // let (virt, ou) = page_table.identity_map(reserved, kernel_untyped);
-            // kernel_untyped = ou.expect("Out of memory.");
+    //         assert!(section_addr % PAGE_SIZE == 0);
+    //         let (reserved, ou) =
+    //             FrameCapability::from_untyped_fixed(kernel_untyped, section_addr,
+    //                                                 utils::necessary_page_count(section_size),
+    //                                                 flags);
+    //         kernel_untyped = ou.expect("Out of memory.");
 
-            cap_pool.put(reserved);
-        }
-    }
+    //         // println!("Identity mapping ...");
+    //         // let (virt, ou) = page_table.identity_map(reserved, kernel_untyped);
+    //         // kernel_untyped = ou.expect("Out of memory.");
+
+    //         cap_pool.put(reserved);
+    //     }
+    // }
 
     // {
     //     let (virt, ou) = page_table.identity_map(vga_buffer::WRITER.lock().cap(), page_untyped);

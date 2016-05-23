@@ -5,24 +5,27 @@ use super::{MemoryBlock, UntypedCapability,
 
 pub struct FrameCapability {
     block: MemoryBlock,
-    count: usize,
     flags: EntryFlags,
 }
 
 impl Capability for FrameCapability { }
 
 impl FrameCapability {
-    pub fn from_untyped(cap: UntypedCapability, count: usize, flags: EntryFlags)
-                        -> (FrameCapability, Option<UntypedCapability>) {
-        let (block, remained) = UntypedCapability::retype(cap, PAGE_SIZE, count * PAGE_SIZE);
-        (FrameCapability { block: block, count: count, flags: flags }, remained)
+    pub const fn from_block(block: MemoryBlock, flags: EntryFlags) -> FrameCapability {
+        FrameCapability { block: block, flags: flags }
     }
 
-    pub fn from_untyped_fixed(cap: UntypedCapability, start_addr: PhysicalAddress, count: usize, flags: EntryFlags)
-                              -> (FrameCapability, Option<UntypedCapability>) {
+    pub fn from_untyped(cap: &mut UntypedCapability, count: usize, flags: EntryFlags)
+                        -> FrameCapability {
+        let block = cap.retype(PAGE_SIZE, count * PAGE_SIZE);
+        FrameCapability::from_block(block, flags)
+    }
+
+    pub fn from_untyped_fixed(cap: &mut UntypedCapability, start_addr: PhysicalAddress, count: usize, flags: EntryFlags)
+                              -> FrameCapability {
         assert!(start_addr % PAGE_SIZE == 0);
-        let (block, remained) = UntypedCapability::retype_fixed(cap, start_addr, count * PAGE_SIZE);
-        (FrameCapability { block: block, count: count, flags: flags }, remained)
+        let block = cap.retype_fixed(start_addr, count * PAGE_SIZE);
+        FrameCapability::from_block(block, flags)
     }
 
     pub fn block(&self) -> &MemoryBlock {
@@ -30,7 +33,7 @@ impl FrameCapability {
     }
 
     pub fn count(&self) -> usize {
-        self.count
+        self.block().size() / PAGE_SIZE
     }
 
     pub fn flags(&self) -> EntryFlags {
@@ -45,19 +48,27 @@ pub struct GuardedFrameCapability {
 impl Capability for GuardedFrameCapability { }
 
 impl GuardedFrameCapability {
-    pub fn from_untyped(cap: UntypedCapability, size: usize)
-                        -> (GuardedFrameCapability, Option<UntypedCapability>) {
-        let (block, remained) = UntypedCapability::retype(cap, 1, size);
-        (GuardedFrameCapability { block: block }, remained)
+    pub const fn from_block(block: MemoryBlock) -> GuardedFrameCapability {
+        GuardedFrameCapability { block: block }
     }
 
-    pub fn from_untyped_fixed(cap: UntypedCapability, start_addr: PhysicalAddress, size: usize)
-                              -> (GuardedFrameCapability, Option<UntypedCapability>) {
-        let (block, remained) = UntypedCapability::retype(cap, start_addr, size);
-        (GuardedFrameCapability { block: block }, remained)
+    pub fn from_untyped(cap: &mut UntypedCapability, count: usize)
+                        -> GuardedFrameCapability {
+        let block = cap.retype(PAGE_SIZE, count * PAGE_SIZE);
+        GuardedFrameCapability::from_block(block)
+    }
+
+    pub fn from_untyped_fixed(cap: &mut UntypedCapability, start_addr: PhysicalAddress, count: usize)
+                              -> GuardedFrameCapability {
+        let block = cap.retype(start_addr, count * PAGE_SIZE);
+        GuardedFrameCapability::from_block(block)
     }
 
     pub fn block(&self) -> &MemoryBlock {
         &self.block
+    }
+
+    pub fn count(&self) -> usize {
+        self.block().size() / PAGE_SIZE
     }
 }

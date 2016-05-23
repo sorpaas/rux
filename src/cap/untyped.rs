@@ -68,42 +68,52 @@ impl UntypedCapability {
         UntypedCapability { block: block, useless: false }
     }
 
+    pub const unsafe fn bootstrap(physical_start_addr: PhysicalAddress, size: usize) -> UntypedCapability {
+        UntypedCapability::from_block(MemoryBlock::bootstrap(physical_start_addr, size))
+    }
+
+    pub fn from_untyped(cap: &mut UntypedCapability, size: usize)
+                        -> UntypedCapability {
+        let block = cap.retype(1, size);
+        UntypedCapability::from_block(block)
+    }
+
+    pub fn from_untyped_fixed(cap: &mut UntypedCapability, start_addr: PhysicalAddress, size: usize)
+                              -> UntypedCapability {
+        let block = cap.retype(start_addr, size);
+        UntypedCapability::from_block(block)
+    }
+
     fn mark_useless(&mut self) {
         self.useless = true;
     }
 
-    pub fn retype(mut cap: UntypedCapability, alignment: usize, size: usize)
-                  -> (MemoryBlock, Option<UntypedCapability>) {
-        let target_physical_start_addr = cap.block().start_addr();
-        UntypedCapability::retype_fixed(cap, utils::align(target_physical_start_addr, alignment), size)
+    pub fn retype(&mut self, alignment: usize, size: usize)
+                  -> MemoryBlock {
+        let target_physical_start_addr = self.block().start_addr();
+        self.retype_fixed(utils::align(target_physical_start_addr, alignment), size)
     }
 
-    pub fn retype_fixed(mut cap: UntypedCapability, start_addr: usize, size: usize)
-                        -> (MemoryBlock, Option<UntypedCapability>) {
-        let target_physical_start_addr = cap.block().start_addr();
+    pub fn retype_fixed(&mut self, start_addr: PhysicalAddress, size: usize)
+                        -> MemoryBlock {
+        let target_physical_start_addr = self.block().start_addr();
         let target_start_addr = start_addr;
         let target_size = size;
         let target = MemoryBlock::new(target_physical_start_addr, target_start_addr, target_size);
-        assert!(target.end_addr() <= cap.block().end_addr());
+        assert!(target.end_addr() < self.block().end_addr());
 
-        let remained = if target.end_addr() < cap.block().end_addr() {
-            let start_addr = target.end_addr() + 1;
-            Some(UntypedCapability::from_block(
-                MemoryBlock::new(start_addr, start_addr, cap.block().end_addr() - start_addr + 1)))
-        } else { None };
+        self.block.start_addr = target.end_addr() + 1;
+        self.block.physical_start_addr = target.end_addr() + 1;
+        self.block.size = self.block().end_addr() - start_addr + 1;
 
-        cap.mark_useless();
-
-        (target, remained)
+        target
     }
 
-    pub fn merge(mut a: UntypedCapability, mut b: UntypedCapability) -> UntypedCapability {
-        assert!(a.block().end_addr() + 1 == b.block().physical_start_addr());
-        a.mark_useless();
-        b.mark_useless();
-        UntypedCapability::from_block(
-            MemoryBlock::new(a.block().physical_start_addr(), a.block().start_addr(),
-                             a.block().size() + b.block().physical_size()))
+    pub fn merge(&mut self, mut cap: UntypedCapability) {
+        assert!(self.block().end_addr() + 1 == cap.block().physical_start_addr());
+        cap.mark_useless();
+
+        self.block.size += cap.block().physical_size();
     }
 }
 

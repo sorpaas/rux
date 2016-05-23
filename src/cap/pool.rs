@@ -3,6 +3,7 @@ use core::mem;
 
 use super::{MemoryBlock, UntypedCapability,
             FrameCapability, GuardedCapability,
+            PageTableCapability,
             Capability};
 
 macro_rules! init_array(
@@ -29,6 +30,7 @@ pub enum CapabilityUnion {
     Untyped(UntypedCapability),
     Frame(FrameCapability),
     Guarded(GuardedCapability),
+    PageTable(PageTableCapability),
 }
 
 pub trait CapabilityMove<T: Capability> {

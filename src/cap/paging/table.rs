@@ -2,9 +2,9 @@ use common::*;
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 
+use super::mapper::{Mapper};
 use super::entry::*;
 use super::super::{MemoryBlock, UntypedCapability};
-use super::super::utils;
 
 pub trait PageTableLevel { }
 
@@ -62,7 +62,7 @@ impl<L> PageTable<L> where L: PageTableLevel {
 /// recursive page mapping.
 
 impl<L> PageTable<L> where L: PageTableHierarchicalLevel {
-    fn next_table_address(&self, index: usize) -> Option<usize> {
+    pub unsafe fn next_table_address_in_active(&self, index: usize) -> Option<usize> {
         let entry_flags = self[index].flags();
         if entry_flags.contains(PRESENT) && !entry_flags.contains(HUGE_PAGE) {
             let table_address = self as *const _ as usize;
@@ -72,34 +72,38 @@ impl<L> PageTable<L> where L: PageTableHierarchicalLevel {
         }
     }
 
-    pub fn next_table(&self, index: usize) -> Option<&PageTable<L::NextLevel>> {
-        self.next_table_address(index)
+    /// WARNING: Only works for active table.
+
+    pub unsafe fn next_table_in_active(&self, index: usize) -> Option<&PageTable<L::NextLevel>> {
+        self.next_table_address_in_active(index)
             .map(|address| unsafe { &*(address as *const _) })
     }
 
-    pub fn next_table_mut(&mut self, index: usize) -> Option<&mut PageTable<L::NextLevel>> {
-        self.next_table_address(index)
+    /// WARNING: Only works for active table.
+
+    pub unsafe fn next_table_mut_in_active(&mut self, index: usize) -> Option<&mut PageTable<L::NextLevel>> {
+        self.next_table_address_in_active(index)
             .map(|address| unsafe { &mut *(address as *mut _) })
     }
 
-    pub fn next_table_create(&mut self,
-                             index: usize,
-                             untyped: UntypedCapability)
-                             -> (&mut PageTable<L::NextLevel>, Option<UntypedCapability>) {
-        if self.next_table(index).is_none() {
-            assert!(!self[index].flags().contains(HUGE_PAGE),
-                    "mapping code does not support huge pages");
-
-            let (mut block, remained) = UntypedCapability::retype(untyped, PAGE_SIZE, PAGE_SIZE);
+    pub fn next_table_create<F>(&mut self, index: usize, untyped: &mut UntypedCapability, mapper: &mut Mapper, f: F)
+        where F: FnOnce(&mut PageTable<L::NextLevel>, &mut UntypedCapability, &mut Mapper) {
+        if self[index].is_unused() {
+            let mut block = untyped.retype(PAGE_SIZE, PAGE_SIZE);
 
             self[index].set_address(block.start_addr(), PRESENT | WRITABLE);
-            self.next_table_mut(index).unwrap().zero();
 
-            unsafe { block.mark_useless() }
-
-            return (self.next_table_mut(index).unwrap(), remained);
+            unsafe {
+                mapper.borrow_mut_map(block.start_addr(), 1, |next_table : &mut PageTable<L::NextLevel>, mapper| {
+                    f(next_table, untyped, mapper);
+                });
+            }
         } else {
-            return (self.next_table_mut(index).unwrap(), Some(untyped));
+            unsafe {
+                mapper.borrow_mut_map(self[index].physical_address().unwrap(), 1, |next_table : &mut PageTable<L::NextLevel>, mapper| {
+                    f(next_table, untyped, mapper);
+                })
+            }
         }
     }
 }

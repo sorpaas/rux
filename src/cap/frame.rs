@@ -6,13 +6,14 @@ use super::{MemoryBlock, UntypedCapability,
 pub struct FrameCapability {
     block: MemoryBlock,
     flags: EntryFlags,
+    useless: bool,
 }
 
 impl Capability for FrameCapability { }
 
 impl FrameCapability {
     pub const fn from_block(block: MemoryBlock, flags: EntryFlags) -> FrameCapability {
-        FrameCapability { block: block, flags: flags }
+        FrameCapability { block: block, flags: flags, useless: false }
     }
 
     pub fn from_untyped(cap: &mut UntypedCapability, count: usize, flags: EntryFlags)
@@ -28,6 +29,10 @@ impl FrameCapability {
         FrameCapability::from_block(block, flags)
     }
 
+    pub unsafe fn mark_useless(&mut self) {
+        self.useless = true;
+    }
+
     pub fn block(&self) -> &MemoryBlock {
         &self.block
     }
@@ -41,21 +46,35 @@ impl FrameCapability {
     }
 }
 
+impl Drop for FrameCapability {
+    fn drop(&mut self) {
+        unsafe { self.block.mark_useless(); }
+        if self.useless { return; }
+
+        unimplemented!();
+    }
+}
+
 pub struct GuardedCapability {
     block: MemoryBlock,
+    useless: bool,
 }
 
 impl Capability for GuardedCapability { }
 
 impl GuardedCapability {
     pub const fn from_block(block: MemoryBlock) -> GuardedCapability {
-        GuardedCapability { block: block }
+        GuardedCapability { block: block, useless: false }
     }
 
     pub fn from_untyped(cap: &mut UntypedCapability, size: usize)
                         -> GuardedCapability {
         let block = cap.retype(1, size);
         GuardedCapability::from_block(block)
+    }
+
+    pub unsafe fn mark_useless(&mut self) {
+        self.useless = true;
     }
 
     pub fn from_untyped_fixed(cap: &mut UntypedCapability, start_addr: PhysicalAddress, size: usize)
@@ -70,5 +89,14 @@ impl GuardedCapability {
 
     pub fn count(&self) -> usize {
         self.block().size() / PAGE_SIZE
+    }
+}
+
+impl Drop for GuardedCapability {
+    fn drop(&mut self) {
+        unsafe { self.block.mark_useless(); }
+        if self.useless { return; }
+
+        unimplemented!();
     }
 }

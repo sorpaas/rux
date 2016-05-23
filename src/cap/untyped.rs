@@ -84,7 +84,7 @@ impl UntypedCapability {
         UntypedCapability::from_block(block)
     }
 
-    fn mark_useless(&mut self) {
+    pub unsafe fn mark_useless(&mut self) {
         self.useless = true;
     }
 
@@ -111,7 +111,7 @@ impl UntypedCapability {
 
     pub fn merge(&mut self, mut cap: UntypedCapability) {
         assert!(self.block().end_addr() + 1 == cap.block().physical_start_addr());
-        cap.mark_useless();
+        unsafe { cap.mark_useless(); }
 
         self.block.size += cap.block().physical_size();
     }

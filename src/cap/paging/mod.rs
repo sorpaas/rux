@@ -29,6 +29,28 @@ impl PageTableCapability {
         &self.p4_block
     }
 
+    fn map_addr(&self, frame_addr: usize, dest_addr: usize, flags: EntryFlags) {
+        let page = Page::new(dest_addr);
+
+        unsafe {
+            active_mapper().borrow_mut_map(self.p4_block().start_addr(), 1, |p4 : &mut PageTable<PageTableLevel4>, mapper| {
+                mapper.borrow_mut_map(p4[page.p4_index()].physical_address().unwrap(), 1, |p3 : &mut PageTable<PageTableLevel3>, mapper| {
+                    mapper.borrow_mut_map(p3[page.p3_index()].physical_address().unwrap(), 1, |p2 : &mut PageTable<PageTableLevel2>, mapper| {
+                        mapper.borrow_mut_map(p2[page.p2_index()].physical_address().unwrap(), 1, |p1 : &mut PageTable<PageTableLevel1>, mapper| {
+                            assert!(p1[page.p1_index()].is_unused());
+                            p1[page.p1_index()].set_address(frame_addr, flags | PRESENT);
+                        })
+                    })
+                })
+            })
+        }
+    }
+
+    pub unsafe fn create_tables_and_map_vga_buffer(&mut self, untyped: &mut UntypedCapability) {
+        self.create_tables(0xb8000, 1, untyped);
+        self.map_addr(0xb8000, 0xb8000, WRITABLE);
+    }
+
     pub fn create_tables(&mut self, dest_addr: usize, count: usize, untyped: &mut UntypedCapability) {
         for i in 0..count {
             let page = Page::new(dest_addr + i * PAGE_SIZE);
@@ -47,20 +69,9 @@ impl PageTableCapability {
 
     pub fn map(&mut self, mut frame: FrameCapability, dest_addr: usize) {
         for i in 0..frame.count() {
-            let page = Page::new(dest_addr + i * PAGE_SIZE);
-
-            unsafe {
-                active_mapper().borrow_mut_map(self.p4_block().start_addr(), 1, |p4 : &mut PageTable<PageTableLevel4>, mapper| {
-                    mapper.borrow_mut_map(p4[page.p4_index()].physical_address().unwrap(), 1, |p3 : &mut PageTable<PageTableLevel3>, mapper| {
-                        mapper.borrow_mut_map(p3[page.p3_index()].physical_address().unwrap(), 1, |p2 : &mut PageTable<PageTableLevel2>, mapper| {
-                            mapper.borrow_mut_map(p2[page.p2_index()].physical_address().unwrap(), 1, |p1 : &mut PageTable<PageTableLevel1>, mapper| {
-                                assert!(p1[page.p1_index()].is_unused());
-                                p1[page.p1_index()].set_address(frame.block().start_addr() + i * PAGE_SIZE, frame.flags());
-                            })
-                        })
-                    })
-                })
-            }
+            let frame_addr = frame.block().start_addr() + i * PAGE_SIZE;
+            let flags = frame.flags();
+            self.map_addr(frame_addr, dest_addr + i * PAGE_SIZE, flags);
         }
 
         unsafe { frame.mark_useless(); }
@@ -85,7 +96,7 @@ impl PageTableCapability {
         self.create_tables_and_map(frame, dest_addr, untyped);
     }
 
-    pub unsafe fn switch_to(&self) {
+    pub unsafe fn switch_on(&self) {
         switch_mapper(self.active_mappable_virtual_start_addr, self.active_mappable_count);
         controlregs::cr3_write(self.p4_block().start_addr() as u64);
     }

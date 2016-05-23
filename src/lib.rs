@@ -125,17 +125,18 @@ pub extern fn rust_main(multiboot_information_address: usize) {
                                                     utils::necessary_page_count(section_size), flags)
             };
 
-            println!("    (Identity mapping ...)");
-            kernel_page_table.create_tables_and_identity_map(reserved, &mut kernel_untyped);
+            // println!("    (Identity mapping ...)");
+            let frame_start_addr = reserved.block().start_addr();
+            let frame_count = reserved.count();
+
+            kernel_page_table.create_tables_and_identity_map(reserved, &mut page_untyped);
         }
     }
 
-    // {
-    //     let (virt, ou) = page_table.identity_map(vga_buffer::WRITER.lock().cap(), page_untyped);
-    //     page_untyped = ou.expect("Out of memory.");
-    // }
-
-    // let (page_table, old_page_table) = ActivePageTableCapability::switch(page_table, cur_page_table);
+    unsafe {
+        kernel_page_table.create_tables_and_map_vga_buffer(&mut page_untyped);
+        kernel_page_table.switch_on();
+    }
 
     cap_pool.put(page_untyped);
     cap_pool.put(kernel_untyped);

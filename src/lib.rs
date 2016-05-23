@@ -29,7 +29,7 @@ use common::*;
 use cap::{MemoryBlock, UntypedCapability,
           FrameCapability, GuardedCapability,
           CapabilityPool, CapabilityMove,
-          // PageTableCapability
+          PageTableCapability
 };
 
 use core::mem;
@@ -78,9 +78,8 @@ pub extern fn rust_main(multiboot_information_address: usize) {
 
     println!("Page untyped start address: 0x{:x}.", page_untyped.block().start_addr());
 
-    // let (page_table, ou) = unsafe { PageTableCapability::bootstrap(page_untyped) };
-    // println!("Inactive page table capability address: 0x{:x}.", page_table.p4_block().start_addr());
-    // page_untyped = ou.expect("Out of memory.");
+    let mut kernel_page_table = PageTableCapability::from_untyped(&mut page_untyped, 0x7e0000000, 512);
+    println!("Inactive page table capability address: 0x{:x}.", kernel_page_table.p4_block().start_addr());
 
     let cr3 = unsafe { controlregs::cr3() as usize };
 
@@ -126,11 +125,8 @@ pub extern fn rust_main(multiboot_information_address: usize) {
                                                     utils::necessary_page_count(section_size), flags)
             };
 
-            // // println!("Identity mapping ...");
-            // // let (virt, ou) = page_table.identity_map(reserved, kernel_untyped);
-            // // kernel_untyped = ou.expect("Out of memory.");
-
-            cap_pool.put(reserved);
+            println!("    (Identity mapping ...)");
+            kernel_page_table.create_tables_and_identity_map(reserved, &mut kernel_untyped);
         }
     }
 

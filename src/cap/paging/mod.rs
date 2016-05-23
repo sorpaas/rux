@@ -47,7 +47,7 @@ impl PageTableCapability {
 
     pub fn map(&mut self, mut frame: FrameCapability, dest_addr: usize) {
         for i in 0..frame.count() {
-            let page = Page::new(dest_addr);
+            let page = Page::new(dest_addr + i * PAGE_SIZE);
 
             unsafe {
                 active_mapper().borrow_mut_map(self.p4_block().start_addr(), 1, |p4 : &mut PageTable<PageTableLevel4>, mapper| {

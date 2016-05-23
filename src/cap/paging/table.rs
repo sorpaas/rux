@@ -95,6 +95,7 @@ impl<L> PageTable<L> where L: PageTableHierarchicalLevel {
 
             unsafe {
                 mapper.borrow_mut_map(block.start_addr(), 1, |next_table : &mut PageTable<L::NextLevel>, mapper| {
+                    next_table.zero();
                     f(next_table, untyped, mapper);
                 });
             }

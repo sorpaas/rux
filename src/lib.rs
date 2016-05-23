@@ -82,6 +82,8 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     // println!("Inactive page table capability address: 0x{:x}.", page_table.p4_block().start_addr());
     // page_untyped = ou.expect("Out of memory.");
 
+    let cr3 = unsafe { controlregs::cr3() as usize };
+
     println!("Kernel sections:");
     for section in elf_sections_tag.sections() {
         use multiboot2::ELF_SECTION_ALLOCATED;
@@ -93,10 +95,11 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         let section_addr = section.addr as usize;
         let untyped_start_addr = kernel_untyped.block().start_addr();
 
+        assert!(untyped_start_addr <= section_addr);
+
         if !section.flags().contains(ELF_SECTION_ALLOCATED) {
             // section is not loaded to memory
 
-            assert!(untyped_start_addr <= section.addr as usize);
             let reserved = GuardedCapability::from_untyped_fixed(&mut kernel_untyped,
                                                                  section_addr, section_size);
             cap_pool.put(reserved);
@@ -106,11 +109,22 @@ pub extern fn rust_main(multiboot_information_address: usize) {
             assert!(section_addr % PAGE_SIZE == 0);
             let flags = EntryFlags::from_elf_section_flags(&section);
 
-            let reserved = FrameCapability::from_untyped_fixed(&mut kernel_untyped,
-                                                               section_addr,
-                                                               utils::necessary_page_count(section_size), flags);
+            let reserved = if cr3 >= section_addr && cr3 < section_addr + section_size {
+                assert!(cr3 == section_addr);
 
-            // let cr3 = unsafe { controlregs::cr3() as usize };
+                // There will be one guarded page directly on the old P4 table.
+                let guarded = GuardedCapability::from_untyped_fixed(&mut kernel_untyped, cr3, PAGE_SIZE);
+                cap_pool.put(guarded);
+
+                println!("    (Stack guarded page initialized at: 0x{:x}.)", cr3);
+
+                FrameCapability::from_untyped_fixed(&mut kernel_untyped, cr3 + PAGE_SIZE,
+                                                    utils::necessary_page_count(section_size - PAGE_SIZE),
+                                                    flags)
+            } else {
+                FrameCapability::from_untyped_fixed(&mut kernel_untyped, section_addr,
+                                                    utils::necessary_page_count(section_size), flags)
+            };
 
             // // println!("Identity mapping ...");
             // // let (virt, ou) = page_table.identity_map(reserved, kernel_untyped);

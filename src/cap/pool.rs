@@ -2,7 +2,7 @@ use common::*;
 use core::mem;
 
 use super::{MemoryBlock, UntypedCapability,
-            FrameCapability, GuardedFrameCapability,
+            FrameCapability, GuardedCapability,
             Capability};
 
 macro_rules! init_array(
@@ -28,7 +28,7 @@ pub enum CapabilityUnion {
 
     Untyped(UntypedCapability),
     Frame(FrameCapability),
-    GuardedFrame(GuardedFrameCapability),
+    Guarded(GuardedCapability),
 }
 
 pub trait CapabilityMove<T: Capability> {
@@ -124,4 +124,4 @@ macro_rules! impl_move(
 
 impl_move!(UntypedCapability, CapabilityUnion::Untyped);
 impl_move!(FrameCapability, CapabilityUnion::Frame);
-impl_move!(GuardedFrameCapability, CapabilityUnion::GuardedFrame);
+impl_move!(GuardedCapability, CapabilityUnion::Guarded);

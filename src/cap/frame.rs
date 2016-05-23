@@ -41,27 +41,27 @@ impl FrameCapability {
     }
 }
 
-pub struct GuardedFrameCapability {
+pub struct GuardedCapability {
     block: MemoryBlock,
 }
 
-impl Capability for GuardedFrameCapability { }
+impl Capability for GuardedCapability { }
 
-impl GuardedFrameCapability {
-    pub const fn from_block(block: MemoryBlock) -> GuardedFrameCapability {
-        GuardedFrameCapability { block: block }
+impl GuardedCapability {
+    pub const fn from_block(block: MemoryBlock) -> GuardedCapability {
+        GuardedCapability { block: block }
     }
 
-    pub fn from_untyped(cap: &mut UntypedCapability, count: usize)
-                        -> GuardedFrameCapability {
-        let block = cap.retype(PAGE_SIZE, count * PAGE_SIZE);
-        GuardedFrameCapability::from_block(block)
+    pub fn from_untyped(cap: &mut UntypedCapability, size: usize)
+                        -> GuardedCapability {
+        let block = cap.retype(1, size);
+        GuardedCapability::from_block(block)
     }
 
-    pub fn from_untyped_fixed(cap: &mut UntypedCapability, start_addr: PhysicalAddress, count: usize)
-                              -> GuardedFrameCapability {
-        let block = cap.retype(start_addr, count * PAGE_SIZE);
-        GuardedFrameCapability::from_block(block)
+    pub fn from_untyped_fixed(cap: &mut UntypedCapability, start_addr: PhysicalAddress, size: usize)
+                              -> GuardedCapability {
+        let block = cap.retype(start_addr, size);
+        GuardedCapability::from_block(block)
     }
 
     pub fn block(&self) -> &MemoryBlock {

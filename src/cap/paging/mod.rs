@@ -46,6 +46,28 @@ impl PageTableCapability {
         }
     }
 
+    fn unmap_addr(&self, dest_addr: usize) -> PhysicalAddress {
+        let page = Page::new(dest_addr);
+
+        unsafe {
+            let mut frame_addr = None;
+
+            active_mapper().borrow_mut_map(self.p4_block().start_addr(), 1, |p4 : &mut PageTable<PageTableLevel4>, mapper| {
+                mapper.borrow_mut_map(p4[page.p4_index()].physical_address().unwrap(), 1, |p3 : &mut PageTable<PageTableLevel3>, mapper| {
+                    mapper.borrow_mut_map(p3[page.p3_index()].physical_address().unwrap(), 1, |p2 : &mut PageTable<PageTableLevel2>, mapper| {
+                        mapper.borrow_mut_map(p2[page.p2_index()].physical_address().unwrap(), 1, |p1 : &mut PageTable<PageTableLevel1>, mapper| {
+                            assert!(!p1[page.p1_index()].is_unused());
+                            frame_addr = p1[page.p1_index()].physical_address();
+                            p1[page.p1_index()].set_unused();
+                        })
+                    })
+                })
+            });
+
+            frame_addr.unwrap()
+        }
+    }
+
     pub unsafe fn create_tables_and_map_vga_buffer(&mut self, untyped: &mut UntypedCapability) {
         self.create_tables(0xb8000, 1, untyped);
         self.map_addr(0xb8000, 0xb8000, WRITABLE);
@@ -75,6 +97,10 @@ impl PageTableCapability {
         }
 
         unsafe { frame.mark_useless(); }
+    }
+
+    pub fn unmap(&mut self, dest_addr: usize) -> FrameCapability {
+        unimplemented!()
     }
 
     pub fn identity_map(&mut self, frame: FrameCapability) {

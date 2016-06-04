@@ -148,6 +148,15 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     cap_pool.put(page_untyped);
     cap_pool.put(kernel_untyped);
 
+    unsafe {
+        asm!("mov rax, [esp + 32]
+              mov ds, rax
+              mov es, rax
+              mov fs, rax
+              mov gs, rax
+              iretq" : : : "memory" : "intel", "volatile");
+    }
+
     loop{}
 }
 

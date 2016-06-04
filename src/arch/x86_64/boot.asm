@@ -1,3 +1,59 @@
+attrib:
+    .present              equ 1 << 7
+    .ring1                equ 1 << 5
+    .ring2                equ 1 << 6
+    .ring3                equ 1 << 5 | 1 << 6
+    .user                 equ 1 << 4
+;user
+    .code                 equ 1 << 3
+;   code
+    .conforming           equ 1 << 2
+    .readable             equ 1 << 1
+;   data
+    .expand_down          equ 1 << 2
+    .writable             equ 1 << 1
+    .accessed             equ 1 << 0
+;system
+;   legacy
+    .tssAvailabe16        equ 0x1
+    .ldt                  equ 0x2
+    .tssBusy16            equ 0x3
+    .call16               equ 0x4
+    .task                 equ 0x5
+    .interrupt16          equ 0x6
+    .trap16               equ 0x7
+    .tssAvailabe32        equ 0x9
+    .tssBusy32            equ 0xB
+    .call32               equ 0xC
+    .interrupt32          equ 0xE
+    .trap32               equ 0xF
+;   long mode
+    .ldt32                equ 0x2
+    .tssAvailabe64        equ 0x9
+    .tssBusy64            equ 0xB
+    .call64               equ 0xC
+    .interrupt64          equ 0xE
+    .trap64               equ 0xF
+
+flags:
+    .granularity equ 1 << 7
+    .available equ 1 << 4
+;user
+    .default_operand_size equ 1 << 6
+;   code
+    .long_mode equ 1 << 5
+;   data
+    .reserved equ 1 << 5
+
+struc GDTEntry
+  .limitl resw 1
+  .basel resw 1
+  .basem resb 1
+  .attribute resb 1
+  .flags__limith resb 1
+  .baseh resb 1
+endstruc
+
 global start
 extern long_mode_start
 
@@ -18,14 +74,14 @@ start:
   lgdt [gdt64.pointer]
 
 	; update selectors
-	mov ax, gdt64.data
+	mov ax, gdt64.kernel_data
 	mov ss, ax  ; stack selector
 	mov ds, ax  ; data selector
 	mov es, ax  ; extra selector
 
   call set_up_SSE
 
-  jmp gdt64.code:long_mode_start
+  jmp gdt64.kernel_code:long_mode_start
 
 ; Prints `ERR: ` and t  he given error code to screen and hangs.
 ; parameter: error cod  e (in ascii) in al
@@ -185,11 +241,49 @@ stack_top:
 
 section .rodata
 gdt64:
-  dq 0                          ; zero entry
-.code: equ $ - gdt64
-  dq (1<<44) | (1<<47) | (1<<41) | (1<<43) | (1<<53) ; code segment
-.data: equ $ - gdt64
-  dq (1<<44) | (1<<47) | (1<<41)                     ; data segment
+.null: equ $ - gdt64
+  dq 0
+
+.kernel_code: equ $ - gdt64
+istruc GDTEntry
+  at GDTEntry.limitl, dw 0
+  at GDTEntry.basel, dw 0
+	at GDTEntry.basem, db 0
+	at GDTEntry.attribute, db attrib.present | attrib.user | attrib.code
+	at GDTEntry.flags__limith, db flags.long_mode
+	at GDTEntry.baseh, db 0
+iend
+
+.kernel_data: equ $ - gdt64
+istruc GDTEntry
+  at GDTEntry.limitl, dw 0
+  at GDTEntry.basel, dw 0
+  at GDTEntry.basem, db 0
+  at GDTEntry.attribute, db attrib.present | attrib.user | attrib.writable
+  at GDTEntry.flags__limith, db 0
+  at GDTEntry.baseh, db 0
+iend
+
+.user_code: equ $ - gdt64
+istruc GDTEntry
+  at GDTEntry.limitl, dw 0
+  at GDTEntry.basel, dw 0
+  at GDTEntry.basem, db 0
+  at GDTEntry.attribute, db attrib.present | attrib.ring3 | attrib.user | attrib.code
+  at GDTEntry.flags__limith, db flags.long_mode
+  at GDTEntry.baseh, db 0
+iend
+
+.user_data: equ $ - gdt64
+istruc GDTEntry
+  at GDTEntry.limitl, dw 0
+  at GDTEntry.basel, dw 0
+  at GDTEntry.basem, db 0
+  at GDTEntry.attribute, db attrib.present | attrib.ring3 | attrib.user | attrib.writable
+  at GDTEntry.flags__limith, db 0
+  at GDTEntry.baseh, db 0
+iend
+
 .pointer:
   dw $ - gdt64 - 1
   dq gdt64

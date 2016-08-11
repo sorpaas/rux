@@ -1,17 +1,17 @@
 ENTRY(start)
 
 SECTIONS {
-	. = 1M;
+  . = 1M;
 
-	.rodata : ALIGN(4K) {
-		/* ensure that the multiboot header is at the beginning */
-		KEEP(*(.multiboot_header))
+  .rodata : ALIGN(4K) {
+    /* ensure that the multiboot header is at the beginning */
+    KEEP(*(.multiboot_header))
     *(.rodata .rodata.*)
-	}
+  }
 
-	.text : ALIGN(4K) {
-		*(.text .text.*)
-	}
+  .text : ALIGN(4K) {
+    *(.text .text.*)
+  }
 
   .data : ALIGN(4K) {
     *(.data .data.*)

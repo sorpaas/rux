@@ -3,13 +3,13 @@
 with pkgs;
 let funs = pkgs.callPackage ./nix/rust-nightly.nix { };
     cargoNightly = funs.cargo {
-      date = "2016-05-21";
-      hash = "00b32hm8444dlxwl5v3v1mf4sw262n7yw04smsllr41kz2b8lq43";
+      date = "2016-08-11";
+      hash = "0i4jj0cig2r10hicm8pblak3n7abgk1sql7krmhnbr4hw0m0r7rv";
     };
 
     rustNightly = funs.rust {
-      date = "2016-05-21";
-      hash = "0ylyq746hvqc8ibhi16vk7i12cnk0zlh46gr7s9g59dpx0j0f1nl";
+      date = "2016-08-11";
+      hash = "169cibr9afpacqj6z60fxb2w28fwjf5zmywycrffs7vv1b43dpri";
     };
 
 in stdenv.mkDerivation {

@@ -1,14 +1,10 @@
-#![feature(lang_items)]
-#![feature(const_fn)]
-#![feature(unique)]
-#![feature(custom_attribute)]
-#![feature(box_syntax)]
-#![feature(box_patterns)]
 #![feature(asm)]
-#![feature(step_by)]
-#![feature(alloc)]
-#![feature(associated_type_defaults)]
+#![feature(const_fn)]
+#![feature(lang_items)]
 #![feature(drop_types_in_const)]
+#![feature(unique)]
+#![feature(alloc)]
+
 #![no_std]
 
 #[macro_use]
@@ -24,6 +20,7 @@ mod multiboot2;
 mod common;
 mod cap;
 mod utils;
+mod interrupts;
 
 use common::*;
 use cap::{MemoryBlock, UntypedCapability,
@@ -41,6 +38,7 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     enable_write_protect_bit();
 
     vga_buffer::clear_screen();
+    println!("Size of pool: {}", core::mem::size_of::<CapabilityPool>());
 
     let mut cap_pool = CapabilityPool::new();
 
@@ -178,4 +176,10 @@ extern fn panic_fmt(fmt: core::fmt::Arguments, file: &str, line: u32) -> ! {
     println!("\n\nPANIC in {} at line {}:", file, line);
     println!("    {}", fmt);
     loop{}
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn _Unwind_Resume() -> ! {
+    loop {}
 }

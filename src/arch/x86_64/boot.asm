@@ -1,58 +1,5 @@
-attrib:
-    .present              equ 1 << 7
-    .ring1                equ 1 << 5
-    .ring2                equ 1 << 6
-    .ring3                equ 1 << 5 | 1 << 6
-    .user                 equ 1 << 4
-;user
-    .code                 equ 1 << 3
-;   code
-    .conforming           equ 1 << 2
-    .readable             equ 1 << 1
-;   data
-    .expand_down          equ 1 << 2
-    .writable             equ 1 << 1
-    .accessed             equ 1 << 0
-;system
-;   legacy
-    .tssAvailabe16        equ 0x1
-    .ldt                  equ 0x2
-    .tssBusy16            equ 0x3
-    .call16               equ 0x4
-    .task                 equ 0x5
-    .interrupt16          equ 0x6
-    .trap16               equ 0x7
-    .tssAvailabe32        equ 0x9
-    .tssBusy32            equ 0xB
-    .call32               equ 0xC
-    .interrupt32          equ 0xE
-    .trap32               equ 0xF
-;   long mode
-    .ldt32                equ 0x2
-    .tssAvailabe64        equ 0x9
-    .tssBusy64            equ 0xB
-    .call64               equ 0xC
-    .interrupt64          equ 0xE
-    .trap64               equ 0xF
-
-flags:
-    .granularity equ 1 << 7
-    .available equ 1 << 4
-;user
-    .default_operand_size equ 1 << 6
-;   code
-    .long_mode equ 1 << 5
-;   data
-    .reserved equ 1 << 5
-
-struc GDTEntry
-  .limitl resw 1
-  .basel resw 1
-  .basem resb 1
-  .attribute resb 1
-  .flags__limith resb 1
-  .baseh resb 1
-endstruc
+%include "src/arch/x86_64/gdt_entry.inc"
+%include "src/arch/x86_64/descriptor_flags.inc"
 
 global start
 extern long_mode_start
@@ -73,14 +20,15 @@ start:
   ;; load the 64-bit GDT
   lgdt [gdt64.pointer]
 
-	; update selectors
-	mov ax, gdt64.kernel_data
-	mov ss, ax  ; stack selector
-	mov ds, ax  ; data selector
-	mov es, ax  ; extra selector
+  ;; update selectors
+  mov ax, gdt64.kernel_data
+  mov ss, ax  ; stack selector
+  mov ds, ax  ; data selector
+  mov es, ax  ; extra selector
 
   call set_up_SSE
 
+  ;; update cs selector
   jmp gdt64.kernel_code:long_mode_start
 
 ; Prints `ERR: ` and t  he given error code to screen and hangs.
@@ -151,10 +99,10 @@ check_long_mode:
   jmp error
 
 set_up_page_tables:
-	;; recursive mapping
-	mov eax, p4_table
-	or eax, 0b11                  ; present + writable
-	mov [p4_table + 511 * 8], eax
+  ;; recursive mapping
+  mov eax, p4_table
+  or eax, 0b11                  ; present + writable
+  mov [p4_table + 511 * 8], eax
 
   ;; map first P4 entry to P3 table
   mov eax, p3_table
@@ -205,7 +153,8 @@ enable_paging:
 
   ret
 
-; Check for SSE and enable it. If it's not supported throw error "a".
+;; Check for SSE and enable it. If it's not supported throw error "a".
+;; This is needed to be done in assembly because Rust uses SSE by default.
 set_up_SSE:
   ; check for SSE
   mov eax, 0x1

@@ -106,7 +106,7 @@ pub extern fn rust_main(multiboot_information_address: usize) {
             // section loaded to memory
 
             assert!(section_addr % PAGE_SIZE == 0);
-            let flags = EntryFlags::from_elf_section_flags(&section);
+            let flags = EntryFlags::from_elf_section_flags(&section) | USER_ACCESSIBLE;
 
             let reserved = if cr3 >= section_addr && cr3 < section_addr + section_size {
                 assert!(cr3 == section_addr);
@@ -147,15 +147,6 @@ pub extern fn rust_main(multiboot_information_address: usize) {
 
     cap_pool.put(page_untyped);
     cap_pool.put(kernel_untyped);
-
-    unsafe {
-        asm!("mov rax, [esp + 32]
-              mov ds, rax
-              mov es, rax
-              mov fs, rax
-              mov gs, rax
-              iretq" : : : "memory" : "intel", "volatile");
-    }
 
     loop{}
 }

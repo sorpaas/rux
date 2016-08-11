@@ -3,6 +3,7 @@ name = "rux"
 version = "0.1.0"
 dependencies = [
  "bitflags 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rlibc 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "spin 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "x86 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -12,6 +13,14 @@ dependencies = [
 name = "bitflags"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "lazy_static"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "spin 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "raw-cpuid"
@@ -29,6 +38,11 @@ version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "spin"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "x86"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -38,7 +52,9 @@ dependencies = [
 
 [metadata]
 "checksum bitflags 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8dead7461c1127cf637931a1e50934eb6eee8bff2f74433ac7909e9afcee04a3"
+"checksum lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "49247ec2a285bb3dcb23cbd9c35193c025e7251bfce77c1d5da97e6362dffe7f"
 "checksum raw-cpuid 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7bc8e963398e6244e1d51c42dd68394f273d39ed8afc9238b74f56041b23dbd3"
 "checksum rlibc 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "4f725fa0be00ed4a869c61f1adb156b629bb6c8d97f2ee4d0644bba1ce33b04b"
 "checksum spin 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "26a697d0d28d9c7f3c36b21273b4599e63237bbcae98c4eeef4d2cca12f02792"
+"checksum spin 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "e64b1f9f6eb067165a890f257804d5f4e358b7b7811a4a7c34b0345f624c0f94"
 "checksum x86 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a1f613c5d15f290aabc0550288a554b6fda85ae5aa6e4fffc009915b8c887a1d"

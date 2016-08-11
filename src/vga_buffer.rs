@@ -1,16 +1,16 @@
 use common::*;
 use core::ptr::Unique;
-use core::fmt::Write;
+use core::fmt::{self, Write};
 use spin::Mutex;
 
 #[cfg(any(target_arch = "x86_64"))]
-unsafe fn outportb(port: u16, val: u8)
+pub unsafe fn outportb(port: u16, val: u8)
 {
     asm!("outb %al, %dx" : : "{dx}"(port), "{al}"(val));
 }
 
 #[cfg(any(target_arch = "x86_64"))]
-unsafe fn inportb(port: u16) -> u8
+pub unsafe fn inportb(port: u16) -> u8
 {
     let ret: u8;
     asm!("inb %dx, %al" : "={ax}"(ret): "{dx}"(port));
@@ -161,6 +161,19 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
 
 pub fn clear_screen() {
     WRITER.lock().clear_screen();
+}
+
+pub unsafe fn print_error(fmt: fmt::Arguments) {
+    use core::fmt::Write;
+
+    let mut writer = Writer {
+        row_position: BUFFER_HEIGHT - 1,
+        column_position: 0,
+        color_code: ColorCode::new(Color::Red, Color::Black),
+        buffer: Unique::new(0xb8000 as *mut _),
+    };
+    writer.new_line();
+    writer.write_fmt(fmt);
 }
 
 macro_rules! print {

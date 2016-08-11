@@ -7,8 +7,8 @@
 
 #![no_std]
 
-#[macro_use]
-extern crate bitflags;
+#[macro_use] extern crate bitflags;
+#[macro_use] extern crate lazy_static;
 extern crate rlibc;
 extern crate spin;
 extern crate x86;
@@ -145,6 +145,28 @@ pub extern fn rust_main(multiboot_information_address: usize) {
 
     cap_pool.put(page_untyped);
     cap_pool.put(kernel_untyped);
+
+    // initialize our IDT
+    interrupts::init();
+
+    // Test code for fetching the scan codes of keyboard
+    {
+        use vga_buffer::{inportb, outportb};
+        let mut scancode = unsafe { inportb(0x60) };
+        let lastscancode = scancode;
+
+        println!("Initial scan code is {}", scancode);
+
+        while true {
+            let scancode = unsafe { inportb(0x60) };
+
+            if scancode != lastscancode {
+                println!("New scan code is {}", scancode);
+            }
+
+            let lastscancode = scancode;
+        }
+    };
 
     loop{}
 }

@@ -12,6 +12,10 @@ spin = "0.3.4"
 bitflags = { version = "0.4", features = ["no_std"] }
 x86 = { version = "0.7.0", default-features = false }
 
+[dependencies.lazy_static]
+version = "0.2.1"
+features = ["spin_no_std"]
+
 [profile.dev]
 panic = "abort"
 

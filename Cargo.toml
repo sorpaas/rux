@@ -6,5 +6,6 @@ authors = ["Wei Tang <hi@that.world>"]
 [lib]
 crate-type = ["staticlib"]
 
-[dependencies.core]
-path = "build/libcore"
+[dependencies.x86]
+version = "0.8.0"
+default-features = false

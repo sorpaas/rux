@@ -40,6 +40,10 @@ build/rustc-nightly-src.tar.gz:
 build/libcore/lib.rs: build/rustc-nightly-src.tar.gz
 	@tar -xmf build/rustc-nightly-src.tar.gz -C build/ rustc-nightly/src/libcore --transform 's~^rustc-nightly/src/~~'
 
+build/lib/$(arch)/libcore.rlib: build/libcore/lib.rs
+	@mkdir -p $(shell dirname $@)
+	@$(rustc) $(rust_flags) --target=$(target_spec) --out-dir=build/lib/$(arch) --crate-type=lib $<
+
 all: $(kernel)
 
 clean:
@@ -53,8 +57,8 @@ $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
 	@$(ld) $(linker_flags) -o $(kernel).elf64 $(assembly_object_files) $(rust_os)
 	@$(objcopy) $(kernel).elf64 -F elf32-i386 $(kernel)
 
-cargo: build/libcore/lib.rs
-	@$(cargo) rustc --target $(target_spec) -- $(rust_flags)
+cargo: build/lib/$(arch)/libcore.rlib
+	@RUSTFLAGS="-L build/lib/$(arch) $(rust_flags)" $(cargo) rustc --target $(target_spec)
 
 # compile assembly files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.S

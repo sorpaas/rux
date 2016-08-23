@@ -2,6 +2,8 @@
 #![feature(asm)]
 #![no_std]
 
+extern crate x86;
+
 /// Macros, need to be loaded before everything else due to how rust parses
 #[macro_use]
 mod macros;

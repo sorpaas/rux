@@ -19,11 +19,9 @@ in stdenv.mkDerivation {
 
   buildInputs = [
     gnumake
-    binutils-raw
-    grub2
-    nasm
-    xorriso
+    (binutils.override { cross = { config = "x86_64-none-elf"; }; })
     qemu
+    file
     rustNightly
     cargoNightly
   ];

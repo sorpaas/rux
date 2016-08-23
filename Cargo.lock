@@ -1,0 +1,11 @@
+[root]
+name = "rux"
+version = "0.0.1"
+dependencies = [
+ "core 0.0.0",
+]
+
+[[package]]
+name = "core"
+version = "0.0.0"
+

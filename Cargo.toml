@@ -1,0 +1,10 @@
+[package]
+name = "rux"
+version = "0.0.1"
+authors = ["Wei Tang <hi@that.world>"]
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies.core]
+path = "build/libcore"

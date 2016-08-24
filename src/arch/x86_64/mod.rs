@@ -17,3 +17,8 @@ mod x86_io;
 // Debug output channel (uses serial)
 #[path = "debug.rs"]
 pub mod debug;
+
+extern {
+    pub static multiboot_sig: u32;
+    pub static multiboot_ptr: u64;
+}

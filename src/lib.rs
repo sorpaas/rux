@@ -5,6 +5,9 @@
 
 extern crate x86;
 
+#[macro_use]
+extern crate lazy_static;
+
 /// Macros, need to be loaded before everything else due to how rust parses
 #[macro_use]
 mod macros;
@@ -26,18 +29,34 @@ use core::mem;
 use core::slice;
 use common::KERNEL_BASE;
 
+use arch::{multiboot_sig, multiboot_ptr};
+
 // Kernel entrypoint
 #[lang="start"]
 #[no_mangle]
-pub fn kmain(multiboot_addr: u64)
+pub fn kmain()
 {
-    log!("Multiboot addr: 0x{:x}", multiboot_addr);
+    assert!(multiboot_sig == 0x2badb002);
+    
+    log!("multiboot_sig: 0x{:x}", multiboot_sig);
+    log!("multiboot_ptr: 0x{:x}", multiboot_ptr);
+    
     let bootinfo = unsafe {
-        multiboot::Multiboot::new(multiboot_addr, |addr, size| {
+        multiboot::Multiboot::new(multiboot_ptr as u64, |addr, size| {
             let ptr = mem::transmute(addr + KERNEL_BASE);
             Some(slice::from_raw_parts(ptr, size))
         })
-    };
+    }.unwrap();
+
+    log!("Bootinfo: {:?}", bootinfo);
+
+    log!("Lower memory bound: 0x{:x}", bootinfo.lower_memory_bound().unwrap());
+    log!("Upper memory bound: 0x{:x}", bootinfo.upper_memory_bound().unwrap());
+
+    log!("Memory regions:");
+    for area in bootinfo.memory_regions().unwrap() {
+        log!("    Base: 0x{:x}, length: 0x{:x}, type: {:?}", area.base_address(), area.length(), area.memory_type());
+    }
     
     let hello = b"Hello World!";
     let color_byte = 0x1f; // white foreground, blue background

@@ -1,6 +1,7 @@
 use core::mem::{size_of, transmute};
 use core::str;
 use core::slice;
+use core::fmt;
 
 use common::PAddr;
 
@@ -109,6 +110,12 @@ macro_rules! check_flag {
             (self.header.flags & (1 << $bit1)) > 0 || (self.header.flags & (1 << $bit2)) > 0
         }
     );
+}
+
+impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> fmt::Debug for Multiboot<'a, F> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.header.fmt(f)
+    }
 }
 
 /// Multiboot structure.

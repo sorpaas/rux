@@ -21,12 +21,12 @@ MULTIBOOT_HEADER_MAGIC =  0x1BADB002
 MULTIBOOT_HEADER_FLAGS = (MULTIBOOT_PAGE_ALIGN | MULTIBOOT_MEMORY_INFO | MULTIBOOT_REQVIDMODE)
 MULTIBOOT_CHECKSUM     = -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
 .section .multiboot, "a"
-.globl mboot
-mboot:
+.globl multiboot
+multiboot:
 	.long MULTIBOOT_HEADER_MAGIC
 	.long MULTIBOOT_HEADER_FLAGS
 	.long MULTIBOOT_CHECKSUM
-	.long mboot
+	.long multiboot
 	/* a.out kludge (not used, the kernel is elf) */
 	.long 0, 0, 0, 0	/* load_addr, load_end_addr, bss_end_addr, entry_addr */
 	/* Video mode */
@@ -45,8 +45,8 @@ start:
 	/* The kernel starts in protected mode (32-bit mode, we want to switch to long mode) */
 	
 	/* 1. Save multiboot state */
-	mov %eax, mboot_sig - KERNEL_BASE
-	mov %ebx, mboot_ptr - KERNEL_BASE
+	mov %eax, multiboot_sig - KERNEL_BASE
+	mov %ebx, multiboot_ptr - KERNEL_BASE
 	
 	/* 2. Ensure that the CPU support long mode */
 	mov $0x80000000, %eax
@@ -202,10 +202,10 @@ init_stack:
 
 /* === General Data === */
 .section .data
-.globl mboot_sig
-.globl mboot_ptr
-mboot_sig:	.long 0
-mboot_ptr:	.long 0
+.globl multiboot_sig
+.globl multiboot_ptr
+multiboot_sig:	.long 0
+multiboot_ptr:	.quad 0
 
 /* Global Descriptor Table */
 GDTPtr_low:

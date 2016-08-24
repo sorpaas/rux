@@ -1,5 +1,6 @@
 #![feature(lang_items)]
 #![feature(asm)]
+#![feature(const_fn)]
 #![no_std]
 
 extern crate x86;
@@ -18,12 +19,25 @@ pub mod unwind;
 /// Logging code
 mod logging;
 
+mod common;
+mod multiboot;
+
+use core::mem;
+use core::slice;
+use common::KERNEL_BASE;
+
 // Kernel entrypoint
 #[lang="start"]
 #[no_mangle]
-pub fn kmain()
+pub fn kmain(multiboot_addr: u64)
 {
-	log!("Hello world! 1={}", 1);
+    log!("Multiboot addr: 0x{:x}", multiboot_addr);
+    let bootinfo = unsafe {
+        multiboot::Multiboot::new(multiboot_addr, |addr, size| {
+            let ptr = mem::transmute(addr + KERNEL_BASE);
+            Some(slice::from_raw_parts(ptr, size))
+        })
+    };
     
     let hello = b"Hello World!";
     let color_byte = 0x1f; // white foreground, blue background

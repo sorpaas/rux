@@ -13,3 +13,6 @@ default-features = false
 [dependencies.lazy_static]
 version = "0.2.1"
 features = ["spin_no_std"]
+
+[dependencies.bitflags]
+version = "0.7"

@@ -1,4 +1,4 @@
 use core::fmt;
 
-pub type PAddr = u64;
-pub const KERNEL_BASE: PAddr = 0xFFFFFFFF80000000;
+pub use arch::{PAddr, VAddr};
+pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;

@@ -8,6 +8,9 @@ extern crate x86;
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate bitflags;
+
 /// Macros, need to be loaded before everything else due to how rust parses
 #[macro_use]
 mod macros;
@@ -27,9 +30,9 @@ mod multiboot;
 
 use core::mem;
 use core::slice;
-use common::KERNEL_BASE;
+use common::{PAddr, VAddr, KERNEL_BASE};
 
-use arch::{multiboot_sig, multiboot_ptr};
+use arch::{multiboot_sig};
 
 // Kernel entrypoint
 #[lang="start"]
@@ -39,14 +42,14 @@ pub fn kmain()
     assert!(multiboot_sig == 0x2badb002);
     
     log!("multiboot_sig: 0x{:x}", multiboot_sig);
-    log!("multiboot_ptr: 0x{:x}", multiboot_ptr);
+    log!("multiboot_ptr: 0x{:x}", arch::multiboot_address());
 
     log!("kernel_stack_guard_page: 0x{:x}", arch::kernel_stack_guard_page_address());
     log!("kernel_end: 0x{:x}", arch::kernel_end_address());
     
     let bootinfo = unsafe {
-        multiboot::Multiboot::new(multiboot_ptr as u64, |addr, size| {
-            let ptr = mem::transmute(addr + KERNEL_BASE);
+        multiboot::Multiboot::new(arch::multiboot_address(), |addr, size| {
+            let ptr = mem::transmute(arch::kernel_internal_to_virtual(addr).as_u64());
             Some(slice::from_raw_parts(ptr, size))
         })
     }.unwrap();

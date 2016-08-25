@@ -2,6 +2,7 @@
 name = "rux"
 version = "0.0.1"
 dependencies = [
+ "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "x86 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

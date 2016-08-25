@@ -3,7 +3,7 @@ use core::str;
 use core::slice;
 use core::fmt;
 
-use common::PAddr;
+use common::{PAddr, VAddr};
 
 /// Value found in %eax after multiboot jumps to our entry point.
 pub const SIGNATURE_EAX: u32 = 0x2BADB002;
@@ -153,7 +153,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
     /// Convert a C string into a u8 slice and from there into a &str.
     /// This unsafe block builds on assumption that multiboot strings are sane.
     unsafe fn convert_c_string(&self, string: PAddr) -> Option<&'a str> {
-        if string == 0 {
+        if string == PAddr::from_u64(0) {
             return None;
         }
         let mut len = 0;
@@ -162,7 +162,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
             if *byte == 0 {
                 break;
             }
-            ptr += 1;
+            ptr += PAddr::from_u64(1);
             len += 1;
         }
         (self.paddr_to_slice)(string, len).map(|slice| str::from_utf8_unchecked(slice))
@@ -232,7 +232,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
     pub fn command_line(&self) -> Option<&'a str> {
         if self.has_cmdline() {
             unsafe {
-                self.convert_c_string(self.header.cmdline as PAddr)
+                self.convert_c_string(PAddr::from_u64(self.header.cmdline as u64))
             }
         } else {
             None
@@ -243,13 +243,13 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
     pub fn modules(&'a self) -> Option<ModuleIter<F>> {
         if self.has_modules() {
             unsafe {
-                (self.paddr_to_slice)(self.header.mods_addr as PAddr,
+                (self.paddr_to_slice)(PAddr::from_u64(self.header.mods_addr as u64),
                                       self.header.mods_count as usize *
                                       size_of::<MBModule>()).map(|slice| {
                                           let ptr = transmute(slice.as_ptr());
                                           let mods = slice::from_raw_parts(ptr,
                                                                            self.header.mods_count as usize);
-                                          ModuleIter { mb: &self, mods: mods}
+                                          ModuleIter { mb: &self, mods: mods }
                                       })
             }
         } else {
@@ -339,7 +339,7 @@ impl MemoryEntry {
 
     /// Get base of memory region.
     pub fn base_address(&self) -> PAddr {
-        self.base_addr as PAddr
+        PAddr::from_u64(self.base_addr)
     }
 
     /// Get size of the memory region.
@@ -370,7 +370,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Iterator for MemoryMapIter<'a,
     fn next(&mut self) -> Option<&'a MemoryEntry> {
         if self.current < self.end {
             unsafe {
-                self.mb.cast(self.current as PAddr).map(|region: &'a MemoryEntry| {
+                self.mb.cast(PAddr::from_u64(self.current as u64)).map(|region: &'a MemoryEntry| {
                     self.current += region.size + 4;
                     region
                 })
@@ -437,9 +437,9 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Iterator for ModuleIter<'a, F>
         self.mods.split_first().map(|(first, rest)| {
             self.mods = rest;
             unsafe {
-                Module::new(first.start as PAddr,
-                            first.end as PAddr,
-                            self.mb.convert_c_string(first.string as PAddr))
+                Module::new(PAddr::from_u64(first.start as u64),
+                            PAddr::from_u64(first.end as u64),
+                            self.mb.convert_c_string(PAddr::from_u64(first.string as u64)))
             }
         })
     }

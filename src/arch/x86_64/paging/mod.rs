@@ -1,5 +1,5 @@
 use core::fmt;
-use common::PAddr;
+use common::{PAddr, VAddr};
 
 #[macro_use]
 mod macros;
@@ -17,4 +17,23 @@ pub const MAXPHYADDR: u64 = 52;
 /// Mask to find the physical address of an entry in a page-table.
 const ADDRESS_MASK: u64 = ((1 << MAXPHYADDR) - 1) & !0xfff;
 
-pub use self::table::{PML4, PDPT, PD, PT, PML4Entry, PDPTEntry, PDEntry, PTEntry};
+pub use self::table::*;
+
+/// Invalidate the given address in the TLB using the `invlpg` instruction.
+///
+/// # Safety
+/// This function is unsafe as it causes a general protection fault (GP) if the current privilege
+/// level is not 0.
+pub unsafe fn flush(vaddr: VAddr) {
+    asm!("invlpg ($0)" :: "r" (vaddr.as_usize()) : "memory");
+}
+
+/// Invalidate the TLB completely by reloading the CR3 register.
+///
+/// # Safety
+/// This function is unsafe as it causes a general protection fault (GP) if the current privilege
+/// level is not 0.
+pub unsafe fn flush_all() {
+    use x86::shared::control_regs::{cr3, cr3_write};
+    cr3_write(cr3())
+}

@@ -1,13 +1,14 @@
 mod multiboot;
 
 use ::{kmain};
-use super::{kernel_end_paddr, kernel_start_paddr};
-use super::paging::{BASE_PAGE_LENGTH, PD};
+use super::{kernel_end_paddr, kernel_start_paddr, KERNEL_BASE};
+use super::paging::{BASE_PAGE_LENGTH, PD, pd_index};
 
 use utils::{block_count, align_up};
 
 use core::mem;
 use core::slice;
+use core::ptr::{Unique};
 use common::{PAddr, VAddr};
 
 extern {
@@ -59,7 +60,7 @@ impl MemoryRegion {
     }
 
     pub fn move_up(&mut self, npaddr: PAddr) {
-        assert!(npaddr > self.start_paddr);
+        assert!(npaddr >= self.start_paddr);
         assert!(self.start_paddr + self.length > npaddr);
         let nlength = self.start_paddr.as_usize() + self.length - npaddr.as_usize();
         self.length = nlength;
@@ -67,11 +68,48 @@ impl MemoryRegion {
     }
 }
 
+// fn alloc_kernel_pml4(kernel_pdpt: &PDPT, &mut MemoryRegion) -> Unique<PML4> {
+
+// }
+
+// fn alloc_kernel_pdpt(kernel_pd: &PD, &mut MemoryRegion) -> Unique<PDPT> {
+
+// }
+
+// fn alloc_kernel_pd(kernel_pts: &[&PT], &mut MemoryRegion) -> Unique<PD> {
+
+// }
+
+// fn alloc_kernel_pts(&mut MemoryRegion) -> &[Unique<PT>] {
+    
+// }
+
+fn map_alloc_in_init_pd(alloc_start_vaddr: VAddr, alloc_start_paddr: PAddr, init_pd_mut: &mut PD) {
+
+}
+
 /// Kernel entrypoint
 #[lang="start"]
 #[no_mangle]
 pub fn kinit() {
+    use super::paging::{PDEntry, PD_P, PD_RW, PD_PS, BASE_PAGE_LENGTH};
+    
     let kernel_page_size = block_count(kernel_end_paddr().as_usize() - kernel_start_paddr().as_usize(), BASE_PAGE_LENGTH);
+    let alloc_size =
+        1 + // One PML4
+        1 + // One PDPT
+        1 + // One PD
+        block_count(kernel_page_size, 512) + // Kernel page mapping PT
+        1
+    // The object pool PT, with its last item pointing to itself at address
+    // KERNEL_BASE + 0xfff000
+        ;
+    let mut init_pd_unique = unsafe { Unique::new(&mut init_pd as *mut PD) };
+    let mut init_pd_mut = unsafe { init_pd_unique.get_mut() };
+
+    for entry in init_pd_mut.iter() {
+        log!("addr: 0x{:x}, flags: {:?}", entry.get_address(), entry);
+    }
 
     log!("kernel_page_size: {}", kernel_page_size);
         
@@ -116,6 +154,24 @@ pub fn kinit() {
 
     log!("archinfo: {:?}", archinfo);
     log!("alloc_region: {:?}", alloc_region);
+
+    // Before allocation, we need to make sure PAddr + alloc_size is mapped. This is done in the init_pd.
+
+    let mut alloc_region_unwrap = alloc_region.unwrap();
+    let map_alloc_start_vaddr = VAddr::from_u64(KERNEL_BASE + 0xc00000);
+    let map_alloc_pd_index = pd_index(map_alloc_start_vaddr);
+    let map_alloc_start_paddr = align_up(alloc_region_unwrap.start_paddr(), BASE_PAGE_LENGTH);
+
+    log!("map_alloc_pd_index: {}", map_alloc_pd_index);
+    log!("mao_alloc_start_paddr: 0x{:x}", map_alloc_start_paddr);
+    log!("alloc_region_start_paddr: 0x{:x}", alloc_region_unwrap.start_paddr());
+
+    assert!(alloc_size <= 512);
+    assert!(alloc_size * BASE_PAGE_LENGTH < alloc_region_unwrap.length());
+
+    init_pd_mut[map_alloc_pd_index] = PDEntry::new(map_alloc_start_paddr, PD_P | PD_RW | PD_PS);
+
+    unsafe { super::paging::flush(map_alloc_start_vaddr); }
 
     kmain();
 }

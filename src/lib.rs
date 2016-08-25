@@ -1,6 +1,7 @@
 #![feature(lang_items)]
 #![feature(asm)]
 #![feature(const_fn)]
+#![feature(unique)]
 #![no_std]
 
 extern crate x86;

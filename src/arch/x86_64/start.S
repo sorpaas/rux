@@ -16,9 +16,10 @@ KERNEL_BASE = 0xFFFFFFFF80000000
 /* === Multiboot Header === */
 MULTIBOOT_PAGE_ALIGN  =  (1<<0)
 MULTIBOOT_MEMORY_INFO =  (1<<1)
+/* REQVIDMODE is not used, because it is not supported by qemu */    
 MULTIBOOT_REQVIDMODE  =  (1<<2)
 MULTIBOOT_HEADER_MAGIC =  0x1BADB002
-MULTIBOOT_HEADER_FLAGS = (MULTIBOOT_PAGE_ALIGN | MULTIBOOT_MEMORY_INFO | MULTIBOOT_REQVIDMODE)
+MULTIBOOT_HEADER_FLAGS = (MULTIBOOT_PAGE_ALIGN | MULTIBOOT_MEMORY_INFO)
 MULTIBOOT_CHECKSUM     = -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
 .section .multiboot, "a"
 .globl multiboot
@@ -167,6 +168,9 @@ memcpy:
 
 /* === Page-aligned data === */
 .section .padata
+.globl init_pml4    
+.globl init_stack
+.globl init_stack_base    
 /* Initial paging structures, four levels */
 /* The +3 for sub-pages indicates "present (1) + writable (2)" */
 init_pml4:

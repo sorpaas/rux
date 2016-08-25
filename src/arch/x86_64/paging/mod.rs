@@ -37,3 +37,9 @@ pub unsafe fn flush_all() {
     use x86::shared::control_regs::{cr3, cr3_write};
     cr3_write(cr3())
 }
+
+pub unsafe fn switch_to(paddr: PAddr) {
+    use x86::shared::control_regs::{cr3_write};
+
+    cr3_write(paddr.as_usize());
+}

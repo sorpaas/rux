@@ -10,6 +10,45 @@ macro_rules! log{
 	})
 }
 
+macro_rules! global_variable {
+    ( $get:ident, $get_mut:ident, $var:ident, $t:ty, $init_v:expr) => {
+        static mut $var: Option<Unique<$t>> = $init_v;
+        
+        pub fn $get() -> &'static $t {
+            unsafe {
+                match $var {
+                    Some(ref x) => x.get(),
+                    None => panic!()
+                }
+            }
+        }
+
+        pub fn $get_mut() -> &'static mut $t {
+            unsafe {
+                match $var {
+                    Some(ref mut x) => x.get_mut(),
+                    None => panic!()
+                }
+            }
+        }
+    }
+}
+
+macro_rules! global_const {
+    ( $get:ident, $var:ident, $t:ty, $init_v:expr) => {
+        static mut $var: Option<$t> = $init_v;
+
+        pub fn $get() -> $t {
+            unsafe {
+                match $var {
+                    Some(x) => x,
+                    None => panic!()
+                }
+            }
+        }
+    }
+}
+
 macro_rules! addr_common {
     ( $t:ty ) => {
         impl Add<usize> for $t {

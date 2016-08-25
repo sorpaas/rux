@@ -16,3 +16,6 @@ features = ["spin_no_std"]
 
 [dependencies.bitflags]
 version = "0.7"
+
+[dependencies.spin]
+version = "0.3"

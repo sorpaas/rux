@@ -27,10 +27,12 @@ mod addr;
 /// vaddr, paddr
 
 pub use self::addr::{PAddr, VAddr};
-pub use self::paging::{PD, BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH};
-pub use self::init::{ArchInfo, MemoryRegion};
+pub use self::paging::{PD, BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH,
+                       with_object, with_object_mut};
+pub use self::init::{ArchInfo, MemoryRegion, object_pool_pt, object_pool_pt_mut,
+                     kernel_pml4_paddr, kernel_pd_paddr, OBJECT_POOL_START_VADDR,
+                     OBJECT_POOL_SIZE, OBJECT_POOL_PT_VADDR};
 pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
-pub const OBJECT_POOL_PAGE_SIZE: usize = 511;
 
 extern {
     static mut init_pd: PD;
@@ -51,32 +53,6 @@ pub fn kernel_end_paddr() -> PAddr {
 
 pub fn kernel_end_vaddr() -> VAddr {
     unsafe { kernel_paddr_to_vaddr(kernel_end_paddr()) }
-}
-
-/// Object pool is a PT.
-/// Its last entry refer to the pool pt.
-pub fn object_pool_length() -> usize {
-    (OBJECT_POOL_PAGE_SIZE + 1) * BASE_PAGE_LENGTH
-}
-
-pub fn kernel_pml4_vaddr() -> VAddr {
-    VAddr::from_u64(0xe00000 + KERNEL_BASE)
-}
-
-pub fn kernel_pdpt_vaddr() -> VAddr {
-    VAddr::from_u64(0xe01000 + KERNEL_BASE)
-}
-
-pub fn kernel_pd_vaddr() -> VAddr {
-    VAddr::from_u64(0xe02000 + KERNEL_BASE)
-}
-
-pub fn object_pool_pt_vaddr() -> VAddr {
-    VAddr::from_u64(0xe03000 + KERNEL_BASE)
-}
-
-pub fn object_pool_base_vaddr() -> VAddr {
-    VAddr::from_u64(0xf00000 + KERNEL_BASE)
 }
 
 pub unsafe fn kernel_paddr_to_vaddr(addr: PAddr) -> VAddr {

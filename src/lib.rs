@@ -5,6 +5,7 @@
 #![no_std]
 
 extern crate x86;
+extern crate spin;
 
 #[macro_use]
 extern crate lazy_static;
@@ -46,6 +47,19 @@ pub fn kmain()
     // // write `Hello World!` to the center of the VGA text buffer
     // let buffer_ptr = (0xFFFFFFFF80000000 + 0xb8000 as u64 + 1988) as *mut _;
     // unsafe { *buffer_ptr = hello_colored };
+
+    use arch::{object_pool_pt, object_pool_pt_mut,
+               with_object, with_object_mut,
+               kernel_pd_paddr};
+    use arch::paging::{PD};
+
+    with_object(kernel_pd_paddr(), |pd: &PD| {
+        for area in pd.iter() {
+            log!("{:?}", area.get_address());
+        }
+    });
+
+    log!("hello, world!");
     
 	loop {}
 }

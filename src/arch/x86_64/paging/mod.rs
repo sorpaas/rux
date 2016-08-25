@@ -5,6 +5,7 @@ use common::{PAddr, VAddr};
 mod macros;
 
 mod table;
+mod with;
 
 pub const BASE_PAGE_LENGTH: usize = 4096; // 4 KiB
 pub const LARGE_PAGE_LENGTH: usize = 1024 * 1024 * 2; // 2 MiB
@@ -18,6 +19,7 @@ pub const MAXPHYADDR: u64 = 52;
 const ADDRESS_MASK: u64 = ((1 << MAXPHYADDR) - 1) & !0xfff;
 
 pub use self::table::*;
+pub use self::with::{with_object, with_object_mut};
 
 /// Invalidate the given address in the TLB using the `invlpg` instruction.
 ///

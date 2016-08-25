@@ -29,9 +29,9 @@ const INITIAL_ALLOC_OBJECT_POOL_PT_OFFSET: usize = 0x3000;
 const INITIAL_ALLOC_KERNEL_PT_START_OFFSET: usize = 0x4000;
 
 // Below should be used AFTER switching to new page table structure.
-const OBJECT_POOL_START_VADDR: VAddr = VAddr::from_u64(KERNEL_BASE + 0xe00000);
-const OBJECT_POOL_SIZE: usize = 511;
-const OBJECT_POOL_PT_VADDR: VAddr = VAddr::from_u64(KERNEL_BASE + 0xfff000);
+pub const OBJECT_POOL_START_VADDR: VAddr = VAddr::from_u64(KERNEL_BASE + 0xe00000);
+pub const OBJECT_POOL_SIZE: usize = 511;
+pub const OBJECT_POOL_PT_VADDR: VAddr = VAddr::from_u64(KERNEL_BASE + 0xfff000);
 
 // Variables
 global_variable!(initial_pd, initial_pd_mut, _initial_pd, PD, unsafe { Some(Unique::new(&mut init_pd as *mut _)) });
@@ -330,7 +330,13 @@ pub fn kinit() {
 
     alloc_kernel_pts(&mut alloc_region, unsafe { pd_unique.get_mut() }, alloc_base_paddr);
 
+    unsafe {
+        _initial_pd = None;
+    }
     unsafe { super::paging::switch_to(kernel_pml4_paddr()); }
+    unsafe {
+        _object_pool_pt = Some(Unique::new(OBJECT_POOL_PT_VADDR.as_usize() as *mut _));
+    }
 
     kmain();
 }

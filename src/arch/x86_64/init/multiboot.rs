@@ -162,7 +162,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
             if *byte == 0 {
                 break;
             }
-            ptr += PAddr::from_usize(1);
+            ptr += 1;
             len += 1;
         }
         (self.paddr_to_slice)(string, len).map(|slice| str::from_utf8_unchecked(slice))

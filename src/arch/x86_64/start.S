@@ -115,7 +115,7 @@ start64:
 	jmp *%rax
 
 .section .text
-.extern kmain
+.extern kinit
 .globl start64_high
 start64_high:
 	/* and clear low-memory mapping */
@@ -134,7 +134,7 @@ start64_high:
 	mov $init_stack, %rsp
 	
 	/* call the rust code */
-	call kmain
+	call kinit
 
 	/* and if that returns (it shouldn't) loop forever */
 start64.loop:
@@ -168,6 +168,7 @@ memcpy:
 
 /* === Page-aligned data === */
 .section .padata
+.globl init_pd    
 .globl kernel_stack_guard_page
 /* Initial paging structures, four levels */
 /* The +3 for sub-pages indicates "present (1) + writable (2)" */

@@ -6,10 +6,10 @@ mod macros;
 
 mod table;
 
-pub const BASE_PAGE_SIZE: u64 = 4096; // 4 KiB
-pub const LARGE_PAGE_SIZE: u64 = 1024 * 1024 * 2; // 2 MiB
-pub const HUGE_PAGE_SIZE: u64 = 1024 * 1024 * 1024; // 1 GiB
-pub const CACHE_LINE_SIZE: usize = 64; // 64 Bytes
+pub const BASE_PAGE_LENGTH: usize = 4096; // 4 KiB
+pub const LARGE_PAGE_LENGTH: usize = 1024 * 1024 * 2; // 2 MiB
+pub const HUGE_PAGE_LENGTH: usize = 1024 * 1024 * 1024; // 1 GiB
+pub const CACHE_LINE_LENGTH: usize = 64; // 64 Bytes
 
 /// MAXPHYADDR, which is at most 52; (use CPUID for finding system value).
 pub const MAXPHYADDR: u64 = 52;

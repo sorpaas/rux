@@ -1,6 +1,6 @@
 use core::fmt;
 use common::{PAddr, VAddr};
-use super::{BASE_PAGE_SIZE, ADDRESS_MASK};
+use super::{BASE_PAGE_LENGTH, ADDRESS_MASK};
 
 /// A PML4 table.
 /// In practice this has only 4 entries but it still needs to be the size of a 4K page.
@@ -72,9 +72,8 @@ impl PML4Entry {
     ///  * `pdpt` - The physical address of the pdpt table.
     ///  * `flags`- Additional flags for the entry.
     pub fn new(pdpt: PAddr, flags: PML4Entry) -> PML4Entry {
-        let pdpt_val = pdpt.as_u64();
-        assert!(pdpt_val % BASE_PAGE_SIZE == 0);
-        PML4Entry { bits: pdpt_val | flags.bits }
+        assert!(pdpt.as_usize() % BASE_PAGE_LENGTH == 0);
+        PML4Entry { bits: pdpt.as_u64() | flags.bits }
     }
 
     /// Retrieves the physical address in this entry.
@@ -138,9 +137,8 @@ impl PDPTEntry {
     ///  * `pd` - The physical address of the page directory.
     ///  * `flags`- Additional flags for the entry.
     pub fn new(pd: PAddr, flags: PDPTEntry) -> PDPTEntry {
-        let pd_val = pd.as_u64();
-        assert!(pd_val % BASE_PAGE_SIZE == 0);
-        PDPTEntry { bits: pd_val | flags.bits }
+        assert!(pd.as_usize() % BASE_PAGE_LENGTH == 0);
+        PDPTEntry { bits: pd.as_u64() | flags.bits }
     }
 
     /// Retrieves the physical address in this entry.
@@ -206,9 +204,8 @@ impl PDEntry {
     ///  * `pt` - The physical address of the page table.
     ///  * `flags`- Additional flags for the entry.
     pub fn new(pt: PAddr, flags: PDEntry) -> PDEntry {
-        let pt_val = pt.as_u64();
-        assert!(pt_val % BASE_PAGE_SIZE == 0);
-        PDEntry { bits: pt_val | flags.bits }
+        assert!(pt.as_usize() % BASE_PAGE_LENGTH == 0);
+        PDEntry { bits: pt.as_u64() | flags.bits }
     }
 
     /// Retrieves the physical address in this entry.
@@ -274,9 +271,8 @@ impl PTEntry {
     ///  * `page` - The physical address of the backing 4 KiB page.
     ///  * `flags`- Additional flags for the entry.
     pub fn new(page: PAddr, flags: PTEntry) -> PTEntry {
-        let page_val = page.as_u64();
-        assert!(page_val % BASE_PAGE_SIZE == 0);
-        PTEntry { bits: page_val | flags.bits }
+        assert!(page.as_usize() % BASE_PAGE_LENGTH == 0);
+        PTEntry { bits: page.as_u64() | flags.bits }
     }
 
     /// Retrieves the physical address in this entry.

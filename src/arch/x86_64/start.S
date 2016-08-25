@@ -168,11 +168,10 @@ memcpy:
 
 /* === Page-aligned data === */
 .section .padata
-.globl init_pml4    
-.globl init_stack
-.globl init_stack_base    
+.globl kernel_stack_guard_page
 /* Initial paging structures, four levels */
 /* The +3 for sub-pages indicates "present (1) + writable (2)" */
+kernel_stack_guard_page:
 init_pml4:
 	.quad low_pdpt - KERNEL_BASE + 3	/* low map for startup, will be cleared before rust code runs */
 	.rept 512 - 3

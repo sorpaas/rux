@@ -22,9 +22,7 @@ extern {
     pub static multiboot_sig: u32;
     pub static multiboot_ptr: u64;
 
-    static init_pml4: u64;
-    static init_stack_base: u64;
-    static init_stack: u64;
+    static kernel_stack_guard_page: u64;
     static kernel_end: u64;
 }
 
@@ -34,14 +32,7 @@ pub fn kernel_end_address() -> PAddr {
     ((&kernel_end as *const _) as PAddr) - KERNEL_BASE
 }
 
-pub fn kernel_stack_address() -> PAddr {
-    ((&init_stack as *const _) as PAddr) - KERNEL_BASE
-}
-
-pub fn kernel_stack_init_base_address() -> PAddr {
-    ((&init_stack_base as *const _) as PAddr) - KERNEL_BASE
-}
-
-pub fn kernel_stack_max_base_address() -> PAddr {
-    ((&init_pml4 as *const _) as PAddr) - KERNEL_BASE
+// TODO Change this to virtual address
+pub fn kernel_stack_guard_page_address() -> PAddr {
+    ((&kernel_stack_guard_page as *const _) as PAddr) - KERNEL_BASE
 }

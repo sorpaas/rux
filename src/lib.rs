@@ -41,9 +41,7 @@ pub fn kmain()
     log!("multiboot_sig: 0x{:x}", multiboot_sig);
     log!("multiboot_ptr: 0x{:x}", multiboot_ptr);
 
-    log!("kernel_stack: 0x{:x}", arch::kernel_stack_address());
-    log!("kernel_stack_init_base: 0x{:x}", arch::kernel_stack_init_base_address());
-    log!("kernel_stack_max_base: 0x{:x}", arch::kernel_stack_max_base_address());
+    log!("kernel_stack_guard_page: 0x{:x}", arch::kernel_stack_guard_page_address());
     log!("kernel_end: 0x{:x}", arch::kernel_end_address());
     
     let bootinfo = unsafe {

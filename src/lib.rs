@@ -49,7 +49,7 @@ pub fn kmain()
     
     let bootinfo = unsafe {
         multiboot::Multiboot::new(arch::multiboot_address(), |addr, size| {
-            let ptr = mem::transmute(arch::kernel_internal_to_virtual(addr).as_raw());
+            let ptr = mem::transmute(arch::kernel_internal_to_virtual(addr).as_usize());
             Some(slice::from_raw_parts(ptr, size))
         })
     }.unwrap();

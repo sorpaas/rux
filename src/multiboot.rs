@@ -3,7 +3,7 @@ use core::str;
 use core::slice;
 use core::fmt;
 
-use common::{PAddr, VAddr, PAddrRaw, VAddrRaw};
+use common::{PAddr, VAddr};
 
 /// Value found in %eax after multiboot jumps to our entry point.
 pub const SIGNATURE_EAX: u32 = 0x2BADB002;
@@ -153,7 +153,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
     /// Convert a C string into a u8 slice and from there into a &str.
     /// This unsafe block builds on assumption that multiboot strings are sane.
     unsafe fn convert_c_string(&self, string: PAddr) -> Option<&'a str> {
-        if string == PAddr::from_raw(0) {
+        if string == PAddr::from_usize(0) {
             return None;
         }
         let mut len = 0;
@@ -162,7 +162,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
             if *byte == 0 {
                 break;
             }
-            ptr += PAddr::from_raw(1);
+            ptr += PAddr::from_usize(1);
             len += 1;
         }
         (self.paddr_to_slice)(string, len).map(|slice| str::from_utf8_unchecked(slice))
@@ -232,7 +232,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
     pub fn command_line(&self) -> Option<&'a str> {
         if self.has_cmdline() {
             unsafe {
-                self.convert_c_string(PAddr::from_raw(self.header.cmdline as PAddrRaw))
+                self.convert_c_string(PAddr::from_u32(self.header.cmdline))
             }
         } else {
             None
@@ -243,7 +243,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
     pub fn modules(&'a self) -> Option<ModuleIter<F>> {
         if self.has_modules() {
             unsafe {
-                (self.paddr_to_slice)(PAddr::from_raw(self.header.mods_addr as PAddrRaw),
+                (self.paddr_to_slice)(PAddr::from_u32(self.header.mods_addr),
                                       self.header.mods_count as usize *
                                       size_of::<MBModule>()).map(|slice| {
                                           let ptr = transmute(slice.as_ptr());
@@ -339,7 +339,7 @@ impl MemoryEntry {
 
     /// Get base of memory region.
     pub fn base_address(&self) -> PAddr {
-        PAddr::from_raw(self.base_addr)
+        PAddr::from_u64(self.base_addr)
     }
 
     /// Get size of the memory region.
@@ -370,7 +370,7 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Iterator for MemoryMapIter<'a,
     fn next(&mut self) -> Option<&'a MemoryEntry> {
         if self.current < self.end {
             unsafe {
-                self.mb.cast(PAddr::from_raw(self.current as PAddrRaw)).map(|region: &'a MemoryEntry| {
+                self.mb.cast(PAddr::from_u32(self.current)).map(|region: &'a MemoryEntry| {
                     self.current += region.size + 4;
                     region
                 })
@@ -437,9 +437,9 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Iterator for ModuleIter<'a, F>
         self.mods.split_first().map(|(first, rest)| {
             self.mods = rest;
             unsafe {
-                Module::new(PAddr::from_raw(first.start as PAddrRaw),
-                            PAddr::from_raw(first.end as PAddrRaw),
-                            self.mb.convert_c_string(PAddr::from_raw(first.string as PAddrRaw)))
+                Module::new(PAddr::from_u32(first.start),
+                            PAddr::from_u32(first.end),
+                            self.mb.convert_c_string(PAddr::from_u32(first.string)))
             }
         })
     }

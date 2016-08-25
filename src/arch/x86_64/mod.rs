@@ -19,10 +19,9 @@ mod x86_io;
 pub mod debug;
 pub mod paging;
 
-use common::{PAddr, VAddr};
+mod addr;
 
-pub type PAddrRaw = u64;
-pub type VAddrRaw = u64;
+pub use self::addr::{PAddr, VAddr};
 pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
 extern {
@@ -34,20 +33,20 @@ extern {
 }
 
 pub fn multiboot_address() -> PAddr {
-    PAddr::from_raw(multiboot_ptr)
+    PAddr::from_u64(multiboot_ptr)
 }
 
 pub fn kernel_end_address() -> PAddr {
-    PAddr::from_raw((&kernel_end as *const _) as u64 - KERNEL_BASE)
+    PAddr::from_u64((&kernel_end as *const _) as u64 - KERNEL_BASE)
 }
 
 // TODO Change this to virtual address
 pub fn kernel_stack_guard_page_address() -> PAddr {
-    PAddr::from_raw((&kernel_stack_guard_page as *const _) as u64 - KERNEL_BASE)
+    PAddr::from_u64((&kernel_stack_guard_page as *const _) as u64 - KERNEL_BASE)
 }
 
 pub fn kernel_internal_to_virtual(addr: PAddr) -> VAddr {
-    assert!(addr.as_raw() <= kernel_end_address().as_raw());
+    assert!(addr.as_usize() <= kernel_end_address().as_usize());
 
-    VAddr::from_raw(addr.as_raw() + KERNEL_BASE)
+    VAddr::from_u64(addr.as_u64() + KERNEL_BASE)
 }

@@ -30,7 +30,7 @@ mod multiboot;
 
 use core::mem;
 use core::slice;
-use common::{PAddr, VAddr, KERNEL_BASE};
+use common::{PAddr, VAddr};
 
 use arch::{multiboot_sig};
 
@@ -49,7 +49,7 @@ pub fn kmain()
     
     let bootinfo = unsafe {
         multiboot::Multiboot::new(arch::multiboot_address(), |addr, size| {
-            let ptr = mem::transmute(arch::kernel_internal_to_virtual(addr).as_u64());
+            let ptr = mem::transmute(arch::kernel_internal_to_virtual(addr).as_raw());
             Some(slice::from_raw_parts(ptr, size))
         })
     }.unwrap();

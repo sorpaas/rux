@@ -149,7 +149,7 @@ fn bootstrap_archinfo() -> (ArchInfo, MemoryRegion) {
 fn map_alloc_region(alloc_region: &mut MemoryRegion) {
     use super::paging::{PD_P, PD_RW, PD_PS, PDEntry};
     
-    let map_alloc_start_vaddr = VAddr::from_u64(KERNEL_BASE + 0xc00000);
+    let map_alloc_start_vaddr = INITIAL_ALLOC_START_VADDR;
     let map_alloc_pd_index = pd_index(map_alloc_start_vaddr);
     let map_alloc_start_paddr = align_up(alloc_region.start_paddr(), BASE_PAGE_LENGTH);
 

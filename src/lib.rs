@@ -24,14 +24,12 @@ pub mod unwind;
 
 /// Logging code
 mod logging;
-
+mod utils;
 mod common;
 
 use core::mem;
 use core::slice;
 use common::{PAddr, VAddr};
-
-use arch::{multiboot_sig};
 
 #[no_mangle]
 pub fn kmain()

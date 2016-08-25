@@ -33,17 +33,8 @@ pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 pub const OBJECT_POOL_PAGE_SIZE: usize = 511;
 
 extern {
-    pub static multiboot_sig: u32;
-    static multiboot_ptr: u64;
-
     static mut init_pd: PD;
-
-    static kernel_stack_guard_page: u64;
     static kernel_end: u64;
-}
-
-pub fn multiboot_paddr() -> PAddr {
-    PAddr::from_u64(multiboot_ptr)
 }
 
 pub fn kernel_start_paddr() -> PAddr {
@@ -60,14 +51,6 @@ pub fn kernel_end_paddr() -> PAddr {
 
 pub fn kernel_end_vaddr() -> VAddr {
     unsafe { kernel_paddr_to_vaddr(kernel_end_paddr()) }
-}
-
-pub fn kernel_stack_guard_page_vaddr() -> VAddr {
-    VAddr::from_u64((&kernel_stack_guard_page as *const _) as u64)
-}
-
-pub fn init_pd_vaddr() -> VAddr {
-    unsafe { VAddr::from_u64((&init_pd as *const _) as u64) }
 }
 
 /// Object pool is a PT.

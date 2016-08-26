@@ -30,7 +30,8 @@ pub use self::addr::{PAddr, VAddr};
 pub use self::paging::{PD, BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH,
                        with_object, with_object_mut};
 pub use self::init::{ArchInfo, MemoryRegion, object_pool_pt, object_pool_pt_mut,
-                     kernel_pml4_paddr, kernel_pd_paddr, OBJECT_POOL_START_VADDR,
+                     kernel_pml4_paddr, kernel_pd_paddr, kernel_pdpt_paddr,
+                     OBJECT_POOL_START_VADDR,
                      OBJECT_POOL_SIZE, OBJECT_POOL_PT_VADDR};
 pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 

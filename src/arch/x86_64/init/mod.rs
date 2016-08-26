@@ -38,6 +38,7 @@ global_variable!(initial_pd, initial_pd_mut, _initial_pd, PD, unsafe { Some(Uniq
 global_variable!(object_pool_pt, object_pool_pt_mut, _object_pool_pt, [PTEntry; OBJECT_POOL_SIZE], None);
 
 global_const!(kernel_pml4_paddr, _kernel_pml4_paddr, PAddr, None);
+global_const!(kernel_pdpt_paddr, _kernel_pdpt_paddr, PAddr, None);
 global_const!(kernel_pd_paddr, _kernel_pd_paddr, PAddr, None);
 
 // Helper functions
@@ -125,6 +126,8 @@ fn alloc_kernel_pdpt(region: &mut MemoryRegion, pml4: &mut PML4, alloc_base: PAd
     region.move_up(paddr + BASE_PAGE_LENGTH);
     
     pml4[pml4_index(VAddr::from_u64(KERNEL_BASE))] = PML4Entry::new(paddr, PML4_P | PML4_RW);
+
+    unsafe { _kernel_pdpt_paddr = Some(paddr); }
 
     pdpt_unique
 }

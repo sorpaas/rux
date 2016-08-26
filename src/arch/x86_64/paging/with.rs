@@ -5,7 +5,7 @@ use utils::{align_down, block_count};
 use core::ptr::{Unique};
 use super::{PTEntry, PT_P, PT_RW, flush, BASE_PAGE_LENGTH};
 use arch::{object_pool_pt, object_pool_pt_mut, OBJECT_POOL_SIZE,
-            OBJECT_POOL_START_VADDR};
+           OBJECT_POOL_START_VADDR};
 use common::{PAddr, VAddr};
 
 static _next_free: Mutex<usize> = Mutex::new(0);
@@ -26,6 +26,7 @@ fn with_object_unique<T, Return, F: Fn(Unique<T>) -> Return>(paddr: PAddr, f: F)
 
         for i in 0..required_page_size {
             object_pool_pt_mut()[next_free_base + i] = PTEntry::new(aligned + (i * BASE_PAGE_LENGTH), PT_P | PT_RW);
+            unsafe { flush(OBJECT_POOL_START_VADDR + (next_free_base * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
         }
 
         *next_free = next_free_base + required_page_size;
@@ -42,6 +43,7 @@ fn with_object_unique<T, Return, F: Fn(Unique<T>) -> Return>(paddr: PAddr, f: F)
 
         for i in 0..required_page_size {
             object_pool_pt_mut()[next_free_base + i] = PTEntry::empty();
+            unsafe { flush(OBJECT_POOL_START_VADDR + (next_free_base * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
         }
 
         *next_free = next_free_base;

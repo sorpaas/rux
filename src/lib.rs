@@ -32,9 +32,10 @@ mod common;
 use core::mem;
 use core::slice;
 use common::{PAddr, VAddr};
+use arch::{ArchInfo, MemoryRegion};
 
 #[no_mangle]
-pub fn kmain()
+pub fn kmain(archinfo: ArchInfo)
 {
     // let hello = b"Hello World!";
     // let color_byte = 0x1f; // white foreground, blue background
@@ -50,14 +51,18 @@ pub fn kmain()
 
     use arch::{object_pool_pt, object_pool_pt_mut,
                with_object, with_object_mut,
-               kernel_pd_paddr};
-    use arch::paging::{PD};
+               kernel_pd_paddr, kernel_pml4_paddr};
+    use arch::paging::{PD, PML4};
 
-    with_object(kernel_pd_paddr(), |pd: &PD| {
-        for area in pd.iter() {
+    with_object(kernel_pml4_paddr(), |pml4: &PML4| {
+        for area in pml4.iter() {
             log!("{:?}", area.get_address());
         }
     });
+
+    for region in archinfo.memory_regions() {
+        log!("{:?}", region);
+    }
 
     log!("hello, world!");
     

@@ -1,4 +1,7 @@
 mod multiboot;
+mod archinfo;
+
+pub use self::archinfo::{ArchInfo, MemoryRegion};
 
 use ::{kmain};
 use super::{kernel_end_paddr, kernel_start_paddr, kernel_start_vaddr, kernel_end_vaddr, KERNEL_BASE};
@@ -48,42 +51,6 @@ pub fn multiboot_paddr() -> PAddr {
 
 pub fn kernel_stack_guard_page_vaddr() -> VAddr {
     VAddr::from_u64((&kernel_stack_guard_page as *const _) as u64)
-}
-
-#[derive(Debug)]
-pub struct ArchInfo {
-    free_memory_length: usize,
-    free_memory_regions: [Option<MemoryRegion>; 16]
-}
-
-impl ArchInfo {
-    pub fn free_memory_regions(&self) -> &[Option<MemoryRegion>; 16] {
-        &self.free_memory_regions
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct MemoryRegion {
-    start_paddr: PAddr,
-    length: usize
-}
-
-impl MemoryRegion {
-    pub fn start_paddr(&self) -> PAddr {
-        self.start_paddr
-    }
-
-    pub fn length(&self) -> usize {
-        self.length
-    }
-
-    pub fn move_up(&mut self, npaddr: PAddr) {
-        assert!(npaddr >= self.start_paddr);
-        assert!(self.start_paddr + self.length > npaddr);
-        let nlength = self.start_paddr.as_usize() + self.length - npaddr.as_usize();
-        self.length = nlength;
-        self.start_paddr = npaddr;
-    }
 }
 
 fn alloc_kernel_pml4(region: &mut MemoryRegion, alloc_base: PAddr) -> Unique<PML4> {
@@ -242,8 +209,7 @@ fn bootstrap_archinfo() -> (ArchInfo, MemoryRegion) {
         })
     }.unwrap();
     
-    let mut archinfo = ArchInfo { free_memory_length: 0,
-                                  free_memory_regions: [None; 16] };
+    let mut archinfo = ArchInfo::new();
     let mut alloc_region: Option<MemoryRegion> = None;
     
     for area in bootinfo.memory_regions().unwrap() {
@@ -253,13 +219,11 @@ fn bootstrap_archinfo() -> (ArchInfo, MemoryRegion) {
             continue;
         }
 
-        let mut cur_region = MemoryRegion {
-            start_paddr: area.base_address(),
-            length: area.length() as usize
-        };
+        let mut cur_region = MemoryRegion::new(area.base_address(), area.length() as usize);
 
-        if cur_region.start_paddr <= kernel_start_paddr() &&
-            PAddr::from_usize(cur_region.start_paddr.as_usize() + cur_region.length) >= kernel_end_paddr()
+        if cur_region.start_paddr() <= kernel_start_paddr() &&
+            PAddr::from_usize(cur_region.start_paddr().as_usize() +
+                              cur_region.length()) >= kernel_end_paddr()
         {
             let npaddr = align_up(kernel_end_paddr(), BASE_PAGE_LENGTH);
             cur_region.move_up(npaddr);
@@ -268,7 +232,7 @@ fn bootstrap_archinfo() -> (ArchInfo, MemoryRegion) {
                 alloc_region = Some(cur_region);
             }
         } else {
-            archinfo.free_memory_regions[archinfo.free_memory_length] = Some(cur_region);
+            archinfo.push_memory_region(cur_region);
         }
     }
 
@@ -341,5 +305,7 @@ pub fn kinit() {
         _object_pool_pt = Some(Unique::new(OBJECT_POOL_PT_VADDR.as_usize() as *mut _));
     }
 
-    kmain();
+    archinfo.push_memory_region(alloc_region);
+
+    kmain(archinfo);
 }

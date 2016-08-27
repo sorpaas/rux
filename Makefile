@@ -31,17 +31,13 @@ $(libcore): build/libcore/lib.rs
 	@mkdir -p $(shell dirname $@)
 	@$(rustc) $(rust_flags) --target=$(shell realpath $(target_spec)) --out-dir=build/$(arch) --crate-type=lib $<
 
-$(kernel): $(libcore)
-	@make -C kernel arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) $(shell realpath $(kernel))
+kernel: $(libcore)
+	@make -C kernel arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) kernel
 
-$(rinit): $(libcore)
-	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) $(shell realpath $(rinit))
+rinit: $(libcore)
+	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) rinit
 
-kernel: $(kernel)
-
-rinit: $(rinit)
-
-run: $(kernel) $(rinit)
+run: kernel rinit
 	@qemu-system-$(arch) -kernel $(kernel) -initrd $(rinit) -serial stdio
 
 clean:

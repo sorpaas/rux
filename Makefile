@@ -1,4 +1,5 @@
-arch ?= x86_64
+arch ?= $(error arch not set)
+libcore ?= $(error libcore path not set)
 
 ifeq ($(arch),x86_64)
     triple ?= x86_64-none-elf-
@@ -51,7 +52,7 @@ clean:
 	@rm -r target
 
 run: $(kernel)
-	@qemu-system-x86_64 -kernel $(kernel) -serial stdio
+	@qemu-system-x86_64 -kernel $(kernel) -serial stdio -initrd shell.nix
 
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
 	@$(ld) $(linker_flags) -o $(kernel).elf64 $(assembly_object_files) $(rust_os)

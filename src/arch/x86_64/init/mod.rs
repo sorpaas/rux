@@ -208,6 +208,12 @@ fn bootstrap_archinfo() -> (ArchInfo, MemoryRegion) {
             Some(slice::from_raw_parts(ptr, size))
         })
     }.unwrap();
+
+    log!("bootinfo: {:?}", bootinfo);
+
+    for module in bootinfo.modules().unwrap() {
+        log!("module: {:?}", module);
+    }
     
     let mut archinfo = ArchInfo::new();
     let mut alloc_region: Option<MemoryRegion> = None;

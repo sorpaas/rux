@@ -54,15 +54,15 @@ pub fn kmain(archinfo: ArchInfo)
                kernel_pd_paddr, kernel_pml4_paddr};
     use arch::paging::{PD, PML4};
 
-    with_object(kernel_pml4_paddr(), |pml4: &PML4| {
-        for area in pml4.iter() {
-            log!("{:?}", area.get_address());
-        }
-    });
+    // with_object(kernel_pml4_paddr(), |pml4: &PML4| {
+    //     for area in pml4.iter() {
+    //         log!("{:?}", area.get_address());
+    //     }
+    // });
 
-    for region in archinfo.memory_regions() {
-        log!("{:?}", region);
-    }
+    // for region in archinfo.memory_regions() {
+    //     log!("{:?}", region);
+    // }
 
     log!("hello, world!");
     

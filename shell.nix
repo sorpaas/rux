@@ -22,6 +22,7 @@ in stdenv.mkDerivation {
     (binutils.override { cross = { config = "x86_64-none-elf"; }; })
     qemu
     file
+    gdb
     rustNightly
     cargoNightly
   ];

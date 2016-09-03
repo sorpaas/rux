@@ -40,6 +40,15 @@ rinit: $(libcore)
 run: kernel rinit
 	@qemu-system-$(arch) -kernel $(kernel) -initrd $(rinit) -serial stdio
 
+debug: kernel rinit
+	@qemu-system-$(arch) -d int -no-reboot -s -S -kernel $(kernel) -initrd $(rinit) -serial stdio
+
+noreboot: kernel rinit
+	@qemu-system-$(arch) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
+
+gdb:
+	@gdb $(kernel) -ex "target remote :1234"
+
 clean:
 	@make -C kernel arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) clean
 	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) clean

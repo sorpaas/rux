@@ -1,6 +1,0 @@
-[submodule "rinit"]
-	path = rinit
-	url = https://git.that.world/rux/rinit.git
-[submodule "kernel"]
-	path = kernel
-	url = https://git.that.world/rux/kernel.git

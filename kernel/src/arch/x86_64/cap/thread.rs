@@ -9,6 +9,7 @@ impl ThreadRuntime {
     pub unsafe fn switch_to(&self) {
         let stack_vaddr = self.stack_pointer as usize;
         let code_start = self.instruction_pointer as usize;
+        let cpu_flags = self.cpu_flags as usize;
         let code_seg = 0x28 | 0x3;
         let data_seg = 0x30 | 0x3;
 
@@ -19,11 +20,11 @@ impl ThreadRuntime {
 
               push rax
               push rbx
-              pushfq
+              push r8
               push rcx
               push rdx
               iretq"
-             :: "{rax}"(data_seg), "{rbx}"(stack_vaddr), "{rcx}"(code_seg), "{rdx}"(code_start)
+             :: "{rax}"(data_seg), "{rbx}"(stack_vaddr), "{rcx}"(code_seg), "{rdx}"(code_start), "{r8}"(cpu_flags)
              : "memory" : "intel", "volatile");
     }
 

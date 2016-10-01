@@ -1,8 +1,10 @@
 mod cpool;
 mod untyped;
+mod thread;
 
 pub use self::cpool::{CPoolHalf};
 pub use self::untyped::{UntypedHalf};
+pub use self::thread::{TCBHalf};
 
 use common::*;
 
@@ -14,6 +16,7 @@ pub enum Capability {
     CPool(CPoolHalf),
     TopPageTable(TopPageTableHalf),
     Page(PageHalf),
+    TCB(TCBHalf),
     ArchSpecific(ArchSpecificCapability),
 }
 

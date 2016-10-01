@@ -11,10 +11,16 @@ mod unwind;
 fn start(_argc: isize, _argv: *const *const u8) {
     // divide_by_zero();
     unsafe {
-        debug_raw(0x1);
-        debug_raw(0x65);
+        debug("Test 1");
+        debug("Test 2");
     }
     loop {};
+}
+
+fn debug(message: &str) {
+    unsafe {
+        debug_raw(&message as *const &str as u64)
+    }
 }
 
 unsafe fn debug_raw(param: u64) {

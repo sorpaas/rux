@@ -88,6 +88,10 @@ extern "C" fn debug_call_handler(stack_frame: *const ExceptionStackFrame) -> ! {
         let param: u64;
         asm!("":"={r15}"(param));
         log!("param is: 0x{:x}", param);
+
+        let message: &str = unsafe { *(param as *const &str) };
+        log!("message: {}", message);
+
         log!("instruction pointer: 0x{:x}", exception.instruction_pointer);
         log!("code segment: 0x{:x}", exception.code_segment);
         log!("cpu flags: 0b{:b}", exception.cpu_flags);

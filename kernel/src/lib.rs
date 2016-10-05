@@ -139,7 +139,7 @@ pub fn kmain(archinfo: InitInfo)
                                   (rinit_stack_vaddr + (PageHalf::length() - 4)));
     }
     
-	loop {}
+    loop {}
 }
 
 fn divide_by_zero() {

@@ -2,9 +2,7 @@
 #![feature(asm)]
 #![no_std]
 
-extern crate rlibc;
-
-mod unwind;
+extern crate system;
 
 #[lang="start"]
 #[no_mangle]

@@ -17,8 +17,6 @@ pub unsafe fn with_object_vaddr<Return, F: FnOnce(VAddr) -> Return>(paddr: PAddr
     let required_page_size = block_count((paddr + size).into(): usize - aligned.into(): usize,
                                          BASE_PAGE_LENGTH);
 
-    log!("required_page_size: {}", required_page_size);
-
     let next_free_base;
 
     {

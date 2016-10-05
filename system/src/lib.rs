@@ -5,3 +5,4 @@
 extern crate rlibc;
 
 pub mod unwind;
+pub mod debug;

@@ -1,5 +1,5 @@
 use common::*;
-use super::{Capability};
+use super::{Capability, CapHalf};
 use super::untyped::{UntypedHalf};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};
@@ -14,7 +14,10 @@ pub struct TCB {
 #[derive(Debug, Clone)]
 pub struct TCBHalf {
     start_paddr: PAddr,
+    deleted: bool
 }
+
+normal_half!(TCBHalf);
 
 impl TCBHalf {
     // TODO handle data races
@@ -43,7 +46,8 @@ impl TCBHalf {
         let start_paddr = untyped.allocate(length, alignment);
 
         let mut cap = TCBHalf {
-            start_paddr: start_paddr
+            start_paddr: start_paddr,
+            deleted: false
         };
 
         cap.with_tcb_mut(|tcb| {

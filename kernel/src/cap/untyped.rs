@@ -17,7 +17,8 @@ impl UntypedHalf {
         UntypedHalf {
             start_paddr: start_paddr,
             length: length,
-            watermark: start_paddr
+            watermark: start_paddr,
+            deleted: false
         }
     }
 

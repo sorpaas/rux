@@ -10,6 +10,25 @@ macro_rules! log{
 	})
 }
 
+macro_rules! normal_half {
+    ( $t:ty ) => {
+        impl !Send for $t { }
+        impl !Sync for $t { }
+
+        impl CapHalf for $t {
+            fn mark_deleted(&mut self) {
+                self.deleted = true;
+            }
+        }
+
+        impl Drop for $t {
+            fn drop(&mut self) {
+                assert!(self.deleted);
+            }
+        }
+    }
+}
+
 macro_rules! global_variable {
     ( $get:ident, $get_mut:ident, $var:ident, $t:ty, $init_v:expr) => {
         static mut $var: Option<Unique<$t>> = $init_v;

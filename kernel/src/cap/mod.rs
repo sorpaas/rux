@@ -17,5 +17,9 @@ pub enum Capability {
     ArchSpecific(ArchSpecificCapability),
 }
 
+pub trait CapHalf {
+    fn mark_deleted(&mut self);
+}
+
 impl Capability {
 }

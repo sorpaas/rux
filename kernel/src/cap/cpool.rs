@@ -1,5 +1,5 @@
 use common::*;
-use super::{Capability};
+use super::{Capability, CapHalf};
 use super::untyped::{UntypedHalf};
 use core::mem::{size_of, align_of};
 use core::ops::{Index, IndexMut};
@@ -8,7 +8,8 @@ use arch;
 
 #[derive(Debug, Clone)]
 pub struct CPoolHalf {
-    start_paddr: PAddr
+    start_paddr: PAddr,
+    deleted: bool
 }
 
 #[derive(Debug)]
@@ -48,8 +49,9 @@ impl CPool {
     }
 }
 
+normal_half!(CPoolHalf);
+
 impl CPoolHalf {
-    // TODO handle data races
     pub fn with_cpool<Return, F: FnOnce(&CPool) -> Return>(&self, f: F) -> Return {
         unsafe {
             arch::with_object(self.start_paddr, |cpool: &CPool| {
@@ -58,7 +60,6 @@ impl CPoolHalf {
         }
     }
 
-    // TODO handle data races
     pub fn with_cpool_mut<Return, F: FnOnce(&mut CPool) -> Return>(&mut self, f: F) -> Return {
         unsafe {
             arch::with_object_mut(self.start_paddr, |cpool: &mut CPool| {
@@ -73,7 +74,8 @@ impl CPoolHalf {
         let start_paddr = untyped.allocate(length, alignment);
 
         let mut cap = CPoolHalf {
-            start_paddr: start_paddr
+            start_paddr: start_paddr,
+            deleted: false
         };
 
         cap.with_cpool_mut(|cpool| {

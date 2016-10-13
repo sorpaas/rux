@@ -6,13 +6,16 @@ use arch;
 use common::{PAddr, VAddr};
 
 use arch::cap::{ArchSpecificCapability};
-use cap::{UntypedHalf, CPoolHalf, Capability};
+use cap::{UntypedHalf, CPoolHalf, Capability, CapHalf};
 use core::ops::{Index};
 
 #[derive(Debug)]
 pub struct PageHalf {
     start_paddr: PAddr,
+    deleted: bool
 }
+
+normal_half!(PageHalf);
 
 impl PageHalf {
     pub fn start_paddr(&self) -> PAddr {
@@ -31,6 +34,7 @@ impl PageHalf {
 
         PageHalf {
             start_paddr: paddr,
+            deleted: false
         }
     }
 
@@ -42,7 +46,10 @@ impl PageHalf {
 #[derive(Debug)]
 pub struct PML4Half {
     start_paddr: PAddr,
+    deleted: bool
 }
+
+normal_half!(PML4Half);
 
 fn insert_in_none(slice: &mut [Option<Capability>], cap: Capability) {
     for space in slice.iter_mut() {
@@ -95,6 +102,7 @@ impl PML4Half {
         
         PML4Half {
             start_paddr: paddr,
+            deleted: false
         }
     }
 
@@ -214,7 +222,10 @@ impl PML4Half {
 #[derive(Debug)]
 pub struct PDPTHalf {
     start_paddr: PAddr,
+    deleted: bool
 }
+
+normal_half!(PDPTHalf);
 
 impl PDPTHalf {
     pub fn new(untyped: &mut UntypedHalf) -> PDPTHalf {
@@ -233,6 +244,7 @@ impl PDPTHalf {
 
         PDPTHalf {
             start_paddr: paddr,
+            deleted: false
         }
     }
 
@@ -256,7 +268,10 @@ impl PDPTHalf {
 #[derive(Debug)]
 pub struct PDHalf {
     start_paddr: PAddr,
+    deleted: bool
 }
+
+normal_half!(PDHalf);
 
 impl PDHalf {
     pub fn new(untyped: &mut UntypedHalf) -> PDHalf {
@@ -275,6 +290,7 @@ impl PDHalf {
 
         PDHalf {
             start_paddr: paddr,
+            deleted: false
         }
     }
 
@@ -298,7 +314,10 @@ impl PDHalf {
 #[derive(Debug)]
 pub struct PTHalf {
     start_paddr: PAddr,
+    deleted: bool
 }
+
+normal_half!(PTHalf);
 
 impl PTHalf {
     pub fn new(untyped: &mut UntypedHalf) -> PTHalf {
@@ -317,6 +336,7 @@ impl PTHalf {
 
         PTHalf {
             start_paddr: paddr,
+            deleted: false
         }
     }
 

@@ -1,4 +1,5 @@
 use common::{PAddr, VAddr};
+use super::{CapHalf};
 use utils::{align_up};
 
 #[derive(Debug)]
@@ -6,14 +7,18 @@ pub struct UntypedHalf {
     start_paddr: PAddr,
     length: usize,
     watermark: PAddr,
+    deleted: bool
 }
+
+normal_half!(UntypedHalf);
 
 impl UntypedHalf {
     pub fn new(start_paddr: PAddr, length: usize) -> UntypedHalf {
         UntypedHalf {
             start_paddr: start_paddr,
             length: length,
-            watermark: start_paddr
+            watermark: start_paddr,
+            deleted: false
         }
     }
 

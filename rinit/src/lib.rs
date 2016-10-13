@@ -2,15 +2,17 @@
 #![feature(asm)]
 #![no_std]
 
-extern crate rlibc;
+#[macro_use]
+extern crate system;
 
-mod unwind;
+use system::debug;
 
 #[lang="start"]
 #[no_mangle]
 fn start(_argc: isize, _argv: *const *const u8) {
     // divide_by_zero();
-    unsafe { asm!("int 80h" :::: "volatile", "intel"); }
+    debug!("Test 1");
+    debug!("Test 2");
     loop {};
 }
 

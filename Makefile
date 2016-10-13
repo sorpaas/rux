@@ -22,7 +22,7 @@ target_spec := $(arch).json
 
 build/rustc-nightly-src.tar.gz:
 	@mkdir -p $(shell dirname $@)
-	@curl https://static.rust-lang.org/dist/2016-08-11/rustc-nightly-src.tar.gz -o $@
+	@curl https://static.rust-lang.org/dist/2016-10-04/rustc-nightly-src.tar.gz -o $@
 
 build/libcore/lib.rs: build/rustc-nightly-src.tar.gz
 	@tar -xmf build/rustc-nightly-src.tar.gz -C build/ rustc-nightly/src/libcore --transform 's~^rustc-nightly/src/~~'

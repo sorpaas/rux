@@ -13,7 +13,17 @@ pub struct UntypedHalf {
 normal_half!(UntypedHalf);
 
 impl UntypedHalf {
-    pub fn new(start_paddr: PAddr, length: usize) -> UntypedHalf {
+    pub unsafe fn bootstrap(start_paddr: PAddr, length: usize) -> UntypedHalf {
+        UntypedHalf {
+            start_paddr: start_paddr,
+            length: length,
+            watermark: start_paddr
+        }
+    }
+
+    pub fn new(untyped: &mut UntypedHalf, length: usize, alignment: usize) -> UntypedHalf {
+        let start_paddr = untyped.allocate(length, alignment);
+
         UntypedHalf {
             start_paddr: start_paddr,
             length: length,

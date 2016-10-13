@@ -13,7 +13,7 @@ pub struct CPoolHalf {
 }
 
 #[derive(Debug)]
-pub struct CPool([Option<Capability>; 32]);
+pub struct CPool([Option<Capability>; 16]);
 
 impl Index<usize> for CPool {
     type Output = Option<Capability>;
@@ -80,8 +80,6 @@ impl CPoolHalf {
 
         cap.with_cpool_mut(|cpool| {
             *cpool = CPool([None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
                             None, None, None, None, None, None, None, None]);
         });
 

@@ -3,6 +3,7 @@ mod bit_field;
 mod dtables;
 
 use lazy_static;
+use arch::{ThreadRuntime};
 
 macro_rules! handler {
     ($name: ident) => {{
@@ -50,6 +51,8 @@ lazy_static! {
         idt.set_handler(0x0, handler!(divide_by_zero_handler));
         idt.set_handler(0x80, handler!(system_call_handler))
             .set_privilege_level(0x3);
+        idt.set_handler(0x81, handler!(debug_call_handler))
+            .set_privilege_level(0x3);
 
         idt
     };
@@ -74,6 +77,31 @@ extern "C" fn system_call_handler(stack_frame: *const ExceptionStackFrame) -> ! 
         log!("cpu flags: 0b{:b}", exception.cpu_flags);
         log!("stack pointer: 0x{:x}", exception.stack_pointer);
         log!("stack segment: 0x{:x}", exception.stack_segment);
+    }
+    loop {}
+}
+
+extern "C" fn debug_call_handler(stack_frame: *const ExceptionStackFrame) -> ! {
+    log!("interrupt: debug call");
+    unsafe {
+        let ref exception = *stack_frame;
+        let param: u64;
+        asm!("":"={r15}"(param));
+        log!("param is: 0x{:x}", param);
+
+        let message: &str = unsafe { *(param as *const &str) };
+        log!("message: {}", message);
+
+        log!("instruction pointer: 0x{:x}", exception.instruction_pointer);
+        log!("code segment: 0x{:x}", exception.code_segment);
+        log!("cpu flags: 0b{:b}", exception.cpu_flags);
+        log!("stack pointer: 0x{:x}", exception.stack_pointer);
+        log!("stack segment: 0x{:x}", exception.stack_segment);
+
+        let runtime = ThreadRuntime::new(exception.instruction_pointer,
+                                         exception.cpu_flags,
+                                         exception.stack_pointer);
+        runtime.switch_to();
     }
     loop {}
 }

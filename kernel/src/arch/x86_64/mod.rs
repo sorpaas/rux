@@ -59,7 +59,7 @@ pub use self::paging::{with_object_vaddr, with_object_unique,
 pub use self::interrupt::{enable_interrupt, disable_interrupt, set_interrupt_handler,
                           InterruptInfo};
 pub use self::init::{InitInfo};
-pub use self::cap::{ArchSpecificCapability, PageHalf};
+pub use self::cap::{ArchSpecificCapability, PageHalf, ThreadRuntime};
 pub use self::addr::{PAddr, VAddr};
 
 pub type TopPageTableHalf = self::cap::PML4Half;

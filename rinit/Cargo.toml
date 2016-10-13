@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Wei Tang <hi@that.world>"]
 
 [lib]
-crate_type = ["staticlib"]
+crate-type = ["staticlib"]
 
-[dependencies.rlibc]
-version = "1.0"
+[dependencies.system]
+path = "../system"

@@ -2,7 +2,7 @@ mod cpool;
 mod untyped;
 mod thread;
 
-pub use self::cpool::{CPoolHalf};
+pub use self::cpool::{CPoolHalf, with_cspace};
 pub use self::untyped::{UntypedHalf};
 pub use self::thread::{TCBHalf};
 

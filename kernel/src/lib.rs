@@ -41,7 +41,7 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo};
-use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, CapHalf};
+use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, CapHalf, with_cspace};
 
 #[no_mangle]
 pub fn kmain(archinfo: InitInfo)
@@ -167,6 +167,10 @@ pub fn kmain(archinfo: InitInfo)
 
         cpool_cap
     };
+
+    with_cspace(&cpool_cap, &[0, 0, 1], |item| {
+        log!("cspace item is {:?}", item);
+    });
 
     // TODO Insert cpool_cap to TCB.
 

@@ -6,6 +6,59 @@ use core::ops::{Index, IndexMut};
 use core::slice::Iter;
 use arch;
 
+pub fn with_cspace<Return, F: FnOnce(&Option<Capability>) -> Return>(root: &CPoolHalf,
+                                                                     route: &[u8], f: F) -> Return {
+    let mut subcpool_half: Option<CPoolHalf> = None;
+    let (route_last, route_cpool) = route.split_last().unwrap();
+
+    let mut failed = false;
+
+    for r in route_cpool {
+        if failed {
+            break;
+        }
+
+        subcpool_half = {
+            let current = if subcpool_half.is_none() {
+                root
+            } else {
+                subcpool_half.as_ref().unwrap()
+            };
+
+            current.with_cpool(|cpool| {
+                let ref middle = cpool[*r as usize];
+
+                match middle {
+                    &Some(Capability::CPool(ref cpool)) => {
+                        let mut subcpool = cpool.clone();
+                        subcpool.mark_deleted();
+
+                        Some(subcpool)
+                    },
+                    _ => {
+                        failed = true;
+                        None
+                    }
+                }
+            })
+        };
+    }
+
+    if failed {
+        f(&None)
+    } else {
+        let current = if subcpool_half.is_none() {
+            root
+        } else {
+            subcpool_half.as_ref().unwrap()
+        };
+
+        current.with_cpool(|cpool| {
+            f(&cpool[*route_last as usize])
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CPoolHalf {
     start_paddr: PAddr,

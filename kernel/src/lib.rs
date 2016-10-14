@@ -78,8 +78,6 @@ pub fn kmain(archinfo: InitInfo)
                     cpool.insert(Capability::Untyped(untyped));
                 }
             }
-        
-            log!("cpool = {:?}", cpool);
 
             untyped_target
         });
@@ -171,10 +169,6 @@ pub fn kmain(archinfo: InitInfo)
     };
 
     // TODO Insert cpool_cap to TCB.
-
-    cpool_cap.with_cpool(|cpool| {
-        log!("Current cpool: {:?}", cpool);
-    });
 
     unsafe {
         arch::switch_to_user_mode(VAddr::from(rinit_entry),

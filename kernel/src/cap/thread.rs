@@ -20,7 +20,6 @@ pub struct TCBHalf {
 normal_half!(TCBHalf);
 
 impl TCBHalf {
-    // TODO handle data races
     pub fn with_tcb<Return, F: FnOnce(&TCB) -> Return>(&self, f: F) -> Return {
         unsafe {
             arch::with_object(self.start_paddr, |tcb: &TCB| {
@@ -29,7 +28,6 @@ impl TCBHalf {
         }
     }
 
-    // TODO handle data races
     pub fn with_tcb_mut<Return, F: FnOnce(&mut TCB) -> Return>(&mut self, f: F) -> Return {
         unsafe {
             arch::with_object_mut(self.start_paddr, |tcb: &mut TCB| {

@@ -7,6 +7,8 @@
 #![feature(type_ascription)]
 #![feature(core_intrinsics)]
 #![feature(optin_builtin_traits)]
+#![feature(drop_types_in_const)]
+#![feature(thread_local)]
 #![no_std]
 
 extern crate x86;
@@ -40,8 +42,8 @@ mod cap;
 use core::mem;
 use core::slice;
 use common::*;
-use arch::{InitInfo};
-use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, CapHalf, with_cspace};
+use arch::{InitInfo, ThreadRuntime};
+use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, CapHalf, TCBHalf, with_cspace};
 
 #[no_mangle]
 pub fn kmain(archinfo: InitInfo)
@@ -50,7 +52,7 @@ pub fn kmain(archinfo: InitInfo)
     let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
     let mut rinit_entry: u64 = 0x0;
 
-    let cpool_cap = {
+    let (mut cpool_cap, mut tcb_half) = {
         let mut region_iter = archinfo.free_regions();
         let cpool_target_region = region_iter.next().unwrap();
         let mut cpool_target_untyped = unsafe {
@@ -153,31 +155,39 @@ pub fn kmain(archinfo: InitInfo)
                 });
         }
 
-        cpool_cap.with_cpool_mut(|cpool| {
-            cpool.insert(Capability::Page(rinit_stack_half));
-            cpool.insert(Capability::Untyped(untyped_target));
-        });
-
         log!("switching to rinit pml4 ...");
         rinit_pml4_half.switch_to();
 
+        let tcb_runtime = ThreadRuntime::new(VAddr::from(rinit_entry),
+                                             0b110,
+                                             (rinit_stack_vaddr + (PageHalf::length() - 4)));
+
+        log!("creating rinit tcb half ...");
+        let tcb_half = TCBHalf::new(cpool_cap.clone(),
+                                    tcb_runtime,
+                                    &mut untyped_target);
+
+        log!("put everything into rinit cpool ...");
         cpool_cap.with_cpool_mut(|cpool| {
+            cpool.insert(Capability::Page(rinit_stack_half));
+            cpool.insert(Capability::Untyped(untyped_target));
             cpool.insert(Capability::TopPageTable(rinit_pml4_half));
+            cpool.insert(Capability::TCB(tcb_half.clone()));
         });
 
-        cpool_cap
+        (cpool_cap, tcb_half)
     };
 
     with_cspace(&cpool_cap, &[0, 0, 1], |item| {
         log!("cspace item is {:?}", item);
     });
 
-    // TODO Insert cpool_cap to TCB.
-
     unsafe {
-        arch::switch_to_user_mode(VAddr::from(rinit_entry),
-                                  (rinit_stack_vaddr + (PageHalf::length() - 4)));
+        tcb_half.switch_to();
     }
+
+    tcb_half.mark_deleted();
+    cpool_cap.mark_deleted();
     
     loop {}
 }

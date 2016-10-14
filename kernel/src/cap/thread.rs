@@ -1,6 +1,5 @@
 use common::*;
-use super::{Capability, CapHalf};
-use super::untyped::{UntypedHalf};
+use super::{Capability, CapHalf, CPoolHalf, UntypedHalf};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};
 use arch;
@@ -9,6 +8,12 @@ use arch;
 pub struct TCB {
     cpool: Capability,
     runtime: ThreadRuntime
+}
+
+impl TCB {
+    pub fn runtime_mut(&mut self) -> &mut ThreadRuntime {
+        &mut self.runtime
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -36,7 +41,14 @@ impl TCBHalf {
         }
     }
 
-    pub fn new(cpool: Capability,
+    pub unsafe fn switch_to(&mut self) {
+        let cloned = self.clone();
+        self.with_tcb_mut(|tcb| {
+            tcb.runtime_mut().switch_to(cloned);
+        });
+    }
+
+    pub fn new(cpool: CPoolHalf,
                runtime: ThreadRuntime,
                untyped: &mut UntypedHalf) -> TCBHalf {
         let alignment = align_of::<TCB>();
@@ -49,8 +61,19 @@ impl TCBHalf {
         };
 
         cap.with_tcb_mut(|tcb| {
+            // FIXME rust recognizes those initial zeros as a TCB with
+            // a zero Untyped, which is incorrect. The zero Untyped is
+            // considered dropped, so the drop function is called. It
+            // is not marked yet, so this cause an error.
+
+            match (*tcb).cpool {
+                Capability::Untyped(ref mut untyped) =>
+                    untyped.mark_deleted(),
+                _ => assert!(false)
+            }
+
             *tcb = TCB {
-                cpool: cpool,
+                cpool: Capability::CPool(cpool),
                 runtime: runtime
             }
         });

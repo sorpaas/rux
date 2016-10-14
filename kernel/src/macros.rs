@@ -23,7 +23,7 @@ macro_rules! normal_half {
 
         impl Drop for $t {
             fn drop(&mut self) {
-                assert!(self.deleted);
+                assert!(self.deleted, "attempt to drop unmarked half {:?}", self);
             }
         }
     }

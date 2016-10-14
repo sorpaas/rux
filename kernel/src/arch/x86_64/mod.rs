@@ -57,31 +57,9 @@ pub use self::paging::{with_object_vaddr, with_object_unique,
                        with_slice, with_slice_mut,
                        with_object, with_object_mut};
 pub use self::interrupt::{enable_interrupt, disable_interrupt, set_interrupt_handler,
-                          InterruptInfo};
+                          InterruptInfo, ThreadRuntime};
 pub use self::init::{InitInfo};
-pub use self::cap::{ArchSpecificCapability, PageHalf, ThreadRuntime};
+pub use self::cap::{ArchSpecificCapability, PageHalf};
 pub use self::addr::{PAddr, VAddr};
 
 pub type TopPageTableHalf = self::cap::PML4Half;
-
-pub unsafe fn switch_to_user_mode(code_vaddr: VAddr, stack_vaddr: VAddr) {
-    unsafe {
-        let stack_addr: usize = stack_vaddr.into();
-        let code_start: usize = code_vaddr.into();
-        let code_seg = 0x28 | 0x3;
-        let data_seg = 0x30 | 0x3;
-        asm!("mov ds, rax
-              mov es, rax
-              mov fs, rax
-              mov gs, rax
-
-              push rax
-              push rbx
-              pushfq
-              push rcx
-              push rdx
-              iretq"
-             :: "{rax}"(data_seg), "{rbx}"(stack_vaddr), "{rcx}"(code_seg), "{rdx}"(code_start)
-             : "memory" : "intel", "volatile");
-    }
-}

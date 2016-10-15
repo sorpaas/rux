@@ -1,7 +1,8 @@
 use common::*;
-use super::{Capability, CapHalf, CPoolHalf, UntypedHalf};
+use super::{Capability, CapHalf, CPoolHalf, UntypedHalf, SystemCallable, CapSendMessage};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};
+use core::fmt;
 use arch;
 
 #[derive(Debug)]
@@ -11,6 +12,14 @@ pub struct TCB {
 }
 
 impl TCB {
+    pub fn cpool(&self) -> &Capability {
+        &self.cpool
+    }
+
+    pub fn cpool_mut(&mut self) -> &mut Capability {
+        &mut self.cpool
+    }
+
     pub fn runtime(&self) -> &ThreadRuntime {
         &self.runtime
     }
@@ -36,6 +45,23 @@ pub struct TCBHalf {
 }
 
 normal_half!(TCBHalf);
+
+impl SystemCallable for TCBHalf {
+    fn handle_send(&mut self, msg: CapSendMessage) {
+        match msg {
+            CapSendMessage::TCBYield => unsafe {
+                log!("yielding to target tcb ...");
+                self.switch_to()
+            }
+        }
+    }
+}
+
+impl fmt::Display for TCBHalf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TCB(0x{:x})", self.start_paddr)
+    }
+}
 
 impl TCBHalf {
     pub fn with_tcb<Return, F: FnOnce(&TCB) -> Return>(&self, f: F) -> Return {

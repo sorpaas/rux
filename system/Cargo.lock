@@ -2,8 +2,13 @@
 name = "system"
 version = "0.1.0"
 dependencies = [
+ "abi 0.1.0",
  "rlibc 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "abi"
+version = "0.1.0"
 
 [[package]]
 name = "rlibc"

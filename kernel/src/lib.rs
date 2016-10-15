@@ -14,6 +14,7 @@
 extern crate x86;
 extern crate spin;
 extern crate rlibc;
+extern crate abi;
 
 #[macro_use]
 extern crate lazy_static;
@@ -177,16 +178,24 @@ pub fn kmain(archinfo: InitInfo)
         (cpool_cap, tcb_half)
     };
 
-    with_cspace(&cpool_cap, &[0, 0, 1], |item| {
-        log!("cspace item is {:?}", item);
-    });
+    let mut cpool_full_cap = Capability::CPool(cpool_cap);
+    for i in 0..32 {
+        with_cspace(&cpool_full_cap, &[0, 0, i], |item| {
+            log!("cspace item at {} is {:?}", i, item);
+        });
+    }
 
     unsafe {
         tcb_half.switch_to();
     }
 
     tcb_half.mark_deleted();
-    cpool_cap.mark_deleted();
+    match cpool_full_cap {
+        Capability::CPool(ref mut cpool_cap) => {
+            cpool_cap.mark_deleted();
+        },
+        _ => assert!(false)
+    }
     
     loop {}
 }

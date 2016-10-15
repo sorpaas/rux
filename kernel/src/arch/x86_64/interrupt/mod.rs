@@ -3,7 +3,7 @@ mod bit_field;
 mod dtables;
 
 use lazy_static;
-use cap::{TCBHalf, CapHalf};
+use cap::{TCBHalf, CapHalf, CapSendMessage, CapSystemCall, SystemCallable, with_cspace, with_cspace_mut};
 use common::*;
 
 macro_rules! handler {
@@ -41,6 +41,17 @@ macro_rules! handler_with_error_code {
         }
         wrapper
     }}
+}
+
+macro_rules! fetch_message {
+    ($t: ty) => {
+        *({
+            let param: u64;
+            asm!("":"={r15}"(param));
+
+            param
+        } as *const $t)
+    }
 }
 
 pub struct InterruptInfo {}
@@ -132,13 +143,25 @@ impl ThreadRuntime {
 extern "C" fn system_call_handler(stack_frame: *const ExceptionStackFrame) -> ! {
     log!("interrupt: system call");
     unsafe {
+        let ref message = fetch_message!(CapSystemCall);
+        log!("message is: {:?}", message);
+
         let ref exception = *stack_frame;
         update_active_tcb(&exception);
-        log!("instruction pointer: 0x{:x}", exception.instruction_pointer);
-        log!("code segment: 0x{:x}", exception.code_segment);
-        log!("cpu flags: 0b{:b}", exception.cpu_flags);
-        log!("stack pointer: 0x{:x}", exception.stack_pointer);
-        log!("stack segment: 0x{:x}", exception.stack_segment);
+
+        active_tcb.as_mut().unwrap().with_tcb_mut(|tcb| {
+            with_cspace_mut(tcb.cpool_mut(), message.target, |item| {
+                match item {
+                    &mut Some(ref mut cap) => {
+                        cap.handle_send(message.message);
+                    },
+                    _ => ()
+                }
+            });
+        });
+
+        // If we didn't call switch_to in the handler, then switch back to the active_tcb.
+        active_tcb.as_mut().unwrap().switch_to();
     }
     loop {}
 }
@@ -146,21 +169,12 @@ extern "C" fn system_call_handler(stack_frame: *const ExceptionStackFrame) -> ! 
 extern "C" fn debug_call_handler(stack_frame: *const ExceptionStackFrame) -> ! {
     log!("interrupt: debug call");
     unsafe {
-        let param: u64;
-        asm!("":"={r15}"(param));
-        log!("param is: 0x{:x}", param);
+        let ref message = fetch_message!(&str);
 
         let ref exception = *stack_frame;
         update_active_tcb(&exception);
 
-        let message: &str = unsafe { *(param as *const &str) };
-        log!("message: {}", message);
-
-        log!("instruction pointer: 0x{:x}", exception.instruction_pointer);
-        log!("code segment: 0x{:x}", exception.code_segment);
-        log!("cpu flags: 0b{:b}", exception.cpu_flags);
-        log!("stack pointer: 0x{:x}", exception.stack_pointer);
-        log!("stack segment: 0x{:x}", exception.stack_segment);
+        log!("[debug] {} from {}", message, unsafe { active_tcb.as_ref().unwrap() });
 
         active_tcb.as_mut().unwrap().switch_to();
     }

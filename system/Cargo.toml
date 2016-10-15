@@ -5,3 +5,6 @@ authors = ["Wei Tang <hi@that.world>"]
 
 [dependencies.rlibc]
 version = "1.0"
+
+[dependencies.abi]
+path = "../abi"

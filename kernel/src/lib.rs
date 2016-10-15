@@ -158,14 +158,13 @@ pub fn kmain(archinfo: InitInfo)
         log!("switching to rinit pml4 ...");
         rinit_pml4_half.switch_to();
 
-        let tcb_runtime = ThreadRuntime::new(VAddr::from(rinit_entry),
-                                             0b110,
-                                             (rinit_stack_vaddr + (PageHalf::length() - 4)));
-
         log!("creating rinit tcb half ...");
-        let tcb_half = TCBHalf::new(cpool_cap.clone(),
-                                    tcb_runtime,
-                                    &mut untyped_target);
+        let mut tcb_half = TCBHalf::new(cpool_cap.clone(),
+                                        &mut untyped_target);
+        tcb_half.with_tcb_mut(|tcb| {
+            tcb.set_stack_pointer(rinit_stack_vaddr + (PageHalf::length() - 4));
+            tcb.set_instruction_pointer(VAddr::from(rinit_entry));
+        });
 
         log!("put everything into rinit cpool ...");
         cpool_cap.with_cpool_mut(|cpool| {

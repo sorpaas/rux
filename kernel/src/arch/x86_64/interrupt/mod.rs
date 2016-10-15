@@ -120,10 +120,12 @@ impl ThreadRuntime {
         }
     }
 
-    pub fn update(&mut self, instruction_pointer: u64, cpu_flags: u64, stack_pointer: u64) {
-        self.instruction_pointer = instruction_pointer;
-        self.cpu_flags = cpu_flags;
-        self.stack_pointer = stack_pointer;
+    pub fn set_instruction_pointer(&mut self, instruction_pointer: VAddr) {
+        self.instruction_pointer = instruction_pointer.into();
+    }
+
+    pub fn set_stack_pointer(&mut self, stack_pointer: VAddr) {
+        self.stack_pointer = stack_pointer.into();
     }
 }
 

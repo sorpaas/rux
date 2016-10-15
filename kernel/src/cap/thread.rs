@@ -11,8 +11,21 @@ pub struct TCB {
 }
 
 impl TCB {
+    pub fn runtime(&self) -> &ThreadRuntime {
+        &self.runtime
+    }
+
     pub fn runtime_mut(&mut self) -> &mut ThreadRuntime {
         &mut self.runtime
+    }
+
+    pub fn set_instruction_pointer(&mut self, instruction_pointer:
+                                   VAddr) {
+        self.runtime_mut().set_instruction_pointer(instruction_pointer)
+    }
+
+    pub fn set_stack_pointer(&mut self, stack_pointer: VAddr) {
+        self.runtime_mut().set_stack_pointer(stack_pointer)
     }
 }
 
@@ -49,7 +62,6 @@ impl TCBHalf {
     }
 
     pub fn new(cpool: CPoolHalf,
-               runtime: ThreadRuntime,
                untyped: &mut UntypedHalf) -> TCBHalf {
         let alignment = align_of::<TCB>();
         let length = size_of::<TCB>();
@@ -74,7 +86,9 @@ impl TCBHalf {
 
             *tcb = TCB {
                 cpool: Capability::CPool(cpool),
-                runtime: runtime
+                runtime: ThreadRuntime::new(VAddr::from(0x0: u64),
+                                            0b110,
+                                            VAddr::from(0x0: u64))
             }
         });
 

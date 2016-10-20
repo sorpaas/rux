@@ -10,6 +10,71 @@ use common::{PAddr, VAddr};
 
 static _next_free: Mutex<usize> = Mutex::new(0);
 
+pub struct ObjectGuard<T: Sized> {
+    mapping_start_index: usize,
+    mapping_size: usize,
+    pointer: NonZero<*const T>,
+    _marker: PhantomData<T>,
+}
+
+impl<T: Sized> ObjectGuard<T> {
+    pub unsafe fn new(paddr: PAddr) -> ObjectGuard<T> {
+        let aligned = align_down(paddr, BASE_PAGE_LENGTH);
+        let before_start = paddr.into(): usize - aligned.into(): usize;
+        let size = size_of::<T>();
+        let required_page_size = block_count((paddr + size).into(): usize - aligned.into(): usize,
+                                             BASE_PAGE_LENGTH);
+
+        let object_pool = object_pool_pt_mut();
+        let mapping_start_index: usize = {
+            let mut mapping_start_index: Option<usize> = None;
+
+            for i in 0..object_pool.len() {
+                let available = true;
+                for j in 0..required_page_size {
+                    if object_pool[i + j].is_present() {
+                        available = false;
+                        break;
+                    }
+                }
+
+                if available {
+                    mapping_start_index = Some(i);
+                    break;
+                }
+            }
+
+            mapping_start_index
+        }.unwrap();
+
+
+        for i in 0..required_page_size {
+            object_pool[mapping_start_index + i] = PTEntry::new(aligned + (i * BASE_PAGE_LENGTH), PT_P | PT_RW);
+            unsafe { flush(OBJECT_POOL_START_VADDR + (mapping_start_index * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
+        }
+
+        let vaddr = OBJECT_POOL_START_VADDR + ((mapping_start_index * BASE_PAGE_LENGTH) + before_start);
+
+        ObjectGuard::<T> {
+            mapping_start_index: mapping_start_index,
+            mapping_size: required_page_size,
+            pointer: NonZero::new(vaddr.into(): usize as *mut T),
+            _marker: PhantomData
+        }
+    }
+}
+
+impl<T: Sized> Drop for ObjectGuard<T> {
+    fn drop(&mut self) {
+        let object_pool = object_pool_pt_mut();
+
+        for i in 0..self.mapping_size {
+            object_pool[self.mapping_start_index + i] = PTEntry::empty();
+            unsafe { flush(OBJECT_POOL_START_VADDR + (self.mapping_start_index * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
+        }
+    }
+}
+
 pub unsafe fn with_object_vaddr<Return, F: FnOnce(VAddr) -> Return>(paddr: PAddr, size: usize, f: F)
                                                                 -> Return {
     let aligned = align_down(paddr, BASE_PAGE_LENGTH);

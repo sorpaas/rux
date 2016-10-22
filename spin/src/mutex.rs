@@ -233,7 +233,7 @@ impl<T> ExternMutex<T>
     /// a) ptr is non-zero.
     /// b) This is the only pointer ever obtained.
     /// c) The pointer points to data that actually stores the value of the type.
-    pub unsafe fn new(ptr: Option<*const T>) -> Self {
+    pub const unsafe fn new(ptr: Option<*const T>) -> Self {
         ExternMutex
         {
             lock: ATOMIC_BOOL_INIT,
@@ -242,8 +242,12 @@ impl<T> ExternMutex<T>
         }
     }
 
-    pub unsafe fn bootstrap(&self, ptr: Option<*const T>) {
-        *self.pointer.get() = ptr;
+    pub unsafe fn bootstrap(&self, ptr: *const T) {
+        *self.pointer.get() = Some(ptr);
+    }
+
+    pub unsafe fn unbootstrap(&self) {
+        *self.pointer.get() = None;
     }
 
     fn obtain_lock(&self)
@@ -261,7 +265,7 @@ impl<T> ExternMutex<T>
     pub fn lock(&self) -> MutexGuard<T>
     {
         self.obtain_lock();
-        let pointer: *mut T = unsafe { mem::transmute((&*self.pointer.get()).unwrap()) };
+        let pointer: *mut T = unsafe { mem::transmute((*self.pointer.get()).unwrap()) };
         MutexGuard
         {
             lock: &self.lock,
@@ -273,7 +277,7 @@ impl<T> ExternMutex<T>
     {
         if self.lock.compare_and_swap(false, true, Ordering::Acquire) != false
         {
-            let pointer: *mut T = unsafe { mem::transmute((&*self.pointer.get()).unwrap()) };
+            let pointer: *mut T = unsafe { mem::transmute((*self.pointer.get()).unwrap()) };
             Some(
                 MutexGuard {
                     lock: &self.lock,

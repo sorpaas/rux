@@ -5,7 +5,7 @@ use core::slice;
 use utils::{align_down, block_count};
 use core::ptr::{Unique};
 use super::{PTEntry, PT_P, PT_RW, flush, BASE_PAGE_LENGTH};
-use arch::init::{object_pool_pt, object_pool_pt_mut, OBJECT_POOL_SIZE, OBJECT_POOL_START_VADDR};
+use arch::init::{OBJECT_POOL_PT, OBJECT_POOL_START_VADDR};
 use common::{PAddr, VAddr};
 
 use core::nonzero::{NonZero};
@@ -40,7 +40,7 @@ impl<T> ObjectGuard<T> {
         let required_page_size = block_count((paddr + size).into(): usize - aligned.into(): usize,
                                              BASE_PAGE_LENGTH);
 
-        let object_pool = object_pool_pt_mut();
+        let mut object_pool = OBJECT_POOL_PT.lock();
         let mapping_start_index: usize = {
             let mut mapping_start_index: Option<usize> = None;
 
@@ -81,7 +81,7 @@ impl<T> ObjectGuard<T> {
 
 impl<T> Drop for ObjectGuard<T> {
     fn drop(&mut self) {
-        let object_pool = object_pool_pt_mut();
+        let mut object_pool = OBJECT_POOL_PT.lock();
 
         for i in 0..self.mapping_size {
             object_pool[self.mapping_start_index + i] = PTEntry::empty();
@@ -113,13 +113,14 @@ pub unsafe fn with_object_vaddr<Return, F: FnOnce(VAddr) -> Return>(paddr: PAddr
                                          BASE_PAGE_LENGTH);
 
     let next_free_base;
+    let mut object_pool = OBJECT_POOL_PT.lock();
 
     {
         let mut next_free = _next_free.lock();
         next_free_base = *next_free;
 
         for i in 0..required_page_size {
-            object_pool_pt_mut()[next_free_base + i] = PTEntry::new(aligned + (i * BASE_PAGE_LENGTH), PT_P | PT_RW);
+            object_pool[next_free_base + i] = PTEntry::new(aligned + (i * BASE_PAGE_LENGTH), PT_P | PT_RW);
             unsafe { flush(OBJECT_POOL_START_VADDR + (next_free_base * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
         }
 
@@ -135,7 +136,7 @@ pub unsafe fn with_object_vaddr<Return, F: FnOnce(VAddr) -> Return>(paddr: PAddr
         assert!(next_free_base == (*next_free - required_page_size));
 
         for i in 0..required_page_size {
-            object_pool_pt_mut()[next_free_base + i] = PTEntry::empty();
+            object_pool[next_free_base + i] = PTEntry::empty();
             unsafe { flush(OBJECT_POOL_START_VADDR + (next_free_base * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
         }
 

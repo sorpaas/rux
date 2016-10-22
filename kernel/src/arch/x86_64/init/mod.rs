@@ -3,9 +3,8 @@ mod paging;
 mod interrupt;
 mod segmentation;
 
-pub use self::paging::{kernel_pml4_paddr, kernel_pdpt_paddr, kernel_pd_paddr,
-                       object_pool_pt, object_pool_pt_mut, OBJECT_POOL_SIZE,
-                       OBJECT_POOL_START_VADDR};
+pub use self::paging::{KERNEL_PML4, KERNEL_PDPT, KERNEL_PD,
+                       OBJECT_POOL_PT, OBJECT_POOL_START_VADDR};
 
 use ::{kmain};
 use super::{kernel_end_paddr, kernel_start_paddr, kernel_start_vaddr, kernel_end_vaddr, KERNEL_BASE};

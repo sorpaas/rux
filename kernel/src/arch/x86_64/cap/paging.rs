@@ -88,7 +88,7 @@ impl PML4Half {
         unsafe {
             arch::with_object_mut(paddr, |pml4: &mut PML4| {
                 use arch::paging::{pml4_index, PML4Entry, PML4_P, PML4_RW};
-                use arch::init::{kernel_pdpt_paddr};
+                use arch::init::{KERNEL_PDPT};
                 use arch::{KERNEL_BASE};
 
                 for entry in pml4.iter_mut() {
@@ -96,7 +96,7 @@ impl PML4Half {
                 }
             
                 pml4[pml4_index(VAddr::from(KERNEL_BASE))] =
-                    PML4Entry::new(kernel_pdpt_paddr(), PML4_P | PML4_RW);
+                    PML4Entry::new(KERNEL_PDPT.paddr(), PML4_P | PML4_RW);
             });
         }
         

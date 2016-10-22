@@ -7,7 +7,9 @@ use arch::paging::{PTEntry, PML4, PDPT, PD, PT,
                    BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH};
 use arch::{KERNEL_BASE};
 use common::{PAddr, VAddr, MemoryRegion};
-use utils::{block_count, align_up};
+use utils::{block_count, align_up, ExternReadonlyObject};
+use spin::{ExternMutex};
+use core::ops::{Deref};
 
 use arch::addr;
 
@@ -30,14 +32,17 @@ pub const OBJECT_POOL_SIZE: usize = 511;
 pub const OBJECT_POOL_PT_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xfff000);
 
 // Variables
-global_variable!(initial_pd, initial_pd_mut, _initial_pd, PD,
-                 unsafe { Some(Unique::new(&mut init_pd as *mut _)) });
-global_variable!(object_pool_pt, object_pool_pt_mut, _object_pool_pt, [PTEntry; OBJECT_POOL_SIZE],
-                 None);
+static INITIAL_PD: ExternMutex<PD> =
+    unsafe { ExternMutex::new(Some(&init_pd as *const _)) };
 
-global_const!(kernel_pml4_paddr, _kernel_pml4_paddr, PAddr, None);
-global_const!(kernel_pdpt_paddr, _kernel_pdpt_paddr, PAddr, None);
-global_const!(kernel_pd_paddr, _kernel_pd_paddr, PAddr, None);
+pub static OBJECT_POOL_PT: ExternMutex<[PTEntry; OBJECT_POOL_SIZE]> =
+    unsafe { ExternMutex::new(None) };
+pub static KERNEL_PML4: ExternReadonlyObject<PML4> =
+    unsafe { ExternReadonlyObject::new() };
+pub static KERNEL_PDPT: ExternReadonlyObject<PDPT> =
+    unsafe { ExternReadonlyObject::new() };
+pub static KERNEL_PD: ExternReadonlyObject<PD> =
+    unsafe { ExternReadonlyObject::new() };
 
 fn kernel_stack_guard_page_vaddr() -> VAddr {
     VAddr::from((&kernel_stack_guard_page as *const _) as u64)
@@ -60,7 +65,7 @@ fn alloc_kernel_pml4(region: &mut MemoryRegion, alloc_base: PAddr) -> Unique<PML
 
     region.move_up(paddr + BASE_PAGE_LENGTH);
 
-    unsafe { _kernel_pml4_paddr = Some(paddr); }
+    unsafe { KERNEL_PML4.bootstrap(*pml4_unique.deref(), paddr); }
     
     pml4_unique
 }
@@ -84,7 +89,7 @@ fn alloc_kernel_pdpt(region: &mut MemoryRegion, pml4: &mut PML4, alloc_base: PAd
     
     pml4[pml4_index(VAddr::from(KERNEL_BASE))] = PML4Entry::new(paddr, PML4_P | PML4_RW);
 
-    unsafe { _kernel_pdpt_paddr = Some(paddr); }
+    unsafe { KERNEL_PDPT.bootstrap(*pdpt_unique.deref(), paddr) }
 
     pdpt_unique
 }
@@ -108,7 +113,7 @@ fn alloc_kernel_pd(region: &mut MemoryRegion, pdpt: &mut PDPT, alloc_base: PAddr
 
     pdpt[pdpt_index(VAddr::from(KERNEL_BASE))] = PDPTEntry::new(paddr, PDPT_P | PDPT_RW);
 
-    unsafe { _kernel_pd_paddr = Some(paddr); }
+    unsafe { KERNEL_PD.bootstrap(*pd_unique.deref(), paddr); }
 
     pd_unique
 }
@@ -202,7 +207,8 @@ fn map_alloc_region(alloc_region: &mut MemoryRegion) -> PAddr {
     let map_alloc_pd_index = pd_index(map_alloc_start_vaddr);
     let map_alloc_start_paddr = align_up(alloc_region.start_paddr(), LARGE_PAGE_LENGTH);
 
-    initial_pd_mut()[map_alloc_pd_index] = PDEntry::new(map_alloc_start_paddr, PD_P | PD_RW | PD_PS);
+    let mut initial_pd = INITIAL_PD.lock();
+    initial_pd[map_alloc_pd_index] = PDEntry::new(map_alloc_start_paddr, PD_P | PD_RW | PD_PS);
 
     // unsafe { super::paging::flush(map_alloc_start_vaddr); }
     unsafe { flush_all(); }
@@ -245,10 +251,10 @@ pub fn init(mut alloc_region: &mut MemoryRegion) {
     alloc_kernel_pts(&mut alloc_region, unsafe { pd_unique.get_mut() }, alloc_base_paddr);
     
     unsafe {
-        _initial_pd = None;
+        INITIAL_PD.unbootstrap();
     }
-    unsafe { switch_to(kernel_pml4_paddr()); }
+    unsafe { switch_to(KERNEL_PML4.paddr()); }
     unsafe {
-        _object_pool_pt = Some(Unique::new(OBJECT_POOL_PT_VADDR.into(): usize as *mut _));
+        OBJECT_POOL_PT.bootstrap(OBJECT_POOL_PT_VADDR.into(): usize as *mut _);
     }
 }

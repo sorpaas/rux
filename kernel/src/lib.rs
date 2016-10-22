@@ -9,6 +9,7 @@
 #![feature(optin_builtin_traits)]
 #![feature(drop_types_in_const)]
 #![feature(thread_local)]
+#![feature(nonzero)]
 #![no_std]
 
 extern crate x86;

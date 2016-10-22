@@ -8,17 +8,32 @@ use super::{PTEntry, PT_P, PT_RW, flush, BASE_PAGE_LENGTH};
 use arch::init::{object_pool_pt, object_pool_pt_mut, OBJECT_POOL_SIZE, OBJECT_POOL_START_VADDR};
 use common::{PAddr, VAddr};
 
+use core::nonzero::{NonZero};
+use core::marker::{PhantomData};
+use core::ops::{Deref};
+use core::mem;
+use core::fmt;
+
 static _next_free: Mutex<usize> = Mutex::new(0);
 
-pub struct ObjectGuard<T: Sized> {
+/// `ObjectGuard` requires T must be Sized.
+pub struct ObjectGuard<T> {
     mapping_start_index: usize,
     mapping_size: usize,
     pointer: NonZero<*const T>,
     _marker: PhantomData<T>,
 }
 
-impl<T: Sized> ObjectGuard<T> {
-    pub unsafe fn new(paddr: PAddr) -> ObjectGuard<T> {
+/// `ObjectGuard` pointers are not `Send` because the data they reference may be aliased.
+impl<T> !Send for ObjectGuard<T> { }
+
+/// `ObjectGuard` pointers are not `Sync` because the data they reference may be aliased.
+impl<T> !Sync for ObjectGuard<T> { }
+
+impl<T> ObjectGuard<T> {
+
+    /// Safety: PAddr must be a non-zero pointer.
+    pub unsafe fn new(paddr: PAddr) -> Self {
         let aligned = align_down(paddr, BASE_PAGE_LENGTH);
         let before_start = paddr.into(): usize - aligned.into(): usize;
         let size = size_of::<T>();
@@ -30,7 +45,7 @@ impl<T: Sized> ObjectGuard<T> {
             let mut mapping_start_index: Option<usize> = None;
 
             for i in 0..object_pool.len() {
-                let available = true;
+                let mut available = true;
                 for j in 0..required_page_size {
                     if object_pool[i + j].is_present() {
                         available = false;
@@ -64,7 +79,7 @@ impl<T: Sized> ObjectGuard<T> {
     }
 }
 
-impl<T: Sized> Drop for ObjectGuard<T> {
+impl<T> Drop for ObjectGuard<T> {
     fn drop(&mut self) {
         let object_pool = object_pool_pt_mut();
 
@@ -72,6 +87,21 @@ impl<T: Sized> Drop for ObjectGuard<T> {
             object_pool[self.mapping_start_index + i] = PTEntry::empty();
             unsafe { flush(OBJECT_POOL_START_VADDR + (self.mapping_start_index * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
         }
+    }
+}
+
+impl<T> Deref for ObjectGuard<T> {
+    type Target = *mut T;
+
+    #[inline]
+    fn deref(&self) -> &*mut T {
+        unsafe { mem::transmute(&*self.pointer) }
+    }
+}
+
+impl<T> fmt::Pointer for ObjectGuard<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Pointer::fmt(&*self.pointer, f)
     }
 }
 

@@ -21,7 +21,7 @@ features = ["spin_no_std"]
 version = "0.7"
 
 [dependencies.spin]
-version = "0.3"
+path = "../spin"
 
 [dependencies.rlibc]
 version = "1.0"

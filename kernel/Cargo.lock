@@ -6,7 +6,7 @@ dependencies = [
  "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rlibc 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "spin 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spin 0.4.4",
  "x86 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -39,13 +39,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "spin"
-version = "0.3.5"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "spin"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+version = "0.4.4"
 
 [[package]]
 name = "x86"
@@ -61,6 +60,5 @@ dependencies = [
 "checksum lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "49247ec2a285bb3dcb23cbd9c35193c025e7251bfce77c1d5da97e6362dffe7f"
 "checksum raw-cpuid 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7bc8e963398e6244e1d51c42dd68394f273d39ed8afc9238b74f56041b23dbd3"
 "checksum rlibc 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
-"checksum spin 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "26a697d0d28d9c7f3c36b21273b4599e63237bbcae98c4eeef4d2cca12f02792"
 "checksum spin 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "e64b1f9f6eb067165a890f257804d5f4e358b7b7811a4a7c34b0345f624c0f94"
 "checksum x86 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "289a79c6ffe63e7948823bc7e6b617856325c752dfec28c4ba50f50a824f55a2"

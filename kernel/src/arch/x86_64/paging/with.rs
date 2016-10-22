@@ -17,7 +17,7 @@ use core::fmt;
 static _next_free: Mutex<usize> = Mutex::new(0);
 
 /// `ObjectGuard` requires T must be Sized.
-pub struct ObjectGuard<T> {
+pub struct MemoryObject<T> {
     mapping_start_index: usize,
     mapping_size: usize,
     pointer: NonZero<*const T>,
@@ -25,12 +25,12 @@ pub struct ObjectGuard<T> {
 }
 
 /// `ObjectGuard` pointers are not `Send` because the data they reference may be aliased.
-impl<T> !Send for ObjectGuard<T> { }
+impl<T> !Send for MemoryObject<T> { }
 
 /// `ObjectGuard` pointers are not `Sync` because the data they reference may be aliased.
-impl<T> !Sync for ObjectGuard<T> { }
+impl<T> !Sync for MemoryObject<T> { }
 
-impl<T> ObjectGuard<T> {
+impl<T> MemoryObject<T> {
 
     /// Safety: PAddr must be a non-zero pointer.
     pub unsafe fn new(paddr: PAddr) -> Self {
@@ -70,7 +70,7 @@ impl<T> ObjectGuard<T> {
 
         let vaddr = OBJECT_POOL_START_VADDR + ((mapping_start_index * BASE_PAGE_LENGTH) + before_start);
 
-        ObjectGuard::<T> {
+        MemoryObject::<T> {
             mapping_start_index: mapping_start_index,
             mapping_size: required_page_size,
             pointer: NonZero::new(vaddr.into(): usize as *mut T),
@@ -79,7 +79,7 @@ impl<T> ObjectGuard<T> {
     }
 }
 
-impl<T> Drop for ObjectGuard<T> {
+impl<T> Drop for MemoryObject<T> {
     fn drop(&mut self) {
         let mut object_pool = OBJECT_POOL_PT.lock();
 
@@ -90,7 +90,7 @@ impl<T> Drop for ObjectGuard<T> {
     }
 }
 
-impl<T> Deref for ObjectGuard<T> {
+impl<T> Deref for MemoryObject<T> {
     type Target = *mut T;
 
     #[inline]
@@ -99,7 +99,7 @@ impl<T> Deref for ObjectGuard<T> {
     }
 }
 
-impl<T> fmt::Pointer for ObjectGuard<T> {
+impl<T> fmt::Pointer for MemoryObject<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Pointer::fmt(&*self.pointer, f)
     }

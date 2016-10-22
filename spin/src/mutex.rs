@@ -6,7 +6,6 @@ use core::fmt;
 use core::mem;
 use core::option::Option::{self, None, Some};
 use core::default::Default;
-use core::nonzero::NonZero;
 
 use util::cpu_relax;
 
@@ -89,7 +88,7 @@ pub struct Mutex<T: ?Sized>
 pub struct ExternMutex<T: ?Sized>
 {
     lock: AtomicBool,
-    pointer: NonZero<*const T>,
+    pointer: UnsafeCell<Option<*const T>>,
     _marker: PhantomData<T>
 }
 
@@ -234,13 +233,17 @@ impl<T> ExternMutex<T>
     /// a) ptr is non-zero.
     /// b) This is the only pointer ever obtained.
     /// c) The pointer points to data that actually stores the value of the type.
-    pub unsafe fn new(ptr: *mut T) -> Self {
+    pub unsafe fn new(ptr: Option<*const T>) -> Self {
         ExternMutex
         {
             lock: ATOMIC_BOOL_INIT,
-            pointer: NonZero::new(ptr),
+            pointer: UnsafeCell::new(ptr),
             _marker: PhantomData,
         }
+    }
+
+    pub unsafe fn bootstrap(&self, ptr: Option<*const T>) {
+        *self.pointer.get() = ptr;
     }
 
     fn obtain_lock(&self)
@@ -258,7 +261,7 @@ impl<T> ExternMutex<T>
     pub fn lock(&self) -> MutexGuard<T>
     {
         self.obtain_lock();
-        let pointer: *mut T = unsafe { mem::transmute(&*self.pointer) };
+        let pointer: *mut T = unsafe { mem::transmute((&*self.pointer.get()).unwrap()) };
         MutexGuard
         {
             lock: &self.lock,
@@ -270,7 +273,7 @@ impl<T> ExternMutex<T>
     {
         if self.lock.compare_and_swap(false, true, Ordering::Acquire) != false
         {
-            let pointer: *mut T = unsafe { mem::transmute(&*self.pointer) };
+            let pointer: *mut T = unsafe { mem::transmute((&*self.pointer.get()).unwrap()) };
             Some(
                 MutexGuard {
                     lock: &self.lock,

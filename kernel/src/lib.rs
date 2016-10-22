@@ -10,6 +10,8 @@
 #![feature(drop_types_in_const)]
 #![feature(thread_local)]
 #![feature(nonzero)]
+#![feature(unsize)]
+#![feature(coerce_unsized)]
 #![no_std]
 
 extern crate x86;

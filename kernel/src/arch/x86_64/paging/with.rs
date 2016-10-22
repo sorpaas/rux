@@ -9,15 +9,15 @@ use arch::init::{OBJECT_POOL_PT, OBJECT_POOL_START_VADDR};
 use common::{PAddr, VAddr};
 
 use core::nonzero::{NonZero};
-use core::marker::{PhantomData};
-use core::ops::{Deref};
+use core::marker::{PhantomData, Unsize};
+use core::ops::{Deref, CoerceUnsized};
 use core::mem;
 use core::fmt;
 
 static _next_free: Mutex<usize> = Mutex::new(0);
 
 /// `ObjectGuard` requires T must be Sized.
-pub struct MemoryObject<T> {
+pub struct MemoryObject<T: ?Sized> {
     mapping_start_index: usize,
     mapping_size: usize,
     pointer: NonZero<*const T>,
@@ -25,15 +25,15 @@ pub struct MemoryObject<T> {
 }
 
 /// `ObjectGuard` pointers are not `Send` because the data they reference may be aliased.
-impl<T> !Send for MemoryObject<T> { }
+impl<T: ?Sized> !Send for MemoryObject<T> { }
 
 /// `ObjectGuard` pointers are not `Sync` because the data they reference may be aliased.
-impl<T> !Sync for MemoryObject<T> { }
+impl<T: ?Sized> !Sync for MemoryObject<T> { }
 
-impl<T> MemoryObject<T> {
+impl<T: ?Sized> MemoryObject<T> {
 
     /// Safety: PAddr must be a non-zero pointer.
-    pub unsafe fn new(paddr: PAddr) -> Self {
+    pub unsafe fn new(paddr: PAddr) -> Self where T: Sized {
         let aligned = align_down(paddr, BASE_PAGE_LENGTH);
         let before_start = paddr.into(): usize - aligned.into(): usize;
         let size = size_of::<T>();
@@ -79,7 +79,9 @@ impl<T> MemoryObject<T> {
     }
 }
 
-impl<T> Drop for MemoryObject<T> {
+impl<T: ?Sized, U: ?Sized> CoerceUnsized<MemoryObject<U>> for MemoryObject<T> where T: Unsize<U> { }
+
+impl<T: ?Sized> Drop for MemoryObject<T> {
     fn drop(&mut self) {
         let mut object_pool = OBJECT_POOL_PT.lock();
 
@@ -90,7 +92,7 @@ impl<T> Drop for MemoryObject<T> {
     }
 }
 
-impl<T> Deref for MemoryObject<T> {
+impl<T: ?Sized> Deref for MemoryObject<T> {
     type Target = *mut T;
 
     #[inline]
@@ -99,7 +101,7 @@ impl<T> Deref for MemoryObject<T> {
     }
 }
 
-impl<T> fmt::Pointer for MemoryObject<T> {
+impl<T: ?Sized> fmt::Pointer for MemoryObject<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Pointer::fmt(&*self.pointer, f)
     }

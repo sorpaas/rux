@@ -113,9 +113,9 @@ pub unsafe fn with_object_vaddr<Return, F: FnOnce(VAddr) -> Return>(paddr: PAddr
                                          BASE_PAGE_LENGTH);
 
     let next_free_base;
-    let mut object_pool = OBJECT_POOL_PT.lock();
 
     {
+        let mut object_pool = OBJECT_POOL_PT.lock();
         let mut next_free = _next_free.lock();
         next_free_base = *next_free;
 
@@ -132,6 +132,7 @@ pub unsafe fn with_object_vaddr<Return, F: FnOnce(VAddr) -> Return>(paddr: PAddr
     let result = f(vaddr);
 
     {
+        let mut object_pool = OBJECT_POOL_PT.lock();
         let mut next_free = _next_free.lock();
         assert!(next_free_base == (*next_free - required_page_size));
 

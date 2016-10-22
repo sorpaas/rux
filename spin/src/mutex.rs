@@ -1,10 +1,12 @@
 use core::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
 use core::cell::UnsafeCell;
-use core::marker::Sync;
+use core::marker::{Sync, PhantomData};
 use core::ops::{Drop, Deref, DerefMut};
 use core::fmt;
+use core::mem;
 use core::option::Option::{self, None, Some};
 use core::default::Default;
+use core::nonzero::NonZero;
 
 use util::cpu_relax;
 
@@ -83,6 +85,14 @@ pub struct Mutex<T: ?Sized>
     data: UnsafeCell<T>,
 }
 
+/// A mutex that stores the data externally.
+pub struct ExternMutex<T: ?Sized>
+{
+    lock: AtomicBool,
+    pointer: NonZero<*const T>,
+    _marker: PhantomData<T>
+}
+
 /// A guard to which the protected data can be accessed
 ///
 /// When the guard falls out of scope it will release the lock.
@@ -95,6 +105,8 @@ pub struct MutexGuard<'a, T: ?Sized + 'a>
 // Same unsafe impls as `std::sync::Mutex`
 unsafe impl<T: ?Sized + Send> Sync for Mutex<T> {}
 unsafe impl<T: ?Sized + Send> Send for Mutex<T> {}
+unsafe impl<T: ?Sized + Send> Sync for ExternMutex<T> {}
+unsafe impl<T: ?Sized + Send> Send for ExternMutex<T> {}
 
 impl<T> Mutex<T>
 {
@@ -216,7 +228,76 @@ impl<T: ?Sized> Mutex<T>
     }
 }
 
+impl<T> ExternMutex<T>
+{
+    /// Safety:
+    /// a) ptr is non-zero.
+    /// b) This is the only pointer ever obtained.
+    /// c) The pointer points to data that actually stores the value of the type.
+    pub unsafe fn new(ptr: *mut T) -> Self {
+        ExternMutex
+        {
+            lock: ATOMIC_BOOL_INIT,
+            pointer: NonZero::new(ptr),
+            _marker: PhantomData,
+        }
+    }
+
+    fn obtain_lock(&self)
+    {
+        while self.lock.compare_and_swap(false, true, Ordering::Acquire) != false
+        {
+            // Wait until the lock looks unlocked before retrying
+            while self.lock.load(Ordering::Relaxed)
+            {
+                cpu_relax();
+            }
+        }
+    }
+
+    pub fn lock(&self) -> MutexGuard<T>
+    {
+        self.obtain_lock();
+        let pointer: *mut T = unsafe { mem::transmute(&*self.pointer) };
+        MutexGuard
+        {
+            lock: &self.lock,
+            data: unsafe { pointer.as_mut().unwrap() },
+        }
+    }
+
+    pub fn try_lock(&self) -> Option<MutexGuard<T>>
+    {
+        if self.lock.compare_and_swap(false, true, Ordering::Acquire) != false
+        {
+            let pointer: *mut T = unsafe { mem::transmute(&*self.pointer) };
+            Some(
+                MutexGuard {
+                    lock: &self.lock,
+                    data: unsafe { pointer.as_mut().unwrap() },
+                }
+            )
+        }
+        else
+        {
+            None
+        }
+    }
+}
+
 impl<T: ?Sized + fmt::Debug> fmt::Debug for Mutex<T>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+    {
+        match self.try_lock()
+        {
+            Some(guard) => write!(f, "Mutex {{ data: {:?} }}", &*guard),
+            None => write!(f, "Mutex {{ <locked> }}"),
+        }
+    }
+}
+
+impl<T: fmt::Debug> fmt::Debug for ExternMutex<T>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {

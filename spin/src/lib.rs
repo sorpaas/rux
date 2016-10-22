@@ -7,6 +7,7 @@
 #![cfg_attr(feature = "core_intrinsics", feature(core_intrinsics))]
 #![cfg_attr(feature = "const_fn", feature(const_fn))]
 
+#![feature(nonzero)]
 #![no_std]
 
 #[cfg(test)]

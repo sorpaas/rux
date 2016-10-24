@@ -6,10 +6,10 @@ pub use self::cpool::{CPoolHalf, with_cspace, with_cspace_mut};
 pub use self::untyped::{UntypedHalf};
 pub use self::thread::{TCBHalf};
 pub use abi::{CapSystemCall, CapSendMessage};
+pub use arch::{TopPageTableHalf, PageHalf, ArchSpecificCapability};
 
 use common::*;
-
-pub use arch::{TopPageTableHalf, PageHalf, ArchSpecificCapability};
+use core::ops::{Deref, DerefMut};
 
 #[derive(Debug)]
 pub enum Capability {
@@ -27,6 +27,14 @@ pub trait CapHalf {
 
 pub trait SystemCallable {
     fn handle_send(&mut self, CapSendMessage);
+}
+
+pub trait CapObject<'a, T, U: Deref<Target=T> + DerefMut + 'a> {
+    fn lock(&'a mut self) -> U;
+}
+
+pub trait CapReadonlyObject<'a, T, U: Deref<Target=T> + 'a> {
+    fn lock(&'a self) -> U;
 }
 
 impl Capability {

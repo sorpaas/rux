@@ -19,9 +19,7 @@ pub const MAXPHYADDR: u64 = 52;
 const ADDRESS_MASK: u64 = ((1 << MAXPHYADDR) - 1) & !0xfff;
 
 pub use self::table::*;
-pub use self::with::{with_object_vaddr, with_object_unique,
-                     with_slice, with_slice_mut,
-                     with_object, with_object_mut};
+pub use self::with::{MemoryObject};
 
 /// Invalidate the given address in the TLB using the `invlpg` instruction.
 ///

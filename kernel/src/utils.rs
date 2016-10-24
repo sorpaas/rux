@@ -133,3 +133,35 @@ impl<T, U: Deref<Target=*mut T>, L> Deref for ReadonlyGuard<T, U, L> {
 }
 
 pub type ReadonlyMemoryGuard<T, L> = ReadonlyGuard<T, MemoryObject<T>, L>;
+
+pub struct MutexMemoryGuard<'a, T: 'a> {
+    object: MemoryObject<Mutex<T>>,
+    guard: MutexGuard<'a, T>
+}
+
+unsafe impl<'a, T: 'a> Send for MutexMemoryGuard<'a, T> { }
+unsafe impl<'a, T: 'a> Sync for MutexMemoryGuard<'a, T> { }
+
+impl<'a, T: 'a> MutexMemoryGuard<'a, T> {
+    pub unsafe fn new(object: MemoryObject<Mutex<T>>) -> Self {
+        let mutex = unsafe { object.as_ref().unwrap() };
+        MutexMemoryGuard {
+            object: object,
+            guard: mutex.lock(),
+        }
+    }
+}
+
+impl<'a, T: 'a> Deref for MutexMemoryGuard<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        self.guard.deref()
+    }
+}
+
+impl<'a, T: 'a> DerefMut for MutexMemoryGuard<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.guard.deref_mut()
+    }
+}

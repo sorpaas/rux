@@ -1,9 +1,9 @@
 use common::*;
-use super::{Capability, CapHalf, CPoolHalf, UntypedHalf, SystemCallable, CapSendMessage};
+use super::{Capability, CapObject, CapHalf, CPoolHalf, UntypedHalf, SystemCallable, CapSendMessage};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};
 use core::fmt;
-use arch;
+use utils::{Mutex, MutexMemoryGuard, MemoryObject};
 
 #[derive(Debug)]
 pub struct TCB {
@@ -63,28 +63,20 @@ impl fmt::Display for TCBHalf {
     }
 }
 
+impl<'a> CapObject<'a, TCB, MutexMemoryGuard<'a, TCB>> for TCBHalf {
+    fn lock(&mut self) -> MutexMemoryGuard<TCB> {
+        unsafe {
+            let obj = MemoryObject::<Mutex<TCB>>::new(self.start_paddr);
+            MutexMemoryGuard::new(obj)
+        }
+    }
+}
+
 impl TCBHalf {
-    pub fn with_tcb<Return, F: FnOnce(&TCB) -> Return>(&self, f: F) -> Return {
-        unsafe {
-            arch::with_object(self.start_paddr, |tcb: &TCB| {
-                f(tcb)
-            })
-        }
-    }
-
-    pub fn with_tcb_mut<Return, F: FnOnce(&mut TCB) -> Return>(&mut self, f: F) -> Return {
-        unsafe {
-            arch::with_object_mut(self.start_paddr, |tcb: &mut TCB| {
-                f(tcb)
-            })
-        }
-    }
-
     pub unsafe fn switch_to(&mut self) {
         let cloned = self.clone();
-        self.with_tcb_mut(|tcb| {
-            tcb.runtime_mut().switch_to(cloned);
-        });
+        let mut tcb = self.lock();
+        tcb.runtime_mut().switch_to(cloned);
     }
 
     pub fn new(cpool: CPoolHalf,
@@ -98,25 +90,26 @@ impl TCBHalf {
             deleted: false
         };
 
-        cap.with_tcb_mut(|tcb| {
+        unsafe {
+            let obj = MemoryObject::<Mutex<TCB>>::new(cap.start_paddr);
+
             // FIXME rust recognizes those initial zeros as a TCB with
             // a zero Untyped, which is incorrect. The zero Untyped is
             // considered dropped, so the drop function is called. It
             // is not marked yet, so this cause an error.
+            // match (*obj.as_mut().unwrap()).cpool {
+            //     Capability::Untyped(ref mut untyped) =>
+            //         untyped.mark_deleted(),
+            //     _ => assert!(false)
+            // }
 
-            match (*tcb).cpool {
-                Capability::Untyped(ref mut untyped) =>
-                    untyped.mark_deleted(),
-                _ => assert!(false)
-            }
-
-            *tcb = TCB {
+            *obj.as_mut().unwrap() = Mutex::new(TCB {
                 cpool: Capability::CPool(cpool),
                 runtime: ThreadRuntime::new(VAddr::from(0x0: u64),
                                             0b110,
                                             VAddr::from(0x0: u64))
-            }
-        });
+            });
+        }
 
         cap
     }

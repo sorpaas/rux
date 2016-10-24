@@ -1,134 +1,10 @@
 use common::*;
-use super::{Capability, CapHalf};
+use super::{Capability, CapHalf, CapObject};
 use super::untyped::{UntypedHalf};
 use core::mem::{size_of, align_of};
 use core::ops::{Index, IndexMut};
 use core::slice::Iter;
-use arch;
-
-pub fn with_cspace<Return, F: FnOnce(&Option<Capability>) -> Return>(root_cap: &Capability,
-                                                                     route: &[u8], f: F) -> Return {
-    let target = {
-        match root_cap {
-            &Capability::CPool(ref target) => target,
-            _ => return f(&None)
-        }
-    };
-    let root = &target;
-
-    let mut subcpool_half: Option<CPoolHalf> = None;
-    let (route_last, route_cpool) = route.split_last().unwrap();
-
-    let mut failed = false;
-
-    for r in route_cpool {
-        if failed {
-            break;
-        }
-
-        subcpool_half = {
-            let current = if subcpool_half.is_none() {
-                root
-            } else {
-                subcpool_half.as_ref().unwrap()
-            };
-
-            current.with_cpool(|cpool| {
-                let ref middle = cpool[*r as usize];
-
-                match middle {
-                    &Some(Capability::CPool(ref cpool)) => {
-                        let mut subcpool = cpool.clone();
-                        subcpool.mark_deleted();
-
-                        Some(subcpool)
-                    },
-                    _ => {
-                        failed = true;
-                        None
-                    }
-                }
-            })
-        };
-    }
-
-    if failed {
-        f(&None)
-    } else {
-        let current = if subcpool_half.is_none() {
-            root
-        } else {
-            subcpool_half.as_ref().unwrap()
-        };
-
-        current.with_cpool(|cpool| {
-            f(&cpool[*route_last as usize])
-        })
-    }
-}
-
-pub fn with_cspace_mut<Return, F: FnOnce(&mut Option<Capability>) -> Return>(root_cap: &mut Capability,
-                                                                             route: &[u8], f: F) -> Return {
-    let ref mut target = {
-        match root_cap {
-            &mut Capability::CPool(ref mut target) => target,
-            _ => return f(&mut None)
-        }
-    };
-    let mut target_mut = target;
-    let mut root = &mut target_mut;
-
-    let mut subcpool_half: Option<CPoolHalf> = None;
-    let (route_last, route_cpool) = route.split_last().unwrap();
-
-    let mut failed = false;
-
-    for r in route_cpool {
-        if failed {
-            break;
-        }
-
-        subcpool_half = {
-            let current = if subcpool_half.is_none() {
-                root
-            } else {
-                subcpool_half.as_ref().unwrap()
-            };
-
-            current.with_cpool(|cpool| {
-                let ref middle = cpool[*r as usize];
-
-                match middle {
-                    &Some(Capability::CPool(ref cpool)) => {
-                        let mut subcpool = cpool.clone();
-                        subcpool.mark_deleted();
-
-                        Some(subcpool)
-                    },
-                    _ => {
-                        failed = true;
-                        None
-                    }
-                }
-            })
-        };
-    }
-
-    if failed {
-        f(&mut None)
-    } else {
-        let current = if subcpool_half.is_none() {
-            root
-        } else {
-            subcpool_half.as_mut().unwrap()
-        };
-
-        current.with_cpool_mut(|cpool| {
-            f(&mut cpool[*route_last as usize])
-        })
-    }
-}
-
+use utils::{Mutex, MutexGuard, MemoryObject, MutexMemoryGuard};
 
 #[derive(Debug, Clone)]
 pub struct CPoolHalf {
@@ -174,21 +50,35 @@ impl CPool {
 
 normal_half!(CPoolHalf);
 
-impl CPoolHalf {
-    pub fn with_cpool<Return, F: FnOnce(&CPool) -> Return>(&self, f: F) -> Return {
+impl<'a> CapObject<'a, CPool, MutexMemoryGuard<'a, CPool>> for CPoolHalf {
+    fn lock(&mut self) -> MutexMemoryGuard<CPool> {
         unsafe {
-            arch::with_object(self.start_paddr, |cpool: &CPool| {
-                f(cpool)
-            })
+            let obj = MemoryObject::<Mutex<CPool>>::new(self.start_paddr);
+            MutexMemoryGuard::new(obj)
         }
     }
+}
 
-    pub fn with_cpool_mut<Return, F: FnOnce(&mut CPool) -> Return>(&mut self, f: F) -> Return {
-        unsafe {
-            arch::with_object_mut(self.start_paddr, |cpool: &mut CPool| {
-                f(cpool)
-            })
+impl CPoolHalf {
+    pub fn traverse(&mut self, routes: &[u8]) -> Option<CPoolHalf> {
+        let mut current_half = self.clone();
+        current_half.mark_deleted();
+
+        for path in routes {
+            let mut cpool_half = current_half.clone();
+            let cpool: MutexMemoryGuard<CPool> = cpool_half.lock();
+            match cpool[*path as usize] {
+                Some(Capability::CPool(ref cpool_half)) => {
+                    current_half = cpool_half.clone();
+                    current_half.mark_deleted();
+                },
+                _ => {
+                    return None;
+                }
+            }
         }
+
+        Some(current_half)
     }
 
     pub fn new(untyped: &mut UntypedHalf) -> CPoolHalf {
@@ -201,40 +91,43 @@ impl CPoolHalf {
             deleted: false
         };
 
-        cap.with_cpool_mut(|cpool| {
-            *cpool = CPool([None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None,
-                            None, None, None, None, None, None, None, None]);
-        });
+        unsafe {
+            let obj = MemoryObject::<Mutex<CPool>>::new(cap.start_paddr);
+            *obj.as_mut().unwrap() =
+                  Mutex::new(
+                      CPool([None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None,
+                             None, None, None, None, None, None, None, None]));
+        }
 
         cap
     }

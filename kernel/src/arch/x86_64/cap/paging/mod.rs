@@ -53,7 +53,7 @@ macro_rules! paging_half {
                 let alignment = BASE_PAGE_LENGTH;
                 let paddr = untyped.allocate(BASE_PAGE_LENGTH, alignment);
 
-                let half = $t {
+                let mut half = $t {
                     start_paddr: paddr,
                     lock: RwLock::new(()),
                     deleted: false,
@@ -67,7 +67,7 @@ macro_rules! paging_half {
             }
 
             pub fn $map_name(&mut self, index: usize, sub: &mut $sub_half) {
-                let current = self.lock_mut();
+                let mut current = self.lock_mut();
                 assert!(!current[index].is_present());
 
                 current[index] = $entry::new(sub.start_paddr(), $access);

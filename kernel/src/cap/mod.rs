@@ -2,7 +2,7 @@ mod cpool;
 mod untyped;
 mod thread;
 
-pub use self::cpool::{CPoolHalf, with_cspace, with_cspace_mut};
+pub use self::cpool::{CPoolHalf};
 pub use self::untyped::{UntypedHalf};
 pub use self::thread::{TCBHalf};
 pub use abi::{CapSystemCall, CapSendMessage};

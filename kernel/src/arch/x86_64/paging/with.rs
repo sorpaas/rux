@@ -29,12 +29,15 @@ impl<T: ?Sized> !Send for MemoryObject<T> { }
 impl<T: ?Sized> !Sync for MemoryObject<T> { }
 
 impl<T: ?Sized> MemoryObject<T> {
-
     /// Safety: PAddr must be a non-zero pointer.
     pub unsafe fn new(paddr: PAddr) -> Self where T: Sized {
+        Self::slice(paddr, 1)
+    }
+
+    pub unsafe fn slice(paddr: PAddr, size: usize) -> Self where T: Sized {
         let aligned = align_down(paddr, BASE_PAGE_LENGTH);
         let before_start = paddr.into(): usize - aligned.into(): usize;
-        let size = size_of::<T>();
+        let size = size_of::<T>() * size;
         let required_page_size = block_count((paddr + size).into(): usize - aligned.into(): usize,
                                              BASE_PAGE_LENGTH);
 

@@ -32,7 +32,7 @@ impl PageHalf {
         let alignment = BASE_PAGE_LENGTH;
         let paddr = untyped.allocate(BASE_PAGE_LENGTH, alignment);
 
-        let half = PageHalf {
+        let mut half = PageHalf {
             start_paddr: paddr,
             lock: Mutex::new(()),
             deleted: false

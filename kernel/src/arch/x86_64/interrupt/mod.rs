@@ -3,7 +3,7 @@ mod bit_field;
 mod dtables;
 
 use lazy_static;
-use cap::{TCBHalf, CapHalf, CapSendMessage, CapSystemCall, SystemCallable, with_cspace, with_cspace_mut};
+use cap::{TCBHalf, CapHalf, CPoolHalf, Capability, CapObject, CapSendMessage, CapSystemCall, SystemCallable};
 use common::*;
 
 macro_rules! handler {
@@ -89,12 +89,11 @@ pub struct ThreadRuntime {
 
 static mut active_tcb: Option<TCBHalf> = None;
 unsafe fn update_active_tcb(stack_frame: &ExceptionStackFrame) {
-    active_tcb.as_mut().unwrap().with_tcb_mut(|tcb| {
-        let runtime = tcb.runtime_mut();
-        runtime.instruction_pointer = stack_frame.instruction_pointer;
-        runtime.cpu_flags = stack_frame.cpu_flags;
-        runtime.stack_pointer = stack_frame.stack_pointer;
-    });
+    let mut tcb = active_tcb.as_mut().unwrap().lock();
+    let runtime = tcb.runtime_mut();
+    runtime.instruction_pointer = stack_frame.instruction_pointer;
+    runtime.cpu_flags = stack_frame.cpu_flags;
+    runtime.stack_pointer = stack_frame.stack_pointer;
 }
 
 impl ThreadRuntime {
@@ -149,16 +148,27 @@ extern "C" fn system_call_handler(stack_frame: *const ExceptionStackFrame) -> ! 
         let ref exception = *stack_frame;
         update_active_tcb(&exception);
 
-        active_tcb.as_mut().unwrap().with_tcb_mut(|tcb| {
-            with_cspace_mut(tcb.cpool_mut(), message.target, |item| {
-                match item {
-                    &mut Some(ref mut cap) => {
-                        cap.handle_send(message.message);
-                    },
-                    _ => ()
-                }
-            });
-        });
+        let mut tcb = active_tcb.as_mut().unwrap().lock();
+        let (target_index, target_cpool_routes) = message.target.split_last().unwrap();
+        let target_cpool = {
+            match tcb.cpool_mut() {
+                &mut Capability::CPool(ref mut cpool_half) => {
+                    cpool_half.traverse(target_cpool_routes)
+                },
+                _ => None
+            }
+        };
+
+        if target_cpool.is_some() {
+            let mut unwrapped = target_cpool.unwrap();
+            let mut locked = unwrapped.lock();
+            match locked[*target_index as usize] {
+                Some(ref mut cap) => {
+                    cap.handle_send(message.message);
+                },
+                _ => ()
+            }
+        }
 
         // If we didn't call switch_to in the handler, then switch back to the active_tcb.
         active_tcb.as_mut().unwrap().switch_to();

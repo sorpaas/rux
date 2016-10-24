@@ -80,7 +80,7 @@ struct ExceptionStackFrame {
     stack_segment: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ThreadRuntime {
     instruction_pointer: u64,
     cpu_flags: u64,

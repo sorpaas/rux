@@ -175,7 +175,7 @@ init_pd:
 		.quad 0
 	.endr 
 init_stack_base:
-        .rept 0x1000 * 16
+        .rept 0x1000 * 64
 		.byte 0
 	.endr
 init_stack:

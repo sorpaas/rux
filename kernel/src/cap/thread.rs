@@ -75,8 +75,11 @@ impl<'a> CapObject<'a, TCB, MutexMemoryGuard<'a, TCB>> for TCBHalf {
 impl TCBHalf {
     pub unsafe fn switch_to(&mut self) {
         let cloned = self.clone();
-        let mut tcb = self.lock();
-        tcb.runtime_mut().switch_to(cloned);
+        let runtime = {
+            let mut tcb = self.lock();
+            tcb.runtime.clone()
+        };
+        runtime.switch_to(cloned);
     }
 
     pub fn new(cpool: CPoolHalf,
@@ -102,6 +105,15 @@ impl TCBHalf {
             //         untyped.mark_deleted(),
             //     _ => assert!(false)
             // }
+
+            {
+                let mut uninit_tcb = obj.as_ref().unwrap().lock();
+                match uninit_tcb.cpool {
+                    Capability::Untyped(ref mut untyped) =>
+                        untyped.mark_deleted(),
+                    _ => assert!(false)
+                }
+            }
 
             *obj.as_mut().unwrap() = Mutex::new(TCB {
                 cpool: Capability::CPool(cpool),

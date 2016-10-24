@@ -67,9 +67,9 @@ pub fn kmain(archinfo: InitInfo)
         let mut cpool_cap = CPoolHalf::new(&mut cpool_target_untyped);
         let cpool_cap_cloned = cpool_cap.clone();
 
-        let mut untyped_target = cpool_target_untyped;
+        let mut untyped_target = {
+            let mut untyped_target = cpool_target_untyped;
 
-        untyped_target = {
             let mut cpool = cpool_cap.lock();
             cpool.insert(Capability::CPool(cpool_cap_cloned));
 

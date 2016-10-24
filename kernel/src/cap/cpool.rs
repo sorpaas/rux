@@ -93,7 +93,7 @@ impl CPoolHalf {
 
         unsafe {
             let obj = MemoryObject::<Mutex<CPool>>::new(cap.start_paddr);
-            *obj.as_mut().unwrap() =
+            *(obj.as_mut().unwrap()) =
                   Mutex::new(
                       CPool([None, None, None, None, None, None, None, None,
                              None, None, None, None, None, None, None, None,

@@ -75,8 +75,8 @@ impl<T> Deref for ExternReadonlyObject<T> {
 }
 
 pub struct UniqueGuard<T, U: Deref<Target=*mut T>, L> {
+    lock: L,
     object: U,
-    lock: L
 }
 
 unsafe impl<T, U: Deref<Target=*mut T>, L> Send for UniqueGuard<T, U, L> { }
@@ -108,8 +108,8 @@ impl<T, U: Deref<Target=*mut T>, L> DerefMut for UniqueGuard<T, U, L> {
 pub type UniqueMemoryGuard<T, L> = UniqueGuard<T, MemoryObject<T>, L>;
 
 pub struct ReadonlyGuard<T, U: Deref<Target=*mut T>, L> {
+    lock: L,
     object: U,
-    lock: L
 }
 
 unsafe impl<T, U: Deref<Target=*mut T>, L> Send for ReadonlyGuard<T, U, L> { }
@@ -135,8 +135,8 @@ impl<T, U: Deref<Target=*mut T>, L> Deref for ReadonlyGuard<T, U, L> {
 pub type ReadonlyMemoryGuard<T, L> = ReadonlyGuard<T, MemoryObject<T>, L>;
 
 pub struct MutexMemoryGuard<'a, T: 'a> {
+    guard: MutexGuard<'a, T>,
     object: MemoryObject<Mutex<T>>,
-    guard: MutexGuard<'a, T>
 }
 
 unsafe impl<'a, T: 'a> Send for MutexMemoryGuard<'a, T> { }

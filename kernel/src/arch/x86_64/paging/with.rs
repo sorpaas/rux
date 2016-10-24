@@ -14,6 +14,10 @@ use core::ops::{Deref, CoerceUnsized};
 use core::mem;
 use core::fmt;
 
+/// CAUTION: If you are going to wrap MemoryObject in any other
+/// struct, you must make should that it is dropped last. However,
+/// Drop order in Rust is currently undefined.
+
 /// `ObjectGuard` requires T must be Sized.
 pub struct MemoryObject<T: ?Sized> {
     mapping_start_index: usize,

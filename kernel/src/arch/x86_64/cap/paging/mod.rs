@@ -9,9 +9,9 @@ use arch::paging::{BASE_PAGE_LENGTH,
                    PT, PTEntry, PT_P, PT_RW, PT_US,
                    PD, PDEntry, PD_P, PD_RW, PD_US,
                    PDPT, PDPTEntry, PDPT_P, PDPT_RW, PDPT_US};
-use utils::{MemoryObject, UniqueMemoryGuard, ReadonlyMemoryGuard,
-            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedHalf, Capability, CapReadonlyObject, CapHalf};
+use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
+           RwLock, RwLockReadGuard, RwLockWriteGuard};
+use cap::{UntypedHalf, Capability, CapReadObject, CapHalf};
 
 macro_rules! paging_half {
     ( $t:ident, $sub_half: ty, $actual: ty, $entry: ident, $access: expr, $map_name: ident ) => {
@@ -24,9 +24,9 @@ macro_rules! paging_half {
 
         normal_half!($t);
 
-        impl<'a> CapReadonlyObject<'a, $actual, ReadonlyMemoryGuard<$actual, RwLockReadGuard<'a, ()>>> for $t {
-            fn lock(&self) -> ReadonlyMemoryGuard<$actual, RwLockReadGuard<()>> {
-                unsafe { ReadonlyMemoryGuard::new(
+        impl<'a> CapReadObject<'a, $actual, UniqueReadGuard<'a, $actual>> for $t {
+            fn read(&self) -> UniqueReadGuard<$actual> {
+                unsafe { UniqueReadGuard::new(
                     MemoryObject::<$actual>::new(self.start_paddr),
                     self.lock.read()
                 ) }
@@ -34,8 +34,8 @@ macro_rules! paging_half {
         }
 
         impl $t {
-            fn lock_mut(&mut self) -> UniqueMemoryGuard<$actual, RwLockWriteGuard<()>> {
-                unsafe { UniqueMemoryGuard::new(
+            fn write(&mut self) -> UniqueWriteGuard<$actual> {
+                unsafe { UniqueWriteGuard::new(
                     MemoryObject::<$actual>::new(self.start_paddr),
                     self.lock.write()
                 ) }
@@ -59,7 +59,7 @@ macro_rules! paging_half {
                     deleted: false,
                 };
 
-                for entry in half.lock_mut().iter_mut() {
+                for entry in half.write().iter_mut() {
                     *entry = $entry::empty();
                 }
 
@@ -67,7 +67,7 @@ macro_rules! paging_half {
             }
 
             pub fn $map_name(&mut self, index: usize, sub: &mut $sub_half) {
-                let mut current = self.lock_mut();
+                let mut current = self.write();
                 assert!(!current[index].is_present());
 
                 current[index] = $entry::new(sub.start_paddr(), $access);

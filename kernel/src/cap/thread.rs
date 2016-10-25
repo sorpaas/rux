@@ -1,9 +1,12 @@
 use common::*;
-use super::{Capability, CapObject, CapHalf, CPoolHalf, UntypedHalf, SystemCallable, CapSendMessage};
+use super::{Capability, CapReadObject, CapWriteObject,
+            CapHalf, CPoolHalf, UntypedHalf, SystemCallable, CapSendMessage};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};
 use core::fmt;
-use utils::{Mutex, MutexMemoryGuard, MemoryObject};
+use util::{RwLock, SharedReadGuard, SharedWriteGuard, MemoryObject};
+
+type TCBMemoryObject = MemoryObject<RwLock<TCB>>;
 
 #[derive(Debug)]
 pub struct TCB {
@@ -46,6 +49,22 @@ pub struct TCBHalf {
 
 normal_half!(TCBHalf);
 
+impl<'a> CapReadObject<'a, TCB, SharedReadGuard<'a, TCB>> for TCBHalf {
+    fn read(&self) -> SharedReadGuard<TCB> {
+        unsafe {
+            SharedReadGuard::new(TCBMemoryObject::new(self.start_paddr))
+        }
+    }
+}
+
+impl<'a> CapWriteObject<'a, TCB, SharedWriteGuard<'a, TCB>> for TCBHalf {
+    fn write(&mut self) -> SharedWriteGuard<TCB> {
+        unsafe {
+            SharedWriteGuard::new(TCBMemoryObject::new(self.start_paddr))
+        }
+    }
+}
+
 impl SystemCallable for TCBHalf {
     fn handle_send(&mut self, msg: CapSendMessage) {
         match msg {
@@ -63,20 +82,11 @@ impl fmt::Display for TCBHalf {
     }
 }
 
-impl<'a> CapObject<'a, TCB, MutexMemoryGuard<'a, TCB>> for TCBHalf {
-    fn lock(&mut self) -> MutexMemoryGuard<TCB> {
-        unsafe {
-            let obj = MemoryObject::<Mutex<TCB>>::new(self.start_paddr);
-            MutexMemoryGuard::new(obj)
-        }
-    }
-}
-
 impl TCBHalf {
     pub unsafe fn switch_to(&mut self) {
         let cloned = self.clone();
         let runtime = {
-            let mut tcb = self.lock();
+            let tcb = self.read();
             tcb.runtime.clone()
         };
         runtime.switch_to(cloned);
@@ -94,7 +104,7 @@ impl TCBHalf {
         };
 
         unsafe {
-            let obj = MemoryObject::<Mutex<TCB>>::new(cap.start_paddr);
+            let obj = TCBMemoryObject::new(cap.start_paddr);
 
             // FIXME rust recognizes those initial zeros as a TCB with
             // a zero Untyped, which is incorrect. The zero Untyped is
@@ -107,7 +117,7 @@ impl TCBHalf {
             // }
 
             {
-                let mut uninit_tcb = obj.as_ref().unwrap().lock();
+                let mut uninit_tcb = obj.as_ref().unwrap().write();
                 match uninit_tcb.cpool {
                     Capability::Untyped(ref mut untyped) =>
                         untyped.mark_deleted(),
@@ -115,7 +125,7 @@ impl TCBHalf {
                 }
             }
 
-            *obj.as_mut().unwrap() = Mutex::new(TCB {
+            *obj.as_mut().unwrap() = RwLock::new(TCB {
                 cpool: Capability::CPool(cpool),
                 runtime: ThreadRuntime::new(VAddr::from(0x0: u64),
                                             0b110,

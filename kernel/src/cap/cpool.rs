@@ -1,10 +1,12 @@
 use common::*;
-use super::{Capability, CapHalf, CapObject};
+use super::{Capability, CapHalf, CapReadObject, CapWriteObject};
 use super::untyped::{UntypedHalf};
 use core::mem::{size_of, align_of};
 use core::ops::{Index, IndexMut};
 use core::slice::Iter;
-use utils::{Mutex, MutexGuard, MemoryObject, MutexMemoryGuard};
+use util::{RwLock, SharedReadGuard, SharedWriteGuard, MemoryObject};
+
+type CPoolMemoryObject = MemoryObject<RwLock<CPool>>;
 
 #[derive(Debug, Clone)]
 pub struct CPoolHalf {
@@ -50,23 +52,30 @@ impl CPool {
 
 normal_half!(CPoolHalf);
 
-impl<'a> CapObject<'a, CPool, MutexMemoryGuard<'a, CPool>> for CPoolHalf {
-    fn lock(&mut self) -> MutexMemoryGuard<CPool> {
+impl<'a> CapReadObject<'a, CPool, SharedReadGuard<'a, CPool>> for CPoolHalf {
+    fn read(&self) -> SharedReadGuard<CPool> {
         unsafe {
-            let obj = MemoryObject::<Mutex<CPool>>::new(self.start_paddr);
-            MutexMemoryGuard::new(obj)
+            SharedReadGuard::new(CPoolMemoryObject::new(self.start_paddr))
+        }
+    }
+}
+
+impl<'a> CapWriteObject<'a, CPool, SharedWriteGuard<'a, CPool>> for CPoolHalf {
+    fn write(&mut self) -> SharedWriteGuard<CPool> {
+        unsafe {
+            SharedWriteGuard::new(CPoolMemoryObject::new(self.start_paddr))
         }
     }
 }
 
 impl CPoolHalf {
-    pub fn traverse(&mut self, routes: &[u8]) -> Option<CPoolHalf> {
+    pub fn traverse(&self, routes: &[u8]) -> Option<CPoolHalf> {
         let mut current_half = self.clone();
         current_half.mark_deleted();
 
         for path in routes {
             let mut cpool_half = current_half.clone();
-            let cpool: MutexMemoryGuard<CPool> = cpool_half.lock();
+            let cpool: SharedReadGuard<CPool> = cpool_half.read();
             match cpool[*path as usize] {
                 Some(Capability::CPool(ref cpool_half)) => {
                     current_half = cpool_half.clone();
@@ -92,9 +101,9 @@ impl CPoolHalf {
         };
 
         unsafe {
-            let obj = MemoryObject::<Mutex<CPool>>::new(cap.start_paddr);
+            let obj = CPoolMemoryObject::new(cap.start_paddr);
             *(obj.as_mut().unwrap()) =
-                  Mutex::new(
+                  RwLock::new(
                       CPool([None, None, None, None, None, None, None, None,
                              None, None, None, None, None, None, None, None,
                              None, None, None, None, None, None, None, None,

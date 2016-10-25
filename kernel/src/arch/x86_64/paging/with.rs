@@ -2,7 +2,7 @@
 use spin::{Mutex};
 use core::mem::{size_of};
 use core::slice;
-use utils::{align_down, block_count};
+use util::{align_down, block_count};
 use core::ptr::{Unique};
 use super::{PTEntry, PT_P, PT_RW, flush, BASE_PAGE_LENGTH};
 use arch::init::{OBJECT_POOL_PT, OBJECT_POOL_START_VADDR};

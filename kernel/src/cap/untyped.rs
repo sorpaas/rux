@@ -1,6 +1,6 @@
 use common::{PAddr, VAddr};
 use super::{CapHalf};
-use utils::{align_up};
+use util::{align_up};
 
 #[derive(Debug)]
 pub struct UntypedHalf {

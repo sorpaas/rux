@@ -38,7 +38,7 @@ pub mod unwind;
 
 /// Logging code
 mod logging;
-mod utils;
+mod util;
 mod common;
 mod elf;
 mod cap;
@@ -47,8 +47,9 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo, ThreadRuntime};
-use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, CapHalf, TCBHalf, CapObject};
-use utils::{MemoryObject};
+use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, CapHalf, TCBHalf,
+          CapReadObject, CapWriteObject};
+use util::{MemoryObject};
 
 #[no_mangle]
 pub fn kmain(archinfo: InitInfo)
@@ -70,7 +71,7 @@ pub fn kmain(archinfo: InitInfo)
         let mut untyped_target = {
             let mut untyped_target = cpool_target_untyped;
 
-            let mut cpool = cpool_cap.lock();
+            let mut cpool = cpool_cap.write();
             cpool.insert(Capability::CPool(cpool_cap_cloned));
 
             for region in region_iter {
@@ -124,7 +125,7 @@ pub fn kmain(archinfo: InitInfo)
                                         &mut untyped_target, &mut cpool_cap);
 
                     {
-                        let mut cpool = cpool_cap.lock();
+                        let mut cpool = cpool_cap.write();
                         cpool.insert(Capability::Page(initial_page_half));
                     }
                     next_page_vaddr += PageHalf::length();
@@ -136,7 +137,7 @@ pub fn kmain(archinfo: InitInfo)
                                             &mut untyped_target, &mut cpool_cap);
 
                         {
-                            let mut cpool = cpool_cap.lock();
+                            let mut cpool = cpool_cap.write();
                             cpool.insert(Capability::Page(rinit_page_half));
                         }
 
@@ -169,14 +170,14 @@ pub fn kmain(archinfo: InitInfo)
         let mut tcb_half = TCBHalf::new(cpool_cap.clone(),
                                         &mut untyped_target);
         {
-            let mut tcb = tcb_half.lock();
+            let mut tcb = tcb_half.write();
             tcb.set_stack_pointer(rinit_stack_vaddr + (PageHalf::length() - 4));
             tcb.set_instruction_pointer(VAddr::from(rinit_entry));
         }
 
         log!("put everything into rinit cpool ...");
         {
-            let mut cpool = cpool_cap.lock();
+            let mut cpool = cpool_cap.write();
             cpool.insert(Capability::Page(rinit_stack_half));
             cpool.insert(Capability::Untyped(untyped_target));
             cpool.insert(Capability::TopPageTable(rinit_pml4_half));

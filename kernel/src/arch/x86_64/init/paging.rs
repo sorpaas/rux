@@ -7,7 +7,7 @@ use arch::paging::{PTEntry, PML4, PDPT, PD, PT,
                    BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH};
 use arch::{KERNEL_BASE};
 use common::{PAddr, VAddr, MemoryRegion};
-use utils::{block_count, align_up, ExternReadonlyObject, ExternMutex};
+use util::{block_count, align_up, ExternReadonlyObject, ExternMutex};
 use core::ops::{Deref};
 
 use arch::addr;

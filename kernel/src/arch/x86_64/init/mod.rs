@@ -12,7 +12,7 @@ use super::paging::{BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH,
                     PD, PT, PML4, PDPT, PTEntry, pd_index, pml4_index, pt_index, pdpt_index};
 use self::multiboot::{Multiboot};
 
-use utils::{block_count, align_up};
+use util::{block_count, align_up};
 
 use core::mem;
 use core::slice::{self, Iter};

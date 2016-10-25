@@ -29,12 +29,12 @@ pub trait SystemCallable {
     fn handle_send(&mut self, CapSendMessage);
 }
 
-pub trait CapObject<'a, T, U: Deref<Target=T> + DerefMut + 'a> {
-    fn lock(&'a mut self) -> U;
+pub trait CapReadObject<'a, T, U: Deref<Target=T> + 'a> {
+    fn read(&'a self) -> U;
 }
 
-pub trait CapReadonlyObject<'a, T, U: Deref<Target=T> + 'a> {
-    fn lock(&'a self) -> U;
+pub trait CapWriteObject<'a, T, U: Deref<Target=T> + DerefMut + 'a> {
+    fn write(&'a mut self) -> U;
 }
 
 impl Capability {

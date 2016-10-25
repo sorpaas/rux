@@ -3,7 +3,8 @@ mod bit_field;
 mod dtables;
 
 use lazy_static;
-use cap::{TCBHalf, CapHalf, CPoolHalf, Capability, CapObject, CapSendMessage, CapSystemCall, SystemCallable};
+use cap::{TCBHalf, CapHalf, CPoolHalf, Capability,
+          CapReadObject, CapWriteObject, CapSendMessage, CapSystemCall, SystemCallable};
 use common::*;
 
 macro_rules! handler {
@@ -89,7 +90,7 @@ pub struct ThreadRuntime {
 
 static mut active_tcb: Option<TCBHalf> = None;
 unsafe fn update_active_tcb(stack_frame: &ExceptionStackFrame) {
-    let mut tcb = active_tcb.as_mut().unwrap().lock();
+    let mut tcb = active_tcb.as_mut().unwrap().write();
     let runtime = tcb.runtime_mut();
     runtime.instruction_pointer = stack_frame.instruction_pointer;
     runtime.cpu_flags = stack_frame.cpu_flags;
@@ -148,7 +149,7 @@ extern "C" fn system_call_handler(stack_frame: *const ExceptionStackFrame) -> ! 
         let ref exception = *stack_frame;
         update_active_tcb(&exception);
 
-        let mut tcb = active_tcb.as_mut().unwrap().lock();
+        let mut tcb = active_tcb.as_mut().unwrap().write();
         let (target_index, target_cpool_routes) = message.target.split_last().unwrap();
         let target_cpool = {
             match tcb.cpool_mut() {
@@ -161,7 +162,7 @@ extern "C" fn system_call_handler(stack_frame: *const ExceptionStackFrame) -> ! 
 
         if target_cpool.is_some() {
             let mut unwrapped = target_cpool.unwrap();
-            let mut locked = unwrapped.lock();
+            let mut locked = unwrapped.write();
             match locked[*target_index as usize] {
                 Some(ref mut cap) => {
                     cap.handle_send(message.message);

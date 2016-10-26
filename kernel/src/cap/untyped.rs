@@ -7,10 +7,7 @@ pub struct UntypedHalf {
     start_paddr: PAddr,
     length: usize,
     watermark: PAddr,
-    deleted: bool
 }
-
-normal_half!(UntypedHalf);
 
 impl UntypedHalf {
     pub unsafe fn bootstrap(start_paddr: PAddr, length: usize) -> UntypedHalf {
@@ -18,7 +15,6 @@ impl UntypedHalf {
             start_paddr: start_paddr,
             length: length,
             watermark: start_paddr,
-            deleted: false
         }
     }
 
@@ -29,7 +25,6 @@ impl UntypedHalf {
             start_paddr: start_paddr,
             length: length,
             watermark: start_paddr,
-            deleted: false
         }
     }
 

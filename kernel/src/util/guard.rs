@@ -33,6 +33,53 @@ pub struct IndexedSharedWriteGuard<'a, T: 'a, I: Copy, U: 'a + Index<I, Output=T
     index: I,
 }
 
+pub enum RefGuard<'a, T: 'a, U: 'a + Deref<Target=T>> {
+    Guard(U),
+    Ref(&'a T),
+}
+
+pub enum RefMutGuard<'a, T: 'a, U: 'a + Deref<Target=T> + DerefMut> {
+    Guard(U),
+    Ref(&'a mut T),
+}
+
+// Implementation for RefGuard and RefMutGuard
+
+impl<'a, T: 'a, U: 'a + Deref<Target=T>> Deref for RefGuard<'a, T, U> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        match self {
+            &RefGuard::Guard(ref u) =>
+                u.deref(),
+            &RefGuard::Ref(ref r) =>
+                r,
+        }
+    }
+}
+
+impl<'a, T: 'a, U: 'a + Deref<Target=T> + DerefMut> Deref for RefMutGuard<'a, T, U> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        match self {
+            &RefMutGuard::Guard(ref u) =>
+                u.deref(),
+            &RefMutGuard::Ref(ref r) =>
+                r,
+        }
+    }
+}
+
+impl<'a, T: 'a, U: 'a + Deref<Target=T> + DerefMut> DerefMut for RefMutGuard<'a, T, U> {
+    fn deref_mut(&mut self) -> &mut T {
+        match self {
+            &mut RefMutGuard::Guard(ref mut u) =>
+                u.deref_mut(),
+            &mut RefMutGuard::Ref(ref mut r) =>
+                r,
+        }
+    }
+}
+
 // Implementation for UniqueReadGuard
 
 impl<'a, T: 'a> UniqueReadGuard<'a, T> {
@@ -134,7 +181,7 @@ impl<'a, T: 'a> DerefMut for SharedWriteGuard<'a, T> {
 // Implementation for IndexedSharedReadGuard
 
 impl<'a, T: 'a, I: Copy, U: 'a + Index<I, Output=T>> IndexedSharedReadGuard<'a, T, I, U> {
-    pub unsafe fn new(guard: SharedReadGuard<'a, U>, index: I) -> Self {
+    pub fn new(guard: SharedReadGuard<'a, U>, index: I) -> Self {
         IndexedSharedReadGuard {
             guard: guard,
             index: index,
@@ -155,7 +202,7 @@ impl<'a, T: 'a, I: Copy, U: 'a + Index<I, Output=T>> Deref for IndexedSharedRead
 // Implementation for IndexedSharedWriteGuard
 
 impl<'a, T: 'a, I: Copy, U: 'a + Index<I, Output=T> + IndexMut<I>> IndexedSharedWriteGuard<'a, T, I, U> {
-    pub unsafe fn new(guard: SharedWriteGuard<'a, U>, index: I) -> Self {
+    pub fn new(guard: SharedWriteGuard<'a, U>, index: I) -> Self {
         IndexedSharedWriteGuard {
             guard: guard,
             index: index,

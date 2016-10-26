@@ -99,7 +99,6 @@ unsafe fn update_active_tcb(stack_frame: &ExceptionStackFrame) {
 
 impl ThreadRuntime {
     pub unsafe fn switch_to(&self, mut tcb_half: TCBHalf) {
-        tcb_half.mark_deleted();
         active_tcb = Some(tcb_half.clone());
 
         let stack_vaddr = self.stack_pointer as usize;
@@ -149,27 +148,27 @@ extern "C" fn system_call_handler(stack_frame: *const ExceptionStackFrame) -> ! 
         let ref exception = *stack_frame;
         update_active_tcb(&exception);
 
-        let mut tcb = active_tcb.as_mut().unwrap().write();
-        let (target_index, target_cpool_routes) = message.target.split_last().unwrap();
-        let target_cpool = {
-            match tcb.cpool_mut() {
-                &mut Capability::CPool(ref mut cpool_half) => {
-                    cpool_half.traverse(target_cpool_routes)
-                },
-                _ => None
-            }
-        };
+        // let mut tcb = active_tcb.as_mut().unwrap().write();
+        // let (target_index, target_cpool_routes) = message.target.split_last().unwrap();
+        // let target_cpool = {
+        //     match tcb.cpool_mut() {
+        //         &mut Capability::CPool(ref mut cpool_half) => {
+        //             cpool_half.traverse(target_cpool_routes)
+        //         },
+        //         _ => None
+        //     }
+        // };
 
-        if target_cpool.is_some() {
-            let mut unwrapped = target_cpool.unwrap();
-            let mut locked = unwrapped.write();
-            match locked[*target_index as usize] {
-                Some(ref mut cap) => {
-                    cap.handle_send(message.message);
-                },
-                _ => ()
-            }
-        }
+        // if target_cpool.is_some() {
+        //     let mut unwrapped = target_cpool.unwrap();
+        //     let mut locked = unwrapped.write();
+        //     match locked[*target_index as usize] {
+        //         Some(ref mut cap) => {
+        //             cap.handle_send(message.message);
+        //         },
+        //         _ => ()
+        //     }
+        // }
 
         // If we didn't call switch_to in the handler, then switch back to the active_tcb.
         active_tcb.as_mut().unwrap().switch_to();

@@ -2,7 +2,7 @@ use common::*;
 use arch::paging::{BASE_PAGE_LENGTH};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedHalf, CapHalf, Capability, CapReadObject, CapWriteObject};
+use cap::{UntypedHalf, CapHalf, Capability, CapReadRefObject, CapWriteRefObject};
 
 /// Non-clonable, lock in CapHalf.
 
@@ -10,13 +10,10 @@ use cap::{UntypedHalf, CapHalf, Capability, CapReadObject, CapWriteObject};
 pub struct PageHalf {
     start_paddr: PAddr,
     lock: RwLock<()>,
-    deleted: bool
 }
 
-normal_half!(PageHalf);
-
-impl<'a> CapReadObject<'a, [u8; BASE_PAGE_LENGTH], UniqueReadGuard<'a, [u8; BASE_PAGE_LENGTH]>> for PageHalf {
-    fn read(&self) -> UniqueReadGuard<[u8; BASE_PAGE_LENGTH]> {
+impl<'a> CapReadRefObject<'a, [u8; BASE_PAGE_LENGTH], UniqueReadGuard<'a, [u8; BASE_PAGE_LENGTH]>> for PageHalf {
+    fn read(&'a self) -> UniqueReadGuard<'a, [u8; BASE_PAGE_LENGTH]> {
         unsafe { UniqueReadGuard::new(
             MemoryObject::<[u8; BASE_PAGE_LENGTH]>::new(self.start_paddr),
             self.lock.read()
@@ -24,8 +21,8 @@ impl<'a> CapReadObject<'a, [u8; BASE_PAGE_LENGTH], UniqueReadGuard<'a, [u8; BASE
     }
 }
 
-impl<'a> CapWriteObject<'a, [u8; BASE_PAGE_LENGTH], UniqueWriteGuard<'a, [u8; BASE_PAGE_LENGTH]>> for PageHalf {
-    fn write(&mut self) -> UniqueWriteGuard<[u8; BASE_PAGE_LENGTH]> {
+impl<'a> CapWriteRefObject<'a, [u8; BASE_PAGE_LENGTH], UniqueWriteGuard<'a, [u8; BASE_PAGE_LENGTH]>> for PageHalf {
+    fn write(&'a mut self) -> UniqueWriteGuard<'a, [u8; BASE_PAGE_LENGTH]> {
         unsafe { UniqueWriteGuard::new(
             MemoryObject::<[u8; BASE_PAGE_LENGTH]>::new(self.start_paddr),
             self.lock.write()
@@ -45,7 +42,6 @@ impl PageHalf {
         let mut half = PageHalf {
             start_paddr: paddr,
             lock: RwLock::new(()),
-            deleted: false
         };
 
         for u in half.write().iter_mut() {

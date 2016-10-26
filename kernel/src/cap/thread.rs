@@ -44,21 +44,18 @@ impl TCB {
 #[derive(Debug, Clone)]
 pub struct TCBHalf {
     start_paddr: PAddr,
-    deleted: bool
 }
 
-normal_half!(TCBHalf);
-
-impl<'a> CapReadObject<'a, TCB, SharedReadGuard<'a, TCB>> for TCBHalf {
-    fn read(&self) -> SharedReadGuard<TCB> {
+impl<'a> CapReadObject<TCB, SharedReadGuard<'a, TCB>> for TCBHalf {
+    fn read<'b>(&'b self) -> SharedReadGuard<'a, TCB> {
         unsafe {
             SharedReadGuard::new(TCBMemoryObject::new(self.start_paddr))
         }
     }
 }
 
-impl<'a> CapWriteObject<'a, TCB, SharedWriteGuard<'a, TCB>> for TCBHalf {
-    fn write(&mut self) -> SharedWriteGuard<TCB> {
+impl<'a> CapWriteObject<TCB, SharedWriteGuard<'a, TCB>> for TCBHalf {
+    fn write<'b>(&'b mut self) -> SharedWriteGuard<'a, TCB> {
         unsafe {
             SharedWriteGuard::new(TCBMemoryObject::new(self.start_paddr))
         }
@@ -100,30 +97,29 @@ impl TCBHalf {
 
         let mut cap = TCBHalf {
             start_paddr: start_paddr,
-            deleted: false
         };
 
         unsafe {
             let obj = TCBMemoryObject::new(cap.start_paddr);
 
-            // FIXME rust recognizes those initial zeros as a TCB with
-            // a zero Untyped, which is incorrect. The zero Untyped is
-            // considered dropped, so the drop function is called. It
-            // is not marked yet, so this cause an error.
-            // match (*obj.as_mut().unwrap()).cpool {
-            //     Capability::Untyped(ref mut untyped) =>
-            //         untyped.mark_deleted(),
-            //     _ => assert!(false)
-            // }
+            // // FIXME rust recognizes those initial zeros as a TCB with
+            // // a zero Untyped, which is incorrect. The zero Untyped is
+            // // considered dropped, so the drop function is called. It
+            // // is not marked yet, so this cause an error.
+            // // match (*obj.as_mut().unwrap()).cpool {
+            // //     Capability::Untyped(ref mut untyped) =>
+            // //         untyped.mark_deleted(),
+            // //     _ => assert!(false)
+            // // }
 
-            {
-                let mut uninit_tcb = obj.as_ref().unwrap().write();
-                match uninit_tcb.cpool {
-                    Capability::Untyped(ref mut untyped) =>
-                        untyped.mark_deleted(),
-                    _ => assert!(false)
-                }
-            }
+            // {
+            //     let mut uninit_tcb = obj.as_ref().unwrap().write();
+            //     match uninit_tcb.cpool {
+            //         Capability::Untyped(ref mut untyped) =>
+            //             untyped.mark_deleted(),
+            //         _ => assert!(false)
+            //     }
+            // }
 
             *obj.as_mut().unwrap() = RwLock::new(TCB {
                 cpool: Capability::CPool(cpool),

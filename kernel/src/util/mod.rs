@@ -1,9 +1,12 @@
 mod object;
 mod guard;
+mod streamer;
 
 pub use self::object::{ExternMutex, ExternReadonlyObject, MutexGuard, MemoryObject};
 pub use self::guard::{UniqueReadGuard, UniqueWriteGuard, SharedReadGuard, SharedWriteGuard,
-                      RwLock, RwLockReadGuard, RwLockWriteGuard};
+                      RwLock, RwLockReadGuard, RwLockWriteGuard, IndexedSharedReadGuard, IndexedSharedWriteGuard,
+                      RefGuard, RefMutGuard};
+pub use self::streamer::{Streamer};
 
 use common::{PAddr, VAddr};
 use core::ops::{Deref, DerefMut};

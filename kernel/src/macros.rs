@@ -9,22 +9,3 @@ macro_rules! log{
 		let _ = write!(&mut ::logging::Writer::get(module_path!()), $($arg)*);
 	})
 }
-
-macro_rules! normal_half {
-    ( $t:ty ) => {
-        impl !Send for $t { }
-        impl !Sync for $t { }
-
-        impl CapHalf for $t {
-            fn mark_deleted(&mut self) {
-                self.deleted = true;
-            }
-        }
-
-        impl Drop for $t {
-            fn drop(&mut self) {
-                assert!(self.deleted, "attempt to drop unmarked half {:?}", self);
-            }
-        }
-    }
-}

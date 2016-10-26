@@ -11,7 +11,7 @@ use arch::paging::{BASE_PAGE_LENGTH,
                    PDPT, PDPTEntry, PDPT_P, PDPT_RW, PDPT_US};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedHalf, Capability, CapReadObject, CapHalf};
+use cap::{UntypedHalf, Capability, CapReadRefObject, CapHalf};
 
 macro_rules! paging_half {
     ( $t:ident, $sub_half: ty, $actual: ty, $entry: ident, $access: expr, $map_name: ident ) => {
@@ -19,13 +19,10 @@ macro_rules! paging_half {
         pub struct $t {
             start_paddr: PAddr,
             lock: RwLock<()>,
-            deleted: bool
         }
 
-        normal_half!($t);
-
-        impl<'a> CapReadObject<'a, $actual, UniqueReadGuard<'a, $actual>> for $t {
-            fn read(&self) -> UniqueReadGuard<$actual> {
+        impl<'a> CapReadRefObject<'a, $actual, UniqueReadGuard<'a, $actual>> for $t {
+            fn read(&'a self) -> UniqueReadGuard<'a, $actual> {
                 unsafe { UniqueReadGuard::new(
                     MemoryObject::<$actual>::new(self.start_paddr),
                     self.lock.read()
@@ -56,7 +53,6 @@ macro_rules! paging_half {
                 let mut half = $t {
                     start_paddr: paddr,
                     lock: RwLock::new(()),
-                    deleted: false,
                 };
 
                 for entry in half.write().iter_mut() {

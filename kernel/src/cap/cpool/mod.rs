@@ -87,9 +87,7 @@ impl CPoolFull {
         let length = size_of::<CPool>();
         let (start_paddr, _) = untyped.allocate(length, alignment);
 
-        let mut cap = CPoolHalf {
-            start_paddr: start_paddr,
-        };
+        let mut cap = unsafe { CPoolHalf::new(start_paddr, 256) };
 
         unsafe {
             let obj = MemoryObject::<CPool>::new(cap.start_paddr);
@@ -115,9 +113,7 @@ impl CPoolFull {
         let length = size_of::<CPool>();
         let (start_paddr, mdb) = untyped.allocate(length, alignment);
 
-        let mut cap = CPoolHalf {
-            start_paddr: start_paddr,
-        };
+        let mut cap = unsafe { CPoolHalf::new(start_paddr, 256) };
 
         unsafe {
             let obj = MemoryObject::<CPool>::new(cap.start_paddr);
@@ -131,23 +127,35 @@ impl CPoolFull {
 
 #[derive(Debug, Clone)]
 pub struct CPoolHalf {
-    start_paddr: PAddr
+    start_paddr: PAddr,
+    size: usize,
 }
 
 impl CPoolHalf {
+    pub unsafe fn new(start_paddr: PAddr, size: usize) -> Self {
+        CPoolHalf {
+            start_paddr: start_paddr,
+            size: size
+        }
+    }
+
     pub fn start_paddr(&self) -> PAddr {
         self.start_paddr
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
     }
 
     pub fn insert<Half, M, U>(&mut self, mut cap: U)
         where U: IntoFull<Half, M>, Cap: From<CapFull<Half, M>> {
         let cpool = self.clone();
-        for index in 0..256 {
-            let mut item = self.try_write(index as u8);
+        for index in 0..self.size {
+            let mut item = self.try_write(index);
             if item.is_some() {
                 let mut item = item.unwrap();
                 if item.is_none() {
-                    *item = unsafe { Some(cap.into_full(cpool, index as u8).into()) };
+                    *item = unsafe { Some(cap.into_full(cpool, index).into()) };
                     return;
                 }
             }
@@ -155,26 +163,26 @@ impl CPoolHalf {
         assert!(false);
     }
 
-    fn item_paddr(&self, index: u8) -> PAddr {
-        self.start_paddr + size_of::<RwLock<Option<Cap>>>() * (index as usize)
+    fn item_paddr(&self, index: usize) -> PAddr {
+        self.start_paddr + size_of::<RwLock<Option<Cap>>>() * index
     }
 
-    pub fn read<'a, 'b>(&'a self, index: u8) -> SharedReadGuard<'b, Option<Cap>> {
+    pub fn read<'a, 'b>(&'a self, index: usize) -> SharedReadGuard<'b, Option<Cap>> {
         let paddr = self.item_paddr(index);
         unsafe { SharedReadGuard::new(MemoryObject::<RwLock<Option<Cap>>>::new(paddr)) }
     }
 
-    pub fn try_read<'a, 'b>(&'a self, index: u8) -> Option<SharedReadGuard<'b, Option<Cap>>> {
+    pub fn try_read<'a, 'b>(&'a self, index: usize) -> Option<SharedReadGuard<'b, Option<Cap>>> {
         let paddr = self.item_paddr(index);
         unsafe { SharedReadGuard::try_new(MemoryObject::<RwLock<Option<Cap>>>::new(paddr)) }
     }
 
-    pub fn write<'a, 'b>(&'a mut self, index: u8) -> SharedWriteGuard<'b, Option<Cap>> {
+    pub fn write<'a, 'b>(&'a mut self, index: usize) -> SharedWriteGuard<'b, Option<Cap>> {
         let paddr = self.item_paddr(index);
         unsafe { SharedWriteGuard::new(MemoryObject::<RwLock<Option<Cap>>>::new(paddr)) }
     }
 
-    pub fn try_write<'a, 'b>(&'a mut self, index: u8) -> Option<SharedWriteGuard<'b, Option<Cap>>> {
+    pub fn try_write<'a, 'b>(&'a mut self, index: usize) -> Option<SharedWriteGuard<'b, Option<Cap>>> {
         let paddr = self.item_paddr(index);
         unsafe { SharedWriteGuard::try_new(MemoryObject::<RwLock<Option<Cap>>>::new(paddr)) }
     }

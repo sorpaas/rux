@@ -29,7 +29,7 @@ pub enum Cap {
 }
 
 impl Cap {
-    pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: u8) {
+    pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: usize) {
         match self {
             &mut Cap::CPool(ref mut full) => full.set_mdb(cpool, cpool_index),
             &mut Cap::Untyped(ref mut full) => full.set_mdb(cpool, cpool_index),

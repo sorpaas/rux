@@ -4,7 +4,7 @@ use core::ops::{Deref, DerefMut};
 use core::marker::{PhantomData};
 
 pub trait IntoFull<Half, M> where CapFull<Half, M>: Into<Cap> {
-    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: u8) -> CapFull<Half, M>;
+    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: usize) -> CapFull<Half, M>;
 }
 
 pub struct CapNearlyFull<Half, M> {
@@ -23,7 +23,7 @@ impl<Half, M> CapNearlyFull<Half, M> {
 
 impl<'a, Half> IntoFull<Half, [MDB; 1]> for CapNearlyFull<Half, [Option<&'a mut MDB>; 1]>
     where CapFull<Half, [MDB; 1]>: Into<Cap> {
-    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: u8) -> CapFull<Half, [MDB; 1]> {
+    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: usize) -> CapFull<Half, [MDB; 1]> {
         let mut cap = CapFull::new(self.half, [ MDB::default() ]);
         let mut index = 0;
         for hold in self.holdings.iter_mut() {
@@ -73,7 +73,7 @@ impl<Half, M> CapFull<Half, M> {
 }
 
 impl<Half> CapFull<Half, [MDB; 1]> {
-    pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: u8) {
+    pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: usize) {
         let mut mdb_index = 0;
         for mdb in self.mdbs.iter_mut() {
             mdb.set(MDBAddr {
@@ -96,7 +96,7 @@ impl<Half> CapFull<Half, [MDB; 1]> {
 
 impl<'a, Half> IntoFull<Half, [MDB; 1]> for CapFull<Half, [MDB; 1]>
     where CapFull<Half, [MDB; 1]>: Into<Cap> {
-    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: u8) -> CapFull<Half, [MDB; 1]> {
+    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: usize) -> CapFull<Half, [MDB; 1]> {
         self.set_mdb(cpool.clone(), cpool_index);
         self
     }
@@ -124,7 +124,7 @@ impl<Half, M> Drop for CapFull<Half, M> {
 #[derive(Clone, Debug)]
 pub struct MDBAddr {
     cpool: CPoolHalf,
-    cpool_index: u8,
+    cpool_index: usize,
     mdb_index: usize,
 }
 

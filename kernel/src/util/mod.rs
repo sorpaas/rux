@@ -2,6 +2,9 @@ mod object;
 mod guard;
 mod streamer;
 
+#[macro_use]
+pub mod field_offset;
+
 pub use self::object::{ExternMutex, ExternReadonlyObject, MutexGuard, MemoryObject};
 pub use self::guard::{UniqueReadGuard, UniqueWriteGuard, SharedReadGuard, SharedWriteGuard,
                       RwLock, RwLockReadGuard, RwLockWriteGuard, IndexedSharedReadGuard, IndexedSharedWriteGuard,

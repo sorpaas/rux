@@ -38,6 +38,8 @@ pub mod unwind;
 
 /// Logging code
 mod logging;
+
+#[macro_use]
 mod util;
 mod common;
 mod elf;

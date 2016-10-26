@@ -1,10 +1,11 @@
 use common::*;
 use cap::{Capability, CapReadObject, CapWriteObject, CapFull, MDB, CapNearlyFull,
-          CPoolHalf, UntypedFull, SystemCallable, CapSendMessage};
+          CPoolHalf, UntypedFull, SystemCallable, CapSendMessage, Cap};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};
 use core::fmt;
 use util::{RwLock, SharedReadGuard, SharedWriteGuard, MemoryObject};
+use util::field_offset;
 
 pub type TCBFull = CapFull<TCBHalf, [MDB; 1]>;
 pub type TCBNearlyFull<'a> = CapNearlyFull<TCBHalf, [Option<&'a mut MDB>; 1]>;
@@ -13,19 +14,11 @@ type TCBMemoryObject = MemoryObject<RwLock<TCB>>;
 
 #[derive(Debug)]
 pub struct TCB {
-    // cpool: Capability, FIXME
+    cpool: [RwLock<Option<Cap>>; 1],
     runtime: ThreadRuntime
 }
 
 impl TCB {
-    // pub fn cpool(&self) -> &Capability {
-    //     &self.cpool
-    // }
-
-    // pub fn cpool_mut(&mut self) -> &mut Capability {
-    //     &mut self.cpool
-    // }
-
     pub fn runtime(&self) -> &ThreadRuntime {
         &self.runtime
     }
@@ -45,22 +38,21 @@ impl TCB {
 }
 
 impl TCBFull {
-    pub fn retype<'a>(untyped: &'a mut UntypedFull,
-                  //cpool: CPoolHalf FIXME
-                  ) -> TCBNearlyFull<'a> {
+    pub fn retype<'a>(untyped: &'a mut UntypedFull) -> TCBNearlyFull<'a> {
         let alignment = align_of::<TCB>();
         let length = size_of::<TCB>();
         let (start_paddr, mdb) = untyped.allocate(length, alignment);
 
         let mut cap = TCBHalf {
             start_paddr: start_paddr,
+            cpool_start_paddr: start_paddr + offset_of!(TCB => cpool).get_byte_offset(),
         };
 
         unsafe {
             let obj = TCBMemoryObject::new(cap.start_paddr);
 
             *obj.as_mut().unwrap() = RwLock::new(TCB {
-                // cpool: Capability::CPool(cpool),
+                cpool: [ RwLock::new(None) ],
                 runtime: ThreadRuntime::new(VAddr::from(0x0: u64),
                                             0b110,
                                             VAddr::from(0x0: u64))
@@ -74,6 +66,7 @@ impl TCBFull {
 #[derive(Debug, Clone)]
 pub struct TCBHalf {
     start_paddr: PAddr,
+    cpool_start_paddr: PAddr,
 }
 
 impl<'a> CapReadObject<TCB, SharedReadGuard<'a, TCB>> for TCBHalf {
@@ -117,5 +110,9 @@ impl TCBHalf {
             tcb.runtime.clone()
         };
         runtime.switch_to(cloned);
+    }
+
+    pub fn cpool_half(&self) -> CPoolHalf {
+        unsafe { CPoolHalf::new(self.cpool_start_paddr, 1) }
     }
 }

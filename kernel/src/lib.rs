@@ -49,7 +49,7 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo, ThreadRuntime};
-use cap::{UntypedFull, CPoolFull, Capability, TCBHalf, MDB, Cap,
+use cap::{UntypedFull, CPoolFull, TCBHalf, MDB, Cap,
           CapReadObject, CapWriteObject};
 use core::ops::{Deref, DerefMut};
 use util::{MemoryObject};

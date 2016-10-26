@@ -2,12 +2,13 @@ use common::*;
 use arch::paging::{BASE_PAGE_LENGTH};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedFull, CapFull, MDB, Capability, CapReadRefObject, CapWriteRefObject};
+use cap::{UntypedFull, CapFull, MDB, CapNearlyFull, CapReadRefObject, CapWriteRefObject};
 
-pub type PageFull<'a> = CapFull<PageHalf, [MDB<'a>; 1]>;
+pub type PageNearlyFull<'a> = CapNearlyFull<PageHalf, [Option<&'a mut MDB>; 1]>;
+pub type PageFull = CapFull<PageHalf, [MDB; 1]>;
 
-impl<'a> PageFull<'a> {
-    pub fn retype(untyped: &'a mut UntypedFull<'a>) -> PageFull<'a> {
+impl PageFull {
+    pub fn retype<'a>(untyped: &'a mut UntypedFull) -> PageNearlyFull<'a> {
         let alignment = BASE_PAGE_LENGTH;
         let (paddr, mdb) = untyped.allocate(BASE_PAGE_LENGTH, alignment);
 
@@ -20,7 +21,7 @@ impl<'a> PageFull<'a> {
             *u = 0x0: u8;
         }
 
-        Self::new(half, [ mdb ])
+        PageNearlyFull::new(half, [ mdb ])
     }
 }
 

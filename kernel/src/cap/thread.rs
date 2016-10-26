@@ -1,5 +1,5 @@
 use common::*;
-use cap::{Capability, CapReadObject, CapWriteObject, CapFull, MDB, CapNearlyFull,
+use cap::{CapReadObject, CapWriteObject, CapFull, MDB, CapNearlyFull,
           CPoolHalf, UntypedFull, SystemCallable, CapSendMessage, Cap};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};

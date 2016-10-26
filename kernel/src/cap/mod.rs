@@ -6,26 +6,19 @@ pub use self::cpool::{CPoolHalf, CPoolFull, CPool, MDB, MDBAddr, CapFull, CapNea
 pub use self::untyped::{UntypedHalf, UntypedFull, UntypedNearlyFull};
 pub use self::thread::{TCBHalf, TCBFull, TCB};
 pub use abi::{CapSystemCall, CapSendMessage};
-// pub use arch::{TopPageTableHalf, PageHalf, ArchSpecificCapability};
+pub use arch::{TopPageTableHalf, TopPageTableFull, PageHalf, PageFull, ArchCap};
 
 use common::*;
 use core::ops::{Deref, DerefMut};
-
-#[derive(Debug)]
-pub enum Capability {
-    Untyped(UntypedHalf),
-    CPool(CPoolHalf),
-    // TopPageTable(TopPageTableHalf),
-    // Page(PageHalf),
-    TCB(TCBHalf),
-    // ArchSpecific(ArchSpecificCapability),
-}
 
 #[derive(Debug)]
 pub enum Cap {
     CPool(CPoolFull),
     Untyped(UntypedFull),
     TCB(TCBFull),
+    TopPageTable(TopPageTableFull),
+    Page(PageFull),
+    Arch(ArchCap),
 }
 
 impl Cap {
@@ -34,6 +27,9 @@ impl Cap {
             &mut Cap::CPool(ref mut full) => full.set_mdb(cpool, cpool_index),
             &mut Cap::Untyped(ref mut full) => full.set_mdb(cpool, cpool_index),
             &mut Cap::TCB(ref mut full) => full.set_mdb(cpool, cpool_index),
+            &mut Cap::TopPageTable(ref mut full) => full.set_mdb(cpool, cpool_index),
+            &mut Cap::Page(ref mut full) => full.set_mdb(cpool, cpool_index),
+            &mut Cap::Arch(ref mut full) => full.set_mdb(cpool, cpool_index),
         }
     }
 
@@ -42,6 +38,9 @@ impl Cap {
             &Cap::CPool(ref full) => full.mdb(index),
             &Cap::Untyped(ref full) => full.mdb(index),
             &Cap::TCB(ref full) => full.mdb(index),
+            &Cap::TopPageTable(ref full) => full.mdb(index),
+            &Cap::Page(ref full) => full.mdb(index),
+            &Cap::Arch(ref full) => full.mdb(index),
         }
     }
 
@@ -50,6 +49,9 @@ impl Cap {
             &mut Cap::CPool(ref mut full) => full.mdb_mut(index),
             &mut Cap::Untyped(ref mut full) => full.mdb_mut(index),
             &mut Cap::TCB(ref mut full) => full.mdb_mut(index),
+            &mut Cap::TopPageTable(ref mut full) => full.mdb_mut(index),
+            &mut Cap::Page(ref mut full) => full.mdb_mut(index),
+            &mut Cap::Arch(ref mut full) => full.mdb_mut(index),
         }
     }
 }
@@ -92,18 +94,15 @@ pub trait CapWriteRefObject<'a, T, U: Deref<Target=T> + DerefMut + 'a> {
     fn write(&'a mut self) -> U;
 }
 
-impl Capability {
-}
-
-impl SystemCallable for Capability {
-    fn handle_send(&mut self, msg: CapSendMessage) {
-        match self {
-            &mut Capability::TCB(ref mut tcb) => {
-                tcb.handle_send(msg);
-            },
-            _ => {
-                log!("system call error: unhandled message");
-            }
-        }
-    }
-}
+// impl SystemCallable for Capability {
+//     fn handle_send(&mut self, msg: CapSendMessage) {
+//         match self {
+//             &mut Capability::TCB(ref mut tcb) => {
+//                 tcb.handle_send(msg);
+//             },
+//             _ => {
+//                 log!("system call error: unhandled message");
+//             }
+//         }
+//     }
+// }

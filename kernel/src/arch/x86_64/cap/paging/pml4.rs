@@ -2,17 +2,18 @@ use common::*;
 use arch::paging::{PML4, PML4Entry, PML4_P, PML4_RW, PML4_US, BASE_PAGE_LENGTH, pml4_index};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedFull, CapFull, MDB, Capability, CapReadRefObject, CapWriteRefObject,
-          ArchSpecificCapability, CPoolHalf};
+use cap::{UntypedFull, CapFull, MDB, CapNearlyFull, CapReadRefObject, CapWriteRefObject,
+          ArchCap, CPoolHalf};
 
 use super::{PageHalf, PDPTHalf, PDHalf, PTHalf};
 
 /// Non-clonable, lock in CapHalf
 
-pub type PML4Full<'a> = CapFull<PML4Half, [MDB<'a>; 1]>;
+pub type PML4NearlyFull<'a> = CapNearlyFull<PML4Half, [Option<&'a mut MDB>; 1]>;
+pub type PML4Full = CapFull<PML4Half, [MDB; 1]>;
 
-impl<'a> PML4Full<'a> {
-    pub fn retype(untyped: &'a mut UntypedFull<'a>) -> PML4Full<'a> {
+impl PML4Full {
+    pub fn retype<'a>(untyped: &'a mut UntypedFull) -> PML4NearlyFull<'a> {
         use arch::init::{KERNEL_PDPT};
         use arch::{KERNEL_BASE};
 
@@ -34,7 +35,7 @@ impl<'a> PML4Full<'a> {
                 PML4Entry::new(KERNEL_PDPT.paddr(), PML4_P | PML4_RW);
         }
 
-        Self::new(half, [ mdb ])
+        PML4NearlyFull::new(half, [ mdb ])
     }
 }
 
@@ -69,26 +70,26 @@ impl PML4Half {
         BASE_PAGE_LENGTH
     }
 
-    pub fn map_pdpt(&mut self, index: usize, pdpt: &PDPTHalf) {
-        use arch::{KERNEL_BASE};
+    // pub fn map_pdpt(&mut self, index: usize, pdpt: &PDPTHalf) {
+    //     use arch::{KERNEL_BASE};
 
-        let mut pml4 = self.write();
+    //     let mut pml4 = self.write();
 
-        assert!(!(pml4_index(VAddr::from(KERNEL_BASE)) == index));
-        assert!(!pml4[index].is_present());
+    //     assert!(!(pml4_index(VAddr::from(KERNEL_BASE)) == index));
+    //     assert!(!pml4[index].is_present());
 
-        pml4[index] = PML4Entry::new(pdpt.start_paddr(), PML4_P | PML4_RW | PML4_US);
-    }
+    //     pml4[index] = PML4Entry::new(pdpt.start_paddr(), PML4_P | PML4_RW | PML4_US);
+    // }
 
-    fn insert_in_none(slice: &mut [Option<Capability>], cap: Capability) {
-        for space in slice.iter_mut() {
-            if space.is_none() {
-                *space = Some(cap);
-                return;
-            }
-        }
-        assert!(false);
-    }
+    // fn insert_in_none(slice: &mut [Option<Capability>], cap: Capability) {
+    //     for space in slice.iter_mut() {
+    //         if space.is_none() {
+    //             *space = Some(cap);
+    //             return;
+    //         }
+    //     }
+    //     assert!(false);
+    // }
 
     pub fn switch_to(&self) {
         use arch::paging;

@@ -1,8 +1,8 @@
 mod page;
 mod pml4;
 
-pub use self::page::{PageHalf};
-pub use self::pml4::{PML4Half};
+pub use self::page::{PageHalf, PageFull};
+pub use self::pml4::{PML4Half, PML4Full};
 
 use common::*;
 use arch::paging::{BASE_PAGE_LENGTH,
@@ -11,7 +11,11 @@ use arch::paging::{BASE_PAGE_LENGTH,
                    PDPT, PDPTEntry, PDPT_P, PDPT_RW, PDPT_US};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedFull, CapFull, MDB, Capability, CapReadRefObject};
+use cap::{UntypedFull, CapFull, CapNearlyFull, MDB, Cap, CapReadRefObject};
+
+pub type PDPTFull = CapFull<PDPTHalf, [MDB; 1]>;
+pub type PDFull = CapFull<PDHalf, [MDB; 1]>;
+pub type PTFull = CapFull<PTHalf, [MDB; 1]>;
 
 macro_rules! paging_half {
     ( $t:ident, $sub_half: ty, $actual: ty, $entry: ident, $access: expr, $map_name: ident ) => {
@@ -30,8 +34,8 @@ macro_rules! paging_half {
             }
         }
 
-        impl<'a> CapFull<$t, [MDB<'a>; 1]> {
-            pub fn retype(untyped: &'a mut UntypedFull<'a>) -> CapFull<$t, [MDB<'a>; 1]> {
+        impl CapFull<$t, [MDB; 1]> {
+            pub fn retype<'a>(untyped: &'a mut UntypedFull) -> CapNearlyFull<$t, [Option<&'a mut MDB>; 1]> {
                 let alignment = BASE_PAGE_LENGTH;
                 let (paddr, mdb) = untyped.allocate(BASE_PAGE_LENGTH, alignment);
 
@@ -44,7 +48,7 @@ macro_rules! paging_half {
                     *entry = $entry::empty();
                 }
 
-                Self::new(half, [ mdb ])
+                CapNearlyFull::<$t, [Option<&mut MDB>; 1]>::new(half, [ mdb ])
             }
         }
 
@@ -64,12 +68,12 @@ macro_rules! paging_half {
                 BASE_PAGE_LENGTH
             }
 
-            pub fn $map_name(&mut self, index: usize, sub: &mut $sub_half) {
-                let mut current = self.write();
-                assert!(!current[index].is_present());
+            // pub fn $map_name(&mut self, index: usize, sub: &mut $sub_half) {
+            //     let mut current = self.write();
+            //     assert!(!current[index].is_present());
 
-                current[index] = $entry::new(sub.start_paddr(), $access);
-            }
+            //     current[index] = $entry::new(sub.start_paddr(), $access);
+            // }
         }
 
     }

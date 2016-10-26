@@ -2,7 +2,7 @@ use common::*;
 use arch::paging::{BASE_PAGE_LENGTH};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedHalf, CapHalf, Capability, CapReadRefObject, CapWriteRefObject};
+use cap::{UntypedHalf, Capability, CapReadRefObject, CapWriteRefObject};
 
 /// Non-clonable, lock in CapHalf.
 

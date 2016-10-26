@@ -11,7 +11,7 @@ use arch::paging::{BASE_PAGE_LENGTH,
                    PDPT, PDPTEntry, PDPT_P, PDPT_RW, PDPT_US};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedHalf, Capability, CapReadRefObject, CapHalf};
+use cap::{UntypedHalf, Capability, CapReadRefObject};
 
 macro_rules! paging_half {
     ( $t:ident, $sub_half: ty, $actual: ty, $entry: ident, $access: expr, $map_name: ident ) => {

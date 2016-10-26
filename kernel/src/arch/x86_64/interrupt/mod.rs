@@ -3,7 +3,7 @@ mod bit_field;
 mod dtables;
 
 use lazy_static;
-use cap::{TCBHalf, CapHalf, CPoolHalf, Capability,
+use cap::{TCBHalf, CPoolHalf, Capability,
           CapReadObject, CapWriteObject, CapSendMessage, CapSystemCall, SystemCallable};
 use common::*;
 

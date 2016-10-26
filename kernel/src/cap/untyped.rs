@@ -1,5 +1,4 @@
 use common::{PAddr, VAddr};
-use super::{CapHalf};
 use util::{align_up};
 
 #[derive(Debug)]

@@ -47,7 +47,7 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo, ThreadRuntime};
-use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, CapHalf, TCBHalf,
+use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, TCBHalf,
           CapReadObject, CapWriteObject};
 use util::{MemoryObject};
 

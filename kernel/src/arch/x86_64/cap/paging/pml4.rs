@@ -3,7 +3,7 @@ use arch::paging::{PML4, PML4Entry, PML4_P, PML4_RW, PML4_US, BASE_PAGE_LENGTH, 
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
 use cap::{UntypedHalf, Capability, CapReadRefObject, CapWriteRefObject,
-          CapHalf, ArchSpecificCapability, CPoolHalf};
+          ArchSpecificCapability, CPoolHalf};
 
 use super::{PageHalf, PDPTHalf, PDHalf, PTHalf};
 

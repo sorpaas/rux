@@ -1,96 +1,72 @@
 mod mdb;
-pub use self::mdb::{MDB, MDBAddr};
+pub use self::mdb::{MDB, MDBAddr, CapFull};
 
 use common::*;
-use super::{Cap, CapHalf, CapReadObject, CapWriteObject, CapFull};
+use super::{Cap, CapReadObject, CapWriteObject};
 use super::untyped::{UntypedHalf};
 use core::mem::{size_of, align_of};
-use core::ops::{Index, IndexMut};
+use core::ops::{Index, IndexMut, Deref, DerefMut};
 use core::slice::Iter;
 use util::{RwLock, SharedReadGuard, SharedWriteGuard, MemoryObject};
 
 pub type CPoolFull<'a> = CapFull<CPoolHalf, [MDB<'a>; 1]>;
-pub type CPoolMemoryObject<'a> = MemoryObject<RwLock<CPool<'a>>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct CPoolHalf {
     start_paddr: PAddr
 }
 
-pub struct CPool<'a>([Option<Cap<'a>>; 256]);
-
-impl<'a> Index<usize> for CPool<'a> {
-    type Output = Option<Cap<'a>>;
-
-    fn index(&self, _index: usize) -> &Option<Cap<'a>> {
-        self.0.index(_index)
-    }
-}
-
-impl<'a> IndexMut<usize> for CPool<'a> {
-    fn index_mut(&mut self, _index: usize) -> &mut Option<Cap<'a>> {
-        self.0.index_mut(_index)
-    }
-}
-
-impl<'a> CPool<'a> {
-    pub fn insert(&mut self, cap: Cap<'a>) {
-        for space in self.0.iter_mut() {
-            if space.is_none() {
-                *space = Some(cap);
-                return;
-            }
-        }
-        assert!(false);
-    }
-
-    pub fn slice(&self) -> &[Option<Cap<'a>>] {
-        &self.0
-    }
-
-    pub fn slice_mut(&mut self) -> &mut [Option<Cap<'a>>] {
-        &mut self.0
-    }
-}
-
-impl<'a> CapReadObject<CPool<'a>, SharedReadGuard<'a, CPool<'a>>> for CPoolHalf {
-    fn read<'b>(&'b self) -> SharedReadGuard<'a, CPool<'a>> {
-        unsafe {
-            SharedReadGuard::new(CPoolMemoryObject::new(self.start_paddr))
-        }
-    }
-}
-
-impl<'a> CapWriteObject<CPool<'a>, SharedWriteGuard<'a, CPool<'a>>> for CPoolHalf {
-    fn write<'b>(&'b mut self) -> SharedWriteGuard<'a, CPool<'a>> {
-        unsafe {
-            SharedWriteGuard::new(CPoolMemoryObject::new(self.start_paddr))
-        }
-    }
-}
+pub type CPool<'a> = [RwLock<Option<Cap<'a>>>; 256];
 
 impl CPoolHalf {
     pub fn start_paddr(&self) -> PAddr {
         self.start_paddr
     }
 
-    pub fn traverse(&self, routes: &[u8]) -> Option<CPoolHalf> {
-        let mut current_half = self.clone();
+    pub fn insert<'a, 'b>(&'b mut self, cap: Cap<'a>) {
+        for i in 0..256 {
+            let mut item = self.write(i);
+            if item.is_none() {
+                *item = Some(cap);
+                return;
+            }
+        }
+        assert!(false);
+    }
 
-        for path in routes {
-            let mut cpool_half = current_half.clone();
-            let cpool: SharedReadGuard<CPool> = cpool_half.read();
-            match cpool[*path as usize] {
-                Some(Cap::CPool(ref cpool_half)) => {
-                    current_half = cpool_half.half.clone();
-                },
-                _ => {
-                    return None;
-                }
+    fn item_paddr<'a, 'b>(&'b self, index: u8) -> PAddr {
+        self.start_paddr + size_of::<RwLock<Option<Cap<'a>>>>() * (index as usize)
+    }
+
+    pub fn read<'a, 'b>(&'b self, index: u8) -> SharedReadGuard<'a, Option<Cap<'a>>> {
+        let paddr = self.item_paddr(index);
+        unsafe { SharedReadGuard::new(MemoryObject::<RwLock<Option<Cap<'a>>>>::new(paddr)) }
+    }
+
+    pub fn write<'a, 'b>(&'b mut self, index: u8) -> SharedWriteGuard<'a, Option<Cap<'a>>> {
+        let paddr = self.item_paddr(index);
+        unsafe { SharedWriteGuard::new(MemoryObject::<RwLock<Option<Cap<'a>>>>::new(paddr)) }
+    }
+
+    pub fn traverse<'a, 'b>(&'b self, routes: &[u8]) -> SharedReadGuard<'a, Option<Cap<'a>>> {
+        if routes.len() == 0 {
+            assert!(false);
+        }
+        let (first, rest) = routes.split_first().unwrap();
+        let mut current_cap = self.read(*first);
+
+        for path in rest {
+            let new_current_cap = if let &Some(Cap::CPool(ref cpool_full)) = current_cap.deref() {
+                Some(cpool_full.read(*path))
+            } else {
+                None
+            };
+            if new_current_cap.is_some() {
+                current_cap = new_current_cap.unwrap();
             }
         }
 
-        Some(current_half)
+        return current_cap;
     }
 
     pub fn new(untyped: &mut UntypedHalf) -> CPoolHalf {
@@ -103,41 +79,72 @@ impl CPoolHalf {
         };
 
         unsafe {
-            let obj = CPoolMemoryObject::new(cap.start_paddr);
+            let obj = MemoryObject::<CPool>::new(cap.start_paddr);
             *(obj.as_mut().unwrap()) =
-                  RwLock::new(
-                      CPool([None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None,
-                             None, None, None, None, None, None, None, None]));
+                [RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None)];
         }
 
         cap

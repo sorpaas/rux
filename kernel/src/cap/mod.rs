@@ -2,7 +2,7 @@ mod cpool;
 mod untyped;
 mod thread;
 
-pub use self::cpool::{CPoolHalf, CPoolFull, CPool, MDB, MDBAddr};
+pub use self::cpool::{CPoolHalf, CPoolFull, CPool, MDB, MDBAddr, CapFull};
 pub use self::untyped::{UntypedHalf};
 pub use self::thread::{TCBHalf, TCB};
 pub use abi::{CapSystemCall, CapSendMessage};
@@ -23,60 +23,6 @@ pub enum Capability {
 
 pub enum Cap<'a> {
     CPool(CPoolFull<'a>),
-}
-
-impl<'a> Cap<'a> {
-    pub fn mdbs(&self) -> &[MDB<'a>] {
-        match self {
-            &Cap::CPool(ref full) =>
-                full.mdbs(),
-        }
-    }
-
-    pub fn mdbs_mut(&mut self) -> &mut [MDB<'a>] {
-        match self {
-            &mut Cap::CPool(ref mut full) =>
-                full.mdbs_mut(),
-        }
-    }
-}
-
-pub struct CapFull<Half, M> {
-    half: Half,
-    mdbs: M,
-    deleted: bool,
-}
-
-impl<Half, M> CapFull<Half, M> {
-    pub fn new(half: Half, mdbs: M) -> Self {
-        CapFull {
-            half: half,
-            mdbs: mdbs,
-            deleted: false,
-        }
-    }
-
-    pub fn mark_deleted(&mut self) {
-        self.deleted = true;
-    }
-
-    pub fn mdbs(&self) -> &M {
-        &self.mdbs
-    }
-
-    pub fn mdbs_mut(&mut self) -> &mut M {
-        &mut self.mdbs
-    }
-}
-
-impl<Half, M> Drop for CapFull<Half, M> {
-    fn drop(&mut self) {
-        assert!(self.deleted, "attempt to drop unmarked CapFull.");
-    }
-}
-
-pub trait CapHalf {
-    fn mark_deleted(&mut self);
 }
 
 pub trait SystemCallable {

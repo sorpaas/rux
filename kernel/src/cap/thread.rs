@@ -1,6 +1,6 @@
 use common::*;
 use super::{Capability, CapReadObject, CapWriteObject,
-            CapHalf, CPoolHalf, UntypedHalf, SystemCallable, CapSendMessage};
+            CPoolHalf, UntypedHalf, SystemCallable, CapSendMessage};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};
 use core::fmt;

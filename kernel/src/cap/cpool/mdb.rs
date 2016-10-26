@@ -137,28 +137,6 @@ pub struct MDB {
     next: Option<MDBAddr>
 }
 
-fn match_mdbs_mut(cap: &mut Cap) -> &mut [MDB] {
-    match cap {
-        &mut Cap::CPool(ref mut cpool) => {
-            &mut cpool.mdbs
-        },
-        &mut Cap::Untyped(ref mut untyped) => {
-            &mut untyped.mdbs
-        }
-    }
-}
-
-fn match_mdbs(cap: &Cap) -> &[MDB] {
-    match cap {
-        &Cap::CPool(ref cpool) => {
-            &cpool.mdbs
-        },
-        &Cap::Untyped(ref untyped) => {
-            &untyped.mdbs
-        }
-    }
-}
-
 impl Default for MDB {
     fn default() -> Self {
         MDB {
@@ -197,8 +175,7 @@ impl MDB {
             let mut first_child = holding_parent.first_child.clone().unwrap();
             let mut full_option = first_child.cpool.write(first_child.cpool_index);
             let full = full_option.as_mut().unwrap();
-            let ref mut mdbs = match_mdbs_mut(full);
-            mdbs[first_child.mdb_index].prev = self.this.clone();
+            full.mdb_mut(first_child.mdb_index).prev = self.this.clone();
         }
         self.next = holding_parent.first_child.clone();
         self.parent = holding_parent.this.clone();
@@ -213,8 +190,7 @@ impl MDB {
             let mut prev = self.prev.clone().unwrap();
             let mut full_option = prev.cpool.write(prev.cpool_index);
             let full = full_option.as_mut().unwrap();
-            let ref mut mdbs = match_mdbs_mut(full);
-            mdbs[prev.mdb_index].next = Some(addr.clone());
+            full.mdb_mut(prev.mdb_index).next = Some(addr.clone());
         }
 
         // Update children
@@ -223,9 +199,8 @@ impl MDB {
             let mut current_child = current_child_option.clone().unwrap();
             let mut full_option = current_child.cpool.write(current_child.cpool_index);
             let full = full_option.as_mut().unwrap();
-            let ref mut mdbs = match_mdbs_mut(full);
-            mdbs[current_child.mdb_index].parent = Some(addr.clone());
-            current_child_option = mdbs[current_child.mdb_index].next.clone();
+            full.mdb_mut(current_child.mdb_index).parent = Some(addr.clone());
+            current_child_option = full.mdb(current_child.mdb_index).next.clone();
         }
 
         // Update next
@@ -233,8 +208,7 @@ impl MDB {
             let mut next = self.next.clone().unwrap();
             let mut full_option = next.cpool.write(next.cpool_index);
             let full = full_option.as_mut().unwrap();
-            let ref mut mdbs = match_mdbs_mut(full);
-            mdbs[next.mdb_index].prev = Some(addr.clone());
+            full.mdb_mut(next.mdb_index).prev = Some(addr.clone());
         }
     }
 }
@@ -253,8 +227,7 @@ impl<'a> Iterator for MDBChildIter<'a> {
             let full_option = next_child.cpool.read(next_child.cpool_index);
             {
                 let full = full_option.as_ref().unwrap();
-                let ref mdbs = match_mdbs(full);
-                self.next_child = mdbs[next_child.mdb_index].next.clone();
+                self.next_child = full.mdb(next_child.mdb_index).next.clone();
             }
             Some(full_option)
         } else {
@@ -277,8 +250,7 @@ impl<'a> Iterator for MDBChildIterMut<'a> {
             let full_option = next_child.cpool.write(next_child.cpool_index);
             {
                 let full = full_option.as_ref().unwrap();
-                let ref mdbs = match_mdbs(full);
-                self.next_child = mdbs[next_child.mdb_index].next.clone();
+                self.next_child = full.mdb(next_child.mdb_index).next.clone();
             }
             Some(full_option)
         } else {

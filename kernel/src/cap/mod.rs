@@ -25,6 +25,7 @@ pub enum Capability {
 pub enum Cap {
     CPool(CPoolFull),
     Untyped(UntypedFull),
+    TCB(TCBFull),
 }
 
 impl Cap {
@@ -32,6 +33,23 @@ impl Cap {
         match self {
             &mut Cap::CPool(ref mut full) => full.set_mdb(cpool, cpool_index),
             &mut Cap::Untyped(ref mut full) => full.set_mdb(cpool, cpool_index),
+            &mut Cap::TCB(ref mut full) => full.set_mdb(cpool, cpool_index),
+        }
+    }
+
+    pub fn mdb(&self, index: usize) -> &MDB {
+        match self {
+            &Cap::CPool(ref full) => full.mdb(index),
+            &Cap::Untyped(ref full) => full.mdb(index),
+            &Cap::TCB(ref full) => full.mdb(index),
+        }
+    }
+
+    pub fn mdb_mut(&mut self, index: usize) -> &mut MDB {
+        match self {
+            &mut Cap::CPool(ref mut full) => full.mdb_mut(index),
+            &mut Cap::Untyped(ref mut full) => full.mdb_mut(index),
+            &mut Cap::TCB(ref mut full) => full.mdb_mut(index),
         }
     }
 }
@@ -45,6 +63,12 @@ impl From<CPoolFull> for Cap {
 impl From<UntypedFull> for Cap {
     fn from(full: UntypedFull) -> Cap {
         Cap::Untyped(full)
+    }
+}
+
+impl From<TCBFull> for Cap {
+    fn from(full: TCBFull) -> Cap {
+        Cap::TCB(full)
     }
 }
 

@@ -1,8 +1,9 @@
 use common::{PAddr, VAddr};
 use util::{align_up};
-use cap::{CapFull, MDB};
+use cap::{CapFull, CapNearlyFull, MDB};
 
 pub type UntypedFull = CapFull<UntypedHalf, [MDB; 1]>;
+pub type UntypedNearlyFull<'a> = CapNearlyFull<UntypedHalf, [Option<&'a mut MDB>; 1]>;
 
 #[derive(Debug)]
 pub struct UntypedHalf {
@@ -12,12 +13,12 @@ pub struct UntypedHalf {
 }
 
 impl UntypedFull {
-    pub unsafe fn bootstrap(start_paddr: PAddr, length: usize) -> UntypedHalf {
-        UntypedHalf {
+    pub unsafe fn bootstrap(start_paddr: PAddr, length: usize) -> UntypedFull {
+        UntypedFull::new(UntypedHalf {
             start_paddr: start_paddr,
             length: length,
             watermark: start_paddr,
-        }
+        }, [ MDB::default() ])
     }
 
     pub fn allocate(&mut self, length: usize, alignment: usize) -> (PAddr, Option<&mut MDB>) {

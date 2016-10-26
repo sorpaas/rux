@@ -3,6 +3,54 @@ use util::{SharedReadGuard, SharedWriteGuard, RefGuard, RefMutGuard, IndexedShar
 use core::ops::{Deref, DerefMut};
 use core::marker::{PhantomData};
 
+pub trait IntoFull<Half, M> where CapFull<Half, M>: Into<Cap> {
+    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: u8) -> CapFull<Half, M>;
+}
+
+pub struct CapNearlyFull<Half, M> {
+    half: Half,
+    holdings: M
+}
+
+impl<Half, M> CapNearlyFull<Half, M> {
+    pub fn new(half: Half, holdings: M) -> Self {
+        CapNearlyFull {
+            half: half,
+            holdings: holdings
+        }
+    }
+}
+
+impl<'a, Half> IntoFull<Half, [MDB; 1]> for CapNearlyFull<Half, [Option<&'a mut MDB>; 1]>
+    where CapFull<Half, [MDB; 1]>: Into<Cap> {
+    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: u8) -> CapFull<Half, [MDB; 1]> {
+        let mut cap = CapFull::new(self.half, [ MDB::default() ]);
+        let mut index = 0;
+        for hold in self.holdings.iter_mut() {
+            unsafe { cap.set_mdb(cpool.clone(), cpool_index); }
+            if hold.is_some() {
+                let hold = hold.take().unwrap();
+                cap.mdb_mut(index).associate(hold);
+            }
+            index += 1;
+        }
+        cap
+    }
+}
+
+impl<Half, M> Deref for CapNearlyFull<Half, M> {
+    type Target = Half;
+    fn deref(&self) -> &Half {
+        &self.half
+    }
+}
+
+impl<Half, M> DerefMut for CapNearlyFull<Half, M> {
+    fn deref_mut(&mut self) -> &mut Half {
+        &mut self.half
+    }
+}
+
 #[derive(Debug)]
 pub struct CapFull<Half, M> {
     half: Half,
@@ -43,6 +91,14 @@ impl<Half> CapFull<Half, [MDB; 1]> {
 
     pub fn mdb_mut(&mut self, index: usize) -> &mut MDB {
         &mut self.mdbs[index]
+    }
+}
+
+impl<'a, Half> IntoFull<Half, [MDB; 1]> for CapFull<Half, [MDB; 1]>
+    where CapFull<Half, [MDB; 1]>: Into<Cap> {
+    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: u8) -> CapFull<Half, [MDB; 1]> {
+        self.set_mdb(cpool.clone(), cpool_index);
+        self
     }
 }
 

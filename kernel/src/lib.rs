@@ -62,24 +62,12 @@ pub fn kmain(archinfo: InitInfo)
     let (mut cpool_cap, mut tcb_half) = {
         let mut region_iter = archinfo.free_regions();
         let cpool_target_region = region_iter.next().unwrap();
-        let mut cpool_target_untyped = unsafe {
-            UntypedFull::bootstrap(cpool_target_region.start_paddr(), cpool_target_region.length())
-        };
-        let mut cpool_target_untyped_cap = UntypedFull::new(cpool_target_untyped, [ MDB::default() ]);
 
         let mut cpool_cap_half = unsafe {
-            CPoolFull::bootstrap(cpool_target_untyped_cap)
+            CPoolFull::bootstrap(
+                UntypedFull::bootstrap(cpool_target_region.start_paddr(), cpool_target_region.length())
+            )
         };
-
-        {
-            let mut cpool_target_untyped_cap = cpool_cap_half.write(0);
-            let mut cpool_target_untyped = match cpool_target_untyped_cap.as_mut().unwrap() {
-                &mut Cap::Untyped(ref mut untyped) => untyped,
-                _ => panic!(),
-            };
-            let cloned_cpool_cap_half = cpool_cap_half.clone();
-            cpool_cap_half.insert_half1(cloned_cpool_cap_half, [ Some(cpool_target_untyped.mdb_mut(0)) ]);
-        }
 
         {
             let cpool_target_untyped_cap = cpool_cap_half.read(0);

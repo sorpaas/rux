@@ -1,15 +1,85 @@
 mod mdb;
-pub use self::mdb::{MDB, MDBAddr, CapFull};
+pub use self::mdb::{MDB, MDBAddr, CapFull, IntoFull, CapNearlyFull};
 
 use common::*;
-use cap::{Cap, UntypedFull, CapReadObject};
+use cap::{Cap, UntypedFull, UntypedNearlyFull, CapReadObject};
 use core::mem::{size_of, align_of};
 use core::ops::{Index, IndexMut, Deref, DerefMut};
 use core::slice::Iter;
 use util::{RwLock, SharedReadGuard, SharedWriteGuard, MemoryObject};
 
 pub type CPoolFull = CapFull<CPoolHalf, [MDB; 1]>;
+pub type CPoolNearlyFull<'a> = CapNearlyFull<CPoolHalf, [Option<&'a mut MDB>; 1]>;
 pub type CPool = [RwLock<Option<Cap>>; 256];
+
+macro_rules! cpool_default {
+    () => ({
+        [RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
+         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None)]
+    })
+}
 
 impl CPoolFull {
     pub unsafe fn bootstrap(mut untyped: UntypedFull) -> CPoolHalf {
@@ -24,73 +94,18 @@ impl CPoolFull {
         unsafe {
             let obj = MemoryObject::<CPool>::new(cap.start_paddr);
             *(obj.as_mut().unwrap()) =
-                [RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None)];
+                cpool_default!();
         }
 
-        cap.insert(untyped.into());
+        cap.insert(untyped);
+
+        let mut untyped_cap = cap.write(0);
+        let mut untyped = match untyped_cap.as_mut().unwrap() {
+            &mut Cap::Untyped(ref mut untyped) => untyped,
+            _ => panic!(),
+        };
+        let cloned_cap = cap.clone();
+        cap.insert(CPoolNearlyFull::new(cloned_cap, [ Some(untyped.mdb_mut(0)) ]));
 
         cap
     }
@@ -107,70 +122,7 @@ impl CPoolFull {
         unsafe {
             let obj = MemoryObject::<CPool>::new(cap.start_paddr);
             *(obj.as_mut().unwrap()) =
-                [RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-                 RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None)];
+                cpool_default!();
         }
 
         (cap, [ mdb ])
@@ -187,42 +139,15 @@ impl CPoolHalf {
         self.start_paddr
     }
 
-    pub fn insert(&mut self, mut cap: Cap) {
+    pub fn insert<Half, M, U>(&mut self, mut cap: U)
+        where U: IntoFull<Half, M>, Cap: From<CapFull<Half, M>> {
         let cpool = self.clone();
         for index in 0..256 {
             let mut item = self.try_write(index as u8);
             if item.is_some() {
                 let mut item = item.unwrap();
                 if item.is_none() {
-                    unsafe { cap.set_mdb(cpool, index as u8); }
-                    *item = Some(cap);
-                    return;
-                }
-            }
-        }
-        assert!(false);
-    }
-
-    pub fn insert_half1<Half>(&mut self, half: Half, mut holdings: [Option<&mut MDB>; 1])
-        where CapFull<Half, [MDB; 1]>: Into<Cap> {
-        for i in 0..256 {
-            let cpool = self.clone();
-            let mut item = self.try_write(i as u8);
-            if item.is_some() {
-                let mut item = item.unwrap();
-                if item.is_none() {
-                    let mut cap = CapFull::new(half, [ MDB::default() ]);
-
-                    let mut index = 0;
-                    for hold in holdings.iter_mut() {
-                        if hold.is_some() {
-                            let hold = hold.take().unwrap();
-                            unsafe { cap.set_mdb(cpool.clone(), i as u8); }
-                            cap.mdb_mut(index).associate(hold);
-                        }
-                        index += 1;
-                    }
-                    *item = Some(cap.into());
+                    *item = unsafe { Some(cap.into_full(cpool, index as u8).into()) };
                     return;
                 }
             }

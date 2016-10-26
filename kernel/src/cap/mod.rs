@@ -2,8 +2,8 @@ mod cpool;
 mod untyped;
 mod thread;
 
-pub use self::cpool::{CPoolHalf, CPoolFull, CPool, MDB, MDBAddr, CapFull};
-pub use self::untyped::{UntypedHalf, UntypedFull};
+pub use self::cpool::{CPoolHalf, CPoolFull, CPool, MDB, MDBAddr, CapFull, CapNearlyFull};
+pub use self::untyped::{UntypedHalf, UntypedFull, UntypedNearlyFull};
 pub use self::thread::{TCBHalf, TCBFull, TCB};
 pub use abi::{CapSystemCall, CapSendMessage};
 // pub use arch::{TopPageTableHalf, PageHalf, ArchSpecificCapability};

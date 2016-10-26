@@ -75,6 +75,43 @@ fn match_mdbs<'a, 'b>(cap: &'b Cap<'a>) -> &'b [MDB<'a>] {
 }
 
 impl<'a> MDB<'a> {
+    pub fn children<'b>(&'a self) -> MDBChildIter<'b> {
+        MDBChildIter {
+            next_child: self.first_child.clone(),
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn children_mut<'b>(&'a mut self) -> MDBChildIterMut<'b> {
+        MDBChildIterMut {
+            next_child: self.first_child.clone(),
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn associate(&mut self, holding_parent: &'a mut MDB<'a>) {
+        assert!(self.parent.is_none() &&
+                self.next.is_none() &&
+                self.prev.is_none() &&
+                self.holding_parent.is_none() &&
+                holding_parent.this.is_some());
+
+        if self.this.is_none() {
+            self.holding_parent = Some(holding_parent);
+        } else {
+            if holding_parent.first_child.is_some() {
+                let mut first_child = holding_parent.first_child.clone().unwrap();
+                let mut full_option = first_child.cpool.write(first_child.cpool_index);
+                let full = full_option.as_mut().unwrap();
+                let ref mut mdbs = match_mdbs_mut(full);
+                mdbs[first_child.mdb_index].prev = self.this.clone();
+            }
+            self.next = holding_parent.first_child.clone();
+            self.parent = holding_parent.this.clone();
+            holding_parent.first_child = self.this.clone();
+        }
+    }
+
     pub fn derive(&'a mut self) -> MDB<'a> {
         MDB {
             this: None,

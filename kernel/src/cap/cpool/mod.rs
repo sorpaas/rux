@@ -110,7 +110,7 @@ impl CPoolFull {
         cap
     }
 
-    pub fn retype(untyped: &mut UntypedFull) -> (CPoolHalf, [Option<&mut MDB>; 1]) {
+    pub fn retype<'a>(untyped: &'a mut UntypedFull) -> CPoolNearlyFull<'a> {
         let alignment = align_of::<CPool>();
         let length = size_of::<CPool>();
         let (start_paddr, mdb) = untyped.allocate(length, alignment);
@@ -125,7 +125,7 @@ impl CPoolFull {
                 cpool_default!();
         }
 
-        (cap, [ mdb ])
+        CPoolNearlyFull::new(cap, [ mdb ])
     }
 }
 

@@ -1,5 +1,5 @@
 use common::*;
-use cap::{Capability, CapReadObject, CapWriteObject, CapFull, MDB,
+use cap::{Capability, CapReadObject, CapWriteObject, CapFull, MDB, CapNearlyFull,
           CPoolHalf, UntypedFull, SystemCallable, CapSendMessage};
 use arch::{ThreadRuntime};
 use core::mem::{size_of, align_of};
@@ -7,6 +7,7 @@ use core::fmt;
 use util::{RwLock, SharedReadGuard, SharedWriteGuard, MemoryObject};
 
 pub type TCBFull = CapFull<TCBHalf, [MDB; 1]>;
+pub type TCBNearlyFull<'a> = CapNearlyFull<TCBHalf, [Option<&'a mut MDB>; 1]>;
 
 type TCBMemoryObject = MemoryObject<RwLock<TCB>>;
 
@@ -44,9 +45,9 @@ impl TCB {
 }
 
 impl TCBFull {
-    pub fn retype(untyped: &mut UntypedFull,
+    pub fn retype<'a>(untyped: &'a mut UntypedFull,
                   //cpool: CPoolHalf FIXME
-                  ) -> (TCBHalf, [Option<&mut MDB>; 1]) {
+                  ) -> TCBNearlyFull<'a> {
         let alignment = align_of::<TCB>();
         let length = size_of::<TCB>();
         let (start_paddr, mdb) = untyped.allocate(length, alignment);
@@ -66,7 +67,7 @@ impl TCBFull {
             });
         }
 
-        (cap, [ mdb ])
+        TCBNearlyFull::new(cap, [ mdb ])
     }
 }
 

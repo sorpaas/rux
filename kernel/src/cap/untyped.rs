@@ -29,10 +29,10 @@ impl UntypedFull {
         (paddr, Some(self.mdb_mut(0)))
     }
 
-    pub fn retype(untyped: &mut UntypedFull, length: usize, alignment: usize) -> (UntypedHalf, [Option<&mut MDB>; 1]) {
+    pub fn retype<'a>(untyped: &'a mut UntypedFull, length: usize, alignment: usize) -> UntypedNearlyFull<'a> {
         let (start_paddr, mdb) = untyped.allocate(length, alignment);
 
-        (UntypedHalf {
+        UntypedNearlyFull::new(UntypedHalf {
             start_paddr: start_paddr,
             length: length,
             watermark: start_paddr,

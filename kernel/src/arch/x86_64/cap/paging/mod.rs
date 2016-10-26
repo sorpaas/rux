@@ -11,7 +11,7 @@ use arch::paging::{BASE_PAGE_LENGTH,
                    PDPT, PDPTEntry, PDPT_P, PDPT_RW, PDPT_US};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedHalf, Capability, CapReadRefObject};
+use cap::{UntypedFull, CapFull, MDB, Capability, CapReadRefObject};
 
 macro_rules! paging_half {
     ( $t:ident, $sub_half: ty, $actual: ty, $entry: ident, $access: expr, $map_name: ident ) => {
@@ -30,6 +30,24 @@ macro_rules! paging_half {
             }
         }
 
+        impl<'a> CapFull<$t, [MDB<'a>; 1]> {
+            pub fn retype(untyped: &'a mut UntypedFull<'a>) -> CapFull<$t, [MDB<'a>; 1]> {
+                let alignment = BASE_PAGE_LENGTH;
+                let (paddr, mdb) = untyped.allocate(BASE_PAGE_LENGTH, alignment);
+
+                let mut half = $t {
+                    start_paddr: paddr,
+                    lock: RwLock::new(()),
+                };
+
+                for entry in half.write().iter_mut() {
+                    *entry = $entry::empty();
+                }
+
+                Self::new(half, [ mdb ])
+            }
+        }
+
         impl $t {
             fn write(&mut self) -> UniqueWriteGuard<$actual> {
                 unsafe { UniqueWriteGuard::new(
@@ -44,22 +62,6 @@ macro_rules! paging_half {
 
             pub fn length() -> usize {
                 BASE_PAGE_LENGTH
-            }
-
-            pub fn new(untyped: &mut UntypedHalf) -> Self {
-                let alignment = BASE_PAGE_LENGTH;
-                let paddr = untyped.allocate(BASE_PAGE_LENGTH, alignment);
-
-                let mut half = $t {
-                    start_paddr: paddr,
-                    lock: RwLock::new(()),
-                };
-
-                for entry in half.write().iter_mut() {
-                    *entry = $entry::empty();
-                }
-
-                half
             }
 
             pub fn $map_name(&mut self, index: usize, sub: &mut $sub_half) {

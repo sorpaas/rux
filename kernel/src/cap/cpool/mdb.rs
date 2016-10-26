@@ -23,6 +23,28 @@ impl<Half, M> CapFull<Half, M> {
     }
 }
 
+impl<'a, Half> CapFull<Half, [MDB<'a>; 1]> {
+    pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: u8) {
+        let mut mdb_index = 0;
+        for mdb in self.mdbs.iter_mut() {
+            mdb.set(MDBAddr {
+                cpool: cpool.clone(),
+                cpool_index: cpool_index,
+                mdb_index: mdb_index,
+            });
+            mdb_index += 1;
+        }
+    }
+
+    pub fn mdb(&self, index: usize) -> &MDB<'a> {
+        &self.mdbs[index]
+    }
+
+    pub fn mdb_mut(&mut self, index: usize) -> &mut MDB<'a> {
+        &mut self.mdbs[index]
+    }
+}
+
 impl<Half, M> Deref for CapFull<Half, M> {
     type Target = Half;
     fn deref(&self) -> &Half {
@@ -70,6 +92,19 @@ fn match_mdbs<'a, 'b>(cap: &'b Cap<'a>) -> &'b [MDB<'a>] {
     match cap {
         &Cap::CPool(ref cpool) => {
             &cpool.mdbs
+        }
+    }
+}
+
+impl<'a> Default for MDB<'a> {
+    fn default() -> Self {
+        MDB {
+            this: None,
+            first_child: None,
+            parent: None,
+            prev: None,
+            next: None,
+            holding_parent: None
         }
     }
 }

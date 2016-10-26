@@ -2,12 +2,41 @@ use common::*;
 use arch::paging::{PML4, PML4Entry, PML4_P, PML4_RW, PML4_US, BASE_PAGE_LENGTH, pml4_index};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedHalf, Capability, CapReadRefObject, CapWriteRefObject,
+use cap::{UntypedFull, CapFull, MDB, Capability, CapReadRefObject, CapWriteRefObject,
           ArchSpecificCapability, CPoolHalf};
 
 use super::{PageHalf, PDPTHalf, PDHalf, PTHalf};
 
 /// Non-clonable, lock in CapHalf
+
+pub type PML4Full<'a> = CapFull<PML4Half, [MDB<'a>; 1]>;
+
+impl<'a> PML4Full<'a> {
+    pub fn retype(untyped: &'a mut UntypedFull<'a>) -> PML4Full<'a> {
+        use arch::init::{KERNEL_PDPT};
+        use arch::{KERNEL_BASE};
+
+        let alignment = BASE_PAGE_LENGTH;
+        let (paddr, mdb) = untyped.allocate(BASE_PAGE_LENGTH, alignment);
+
+        let mut half = PML4Half {
+            start_paddr: paddr,
+            lock: RwLock::new(()),
+        };
+
+        {
+            let mut pml4 = half.write();
+
+            for entry in pml4.iter_mut() {
+                *entry = PML4Entry::empty();
+            }
+            pml4[pml4_index(VAddr::from(KERNEL_BASE))] =
+                PML4Entry::new(KERNEL_PDPT.paddr(), PML4_P | PML4_RW);
+        }
+
+        Self::new(half, [ mdb ])
+    }
+}
 
 #[derive(Debug)]
 pub struct PML4Half {
@@ -38,31 +67,6 @@ impl PML4Half {
 
     pub fn length() -> usize {
         BASE_PAGE_LENGTH
-    }
-
-    pub fn new(untyped: &mut UntypedHalf) -> PML4Half {
-        use arch::init::{KERNEL_PDPT};
-        use arch::{KERNEL_BASE};
-
-        let alignment = BASE_PAGE_LENGTH;
-        let paddr = untyped.allocate(BASE_PAGE_LENGTH, alignment);
-
-        let mut half = PML4Half {
-            start_paddr: paddr,
-            lock: RwLock::new(()),
-        };
-
-        {
-            let mut pml4 = half.write();
-
-            for entry in pml4.iter_mut() {
-                *entry = PML4Entry::empty();
-            }
-            pml4[pml4_index(VAddr::from(KERNEL_BASE))] =
-                PML4Entry::new(KERNEL_PDPT.paddr(), PML4_P | PML4_RW);
-        }
-
-        half
     }
 
     pub fn map_pdpt(&mut self, index: usize, pdpt: &PDPTHalf) {

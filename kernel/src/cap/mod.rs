@@ -3,8 +3,8 @@ mod untyped;
 mod thread;
 
 pub use self::cpool::{CPoolHalf, CPoolFull, CPool, MDB, MDBAddr, CapFull};
-pub use self::untyped::{UntypedHalf};
-pub use self::thread::{TCBHalf, TCB};
+pub use self::untyped::{UntypedHalf, UntypedFull};
+pub use self::thread::{TCBHalf, TCBFull, TCB};
 pub use abi::{CapSystemCall, CapSendMessage};
 pub use arch::{TopPageTableHalf, PageHalf, ArchSpecificCapability};
 
@@ -23,6 +23,14 @@ pub enum Capability {
 
 pub enum Cap<'a> {
     CPool(CPoolFull<'a>),
+}
+
+impl<'a> Cap<'a> {
+    pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: u8) {
+        match self {
+            &mut Cap::CPool(ref mut full) => full.set_mdb(cpool, cpool_index),
+        }
+    }
 }
 
 pub trait SystemCallable {

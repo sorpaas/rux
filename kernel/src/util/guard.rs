@@ -138,6 +138,18 @@ impl<'a, T: 'a> SharedReadGuard<'a, T> {
             lock: rwlock.read(),
         }
     }
+
+    pub unsafe fn try_new(object: MemoryObject<RwLock<T>>) -> Option<Self> {
+        let rwlock = unsafe { object.as_ref().unwrap() };
+        if let Some(lock) = rwlock.try_read() {
+            Some(SharedReadGuard {
+                object: object,
+                lock: lock,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 unsafe impl<'a, T: 'a> Send for SharedReadGuard<'a, T> { }
@@ -158,6 +170,18 @@ impl<'a, T: 'a> SharedWriteGuard<'a, T> {
         SharedWriteGuard {
             object: object,
             lock: rwlock.write(),
+        }
+    }
+
+    pub unsafe fn try_new(object: MemoryObject<RwLock<T>>) -> Option<Self> {
+        let rwlock = unsafe { object.as_ref().unwrap() };
+        if let Some(lock) = rwlock.try_write() {
+            Some(SharedWriteGuard {
+                object: object,
+                lock: lock
+            })
+        } else {
+            None
         }
     }
 }

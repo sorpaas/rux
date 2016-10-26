@@ -2,7 +2,7 @@ use common::{PAddr, VAddr};
 use util::{align_up};
 use cap::{CapFull, MDB};
 
-pub type UntypedFull<'a> = CapFull<UntypedHalf, [MDB<'a>; 1]>;
+pub type UntypedFull = CapFull<UntypedHalf, [MDB; 1]>;
 
 #[derive(Debug)]
 pub struct UntypedHalf {
@@ -11,27 +11,27 @@ pub struct UntypedHalf {
     watermark: PAddr,
 }
 
-impl<'a> UntypedFull<'a> {
-    pub unsafe fn bootstrap(start_paddr: PAddr, length: usize) -> UntypedFull<'a> {
-        Self::new(UntypedHalf {
+impl UntypedFull {
+    pub unsafe fn bootstrap(start_paddr: PAddr, length: usize) -> UntypedHalf {
+        UntypedHalf {
             start_paddr: start_paddr,
             length: length,
             watermark: start_paddr,
-        }, [ MDB::default() ])
+        }
     }
 
-    pub fn allocate(&'a mut self, length: usize, alignment: usize) -> (PAddr, MDB<'a>) {
+    pub fn allocate(&mut self, length: usize, alignment: usize) -> (PAddr, Option<&mut MDB>) {
         let paddr = align_up(self.watermark, alignment);
         assert!(paddr + length <= self.start_paddr + self.length);
 
         self.watermark = paddr + length;
-        (paddr, self.mdb_mut(0).derive())
+        (paddr, Some(self.mdb_mut(0)))
     }
 
-    pub fn retype(untyped: &'a mut UntypedFull<'a>, length: usize, alignment: usize) -> UntypedFull<'a> {
+    pub fn retype(untyped: &mut UntypedFull, length: usize, alignment: usize) -> (UntypedHalf, [Option<&mut MDB>; 1]) {
         let (start_paddr, mdb) = untyped.allocate(length, alignment);
 
-        Self::new(UntypedHalf {
+        (UntypedHalf {
             start_paddr: start_paddr,
             length: length,
             watermark: start_paddr,

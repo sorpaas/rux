@@ -6,7 +6,7 @@ pub use self::cpool::{CPoolHalf, CPoolFull, CPool, MDB, MDBAddr, CapFull};
 pub use self::untyped::{UntypedHalf, UntypedFull};
 pub use self::thread::{TCBHalf, TCBFull, TCB};
 pub use abi::{CapSystemCall, CapSendMessage};
-pub use arch::{TopPageTableHalf, PageHalf, ArchSpecificCapability};
+// pub use arch::{TopPageTableHalf, PageHalf, ArchSpecificCapability};
 
 use common::*;
 use core::ops::{Deref, DerefMut};
@@ -15,21 +15,36 @@ use core::ops::{Deref, DerefMut};
 pub enum Capability {
     Untyped(UntypedHalf),
     CPool(CPoolHalf),
-    TopPageTable(TopPageTableHalf),
-    Page(PageHalf),
+    // TopPageTable(TopPageTableHalf),
+    // Page(PageHalf),
     TCB(TCBHalf),
-    ArchSpecific(ArchSpecificCapability),
+    // ArchSpecific(ArchSpecificCapability),
 }
 
-pub enum Cap<'a> {
-    CPool(CPoolFull<'a>),
+#[derive(Debug)]
+pub enum Cap {
+    CPool(CPoolFull),
+    Untyped(UntypedFull),
 }
 
-impl<'a> Cap<'a> {
+impl Cap {
     pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: u8) {
         match self {
             &mut Cap::CPool(ref mut full) => full.set_mdb(cpool, cpool_index),
+            &mut Cap::Untyped(ref mut full) => full.set_mdb(cpool, cpool_index),
         }
+    }
+}
+
+impl From<CPoolFull> for Cap {
+    fn from(full: CPoolFull) -> Cap {
+        Cap::CPool(full)
+    }
+}
+
+impl From<UntypedFull> for Cap {
+    fn from(full: UntypedFull) -> Cap {
+        Cap::Untyped(full)
     }
 }
 

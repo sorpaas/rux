@@ -47,26 +47,56 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo, ThreadRuntime};
-use cap::{UntypedHalf, CPoolHalf, TopPageTableHalf, PageHalf, Capability, TCBHalf,
+use cap::{UntypedFull, CPoolFull, Capability, TCBHalf, MDB, Cap,
           CapReadObject, CapWriteObject};
+use core::ops::{Deref, DerefMut};
 use util::{MemoryObject};
 
 #[no_mangle]
 pub fn kmain(archinfo: InitInfo)
 {
     log!("archinfo: {:?}", &archinfo);
-    // let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
-    // let mut rinit_entry: u64 = 0x0;
+    let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
+    let mut rinit_entry: u64 = 0x0;
 
-    // let (mut cpool_cap, mut tcb_half) = {
-    //     let mut region_iter = archinfo.free_regions();
-    //     let cpool_target_region = region_iter.next().unwrap();
-    //     let mut cpool_target_untyped = unsafe {
-    //         UntypedHalf::bootstrap(cpool_target_region.start_paddr(), cpool_target_region.length())
-    //     };
+    let (mut cpool_cap, mut tcb_half) = {
+        let mut region_iter = archinfo.free_regions();
+        let cpool_target_region = region_iter.next().unwrap();
+        let mut cpool_target_untyped = unsafe {
+            UntypedFull::bootstrap(cpool_target_region.start_paddr(), cpool_target_region.length())
+        };
+        let mut cpool_target_untyped_cap = UntypedFull::new(cpool_target_untyped, [ MDB::default() ]);
 
-    //     let mut cpool_cap = CPoolHalf::new(&mut cpool_target_untyped);
-    //     let cpool_cap_cloned = cpool_cap.clone();
+        let mut cpool_cap_half = unsafe {
+            CPoolFull::bootstrap(cpool_target_untyped_cap)
+        };
+
+        {
+            let mut cpool_target_untyped_cap = cpool_cap_half.write(0);
+            let mut cpool_target_untyped = match cpool_target_untyped_cap.as_mut().unwrap() {
+                &mut Cap::Untyped(ref mut untyped) => untyped,
+                _ => panic!(),
+            };
+            let cloned_cpool_cap_half = cpool_cap_half.clone();
+            cpool_cap_half.insert_half1(cloned_cpool_cap_half, [ Some(cpool_target_untyped.mdb_mut(0)) ]);
+        }
+
+        {
+            let cpool_target_untyped_cap = cpool_cap_half.read(0);
+            let cpool_target_untyped = match cpool_target_untyped_cap.as_ref().unwrap() {
+                &Cap::Untyped(ref untyped) => untyped,
+                _ => panic!(),
+            };
+            for child in cpool_target_untyped.mdb(0).children() {
+                log!("child of index 0: {:?}", child.deref());
+            }
+        }
+        log!("CPool index 0: {:?}", cpool_cap_half.read(0).deref());
+        log!("CPool index 1: {:?}", cpool_cap_half.read(1).deref());
+
+        ((), ())
+    };
+
 
     //     let mut untyped_target = {
     //         let mut untyped_target = cpool_target_untyped;

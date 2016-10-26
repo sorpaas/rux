@@ -23,7 +23,7 @@ mod init;
 mod addr;
 mod interrupt;
 mod segmentation;
-mod cap;
+// mod cap;
 
 const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
@@ -57,7 +57,7 @@ pub use self::paging::{MemoryObject};
 pub use self::interrupt::{enable_interrupt, disable_interrupt, set_interrupt_handler,
                           InterruptInfo, ThreadRuntime};
 pub use self::init::{InitInfo};
-pub use self::cap::{ArchSpecificCapability, PageHalf};
+// pub use self::cap::{ArchSpecificCapability, PageHalf};
 pub use self::addr::{PAddr, VAddr};
 
-pub type TopPageTableHalf = self::cap::PML4Half;
+// pub type TopPageTableHalf = self::cap::PML4Half;

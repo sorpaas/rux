@@ -6,7 +6,7 @@ use core::mem::{size_of, align_of};
 use core::fmt;
 use util::{RwLock, SharedReadGuard, SharedWriteGuard, MemoryObject};
 
-pub type TCBFull<'a> = CapFull<TCBHalf, [MDB<'a>; 1]>;
+pub type TCBFull = CapFull<TCBHalf, [MDB; 1]>;
 
 type TCBMemoryObject = MemoryObject<RwLock<TCB>>;
 
@@ -43,10 +43,10 @@ impl TCB {
     }
 }
 
-impl<'a> TCBFull<'a> {
-    pub fn retype(untyped: &'a mut UntypedFull<'a>,
+impl TCBFull {
+    pub fn retype(untyped: &mut UntypedFull,
                   //cpool: CPoolHalf FIXME
-                  ) -> TCBFull<'a> {
+                  ) -> (TCBHalf, [Option<&mut MDB>; 1]) {
         let alignment = align_of::<TCB>();
         let length = size_of::<TCB>();
         let (start_paddr, mdb) = untyped.allocate(length, alignment);
@@ -66,7 +66,7 @@ impl<'a> TCBFull<'a> {
             });
         }
 
-        Self::new(cap, [ mdb ])
+        (cap, [ mdb ])
     }
 }
 

@@ -3,6 +3,7 @@ use util::{SharedReadGuard, SharedWriteGuard, RefGuard, RefMutGuard, IndexedShar
 use core::ops::{Deref, DerefMut};
 use core::marker::{PhantomData};
 
+#[derive(Debug)]
 pub struct CapFull<Half, M> {
     half: Half,
     mdbs: M,
@@ -23,7 +24,7 @@ impl<Half, M> CapFull<Half, M> {
     }
 }
 
-impl<'a, Half> CapFull<Half, [MDB<'a>; 1]> {
+impl<Half> CapFull<Half, [MDB; 1]> {
     pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: u8) {
         let mut mdb_index = 0;
         for mdb in self.mdbs.iter_mut() {
@@ -36,11 +37,11 @@ impl<'a, Half> CapFull<Half, [MDB<'a>; 1]> {
         }
     }
 
-    pub fn mdb(&self, index: usize) -> &MDB<'a> {
+    pub fn mdb(&self, index: usize) -> &MDB {
         &self.mdbs[index]
     }
 
-    pub fn mdb_mut(&mut self, index: usize) -> &mut MDB<'a> {
+    pub fn mdb_mut(&mut self, index: usize) -> &mut MDB {
         &mut self.mdbs[index]
     }
 }
@@ -64,98 +65,88 @@ impl<Half, M> Drop for CapFull<Half, M> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MDBAddr {
     cpool: CPoolHalf,
     cpool_index: u8,
     mdb_index: usize,
 }
 
-pub struct MDB<'a> {
+#[derive(Debug)]
+pub struct MDB {
     this: Option<MDBAddr>,
     first_child: Option<MDBAddr>,
     parent: Option<MDBAddr>,
     prev: Option<MDBAddr>,
-    next: Option<MDBAddr>,
-    holding_parent: Option<&'a mut MDB<'a>>
+    next: Option<MDBAddr>
 }
 
-fn match_mdbs_mut<'a, 'b>(cap: &'b mut Cap<'a>) -> &'b mut [MDB<'a>] {
+fn match_mdbs_mut(cap: &mut Cap) -> &mut [MDB] {
     match cap {
         &mut Cap::CPool(ref mut cpool) => {
             &mut cpool.mdbs
+        },
+        &mut Cap::Untyped(ref mut untyped) => {
+            &mut untyped.mdbs
         }
     }
 }
 
-fn match_mdbs<'a, 'b>(cap: &'b Cap<'a>) -> &'b [MDB<'a>] {
+fn match_mdbs(cap: &Cap) -> &[MDB] {
     match cap {
         &Cap::CPool(ref cpool) => {
             &cpool.mdbs
+        },
+        &Cap::Untyped(ref untyped) => {
+            &untyped.mdbs
         }
     }
 }
 
-impl<'a> Default for MDB<'a> {
+impl Default for MDB {
     fn default() -> Self {
         MDB {
             this: None,
             first_child: None,
             parent: None,
             prev: None,
-            next: None,
-            holding_parent: None
+            next: None
         }
     }
 }
 
-impl<'a> MDB<'a> {
-    pub fn children<'b>(&'a self) -> MDBChildIter<'b> {
+impl MDB {
+    pub fn children<'a, 'b>(&'a self) -> MDBChildIter<'b> {
         MDBChildIter {
             next_child: self.first_child.clone(),
             _marker: PhantomData,
         }
     }
 
-    pub fn children_mut<'b>(&'a mut self) -> MDBChildIterMut<'b> {
+    pub fn children_mut<'a, 'b>(&'a mut self) -> MDBChildIterMut<'b> {
         MDBChildIterMut {
             next_child: self.first_child.clone(),
             _marker: PhantomData,
         }
     }
 
-    pub fn associate(&mut self, holding_parent: &'a mut MDB<'a>) {
+    pub fn associate(&mut self, holding_parent: &mut MDB) {
         assert!(self.parent.is_none() &&
                 self.next.is_none() &&
                 self.prev.is_none() &&
-                self.holding_parent.is_none() &&
+                self.this.is_some() &&
                 holding_parent.this.is_some());
 
-        if self.this.is_none() {
-            self.holding_parent = Some(holding_parent);
-        } else {
-            if holding_parent.first_child.is_some() {
-                let mut first_child = holding_parent.first_child.clone().unwrap();
-                let mut full_option = first_child.cpool.write(first_child.cpool_index);
-                let full = full_option.as_mut().unwrap();
-                let ref mut mdbs = match_mdbs_mut(full);
-                mdbs[first_child.mdb_index].prev = self.this.clone();
-            }
-            self.next = holding_parent.first_child.clone();
-            self.parent = holding_parent.this.clone();
-            holding_parent.first_child = self.this.clone();
+        if holding_parent.first_child.is_some() {
+            let mut first_child = holding_parent.first_child.clone().unwrap();
+            let mut full_option = first_child.cpool.write(first_child.cpool_index);
+            let full = full_option.as_mut().unwrap();
+            let ref mut mdbs = match_mdbs_mut(full);
+            mdbs[first_child.mdb_index].prev = self.this.clone();
         }
-    }
-
-    pub fn derive(&'a mut self) -> MDB<'a> {
-        MDB {
-            this: None,
-            first_child: None,
-            parent: None,
-            next: None,
-            prev: None,
-            holding_parent: Some(self),
-        }
+        self.next = holding_parent.first_child.clone();
+        self.parent = holding_parent.this.clone();
+        holding_parent.first_child = self.this.clone();
     }
 
     pub unsafe fn set(&mut self, addr: MDBAddr) {
@@ -189,31 +180,16 @@ impl<'a> MDB<'a> {
             let ref mut mdbs = match_mdbs_mut(full);
             mdbs[next.mdb_index].prev = Some(addr.clone());
         }
-
-        // If holding_parent exists, then insert this to holding parent.
-        if self.holding_parent.is_some() {
-            let holding_parent = self.holding_parent.take().unwrap();
-            if holding_parent.first_child.is_some() {
-                let mut first_child = holding_parent.first_child.clone().unwrap();
-                let mut full_option = first_child.cpool.write(first_child.cpool_index);
-                let full = full_option.as_mut().unwrap();
-                let ref mut mdbs = match_mdbs_mut(full);
-                mdbs[first_child.mdb_index].prev = Some(addr.clone());
-            }
-            self.next = holding_parent.first_child.clone();
-            self.parent = holding_parent.this.clone();
-            holding_parent.first_child = Some(addr.clone());
-        }
     }
 }
 
 pub struct MDBChildIter<'a> {
     next_child: Option<MDBAddr>,
-    _marker: PhantomData<Option<Cap<'a>>>
+    _marker: PhantomData<SharedReadGuard<'a, Option<Cap>>>,
 }
 
 impl<'a> Iterator for MDBChildIter<'a> {
-    type Item = SharedReadGuard<'a, Option<Cap<'a>>>;
+    type Item = SharedReadGuard<'a, Option<Cap>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.next_child.is_some() {
@@ -233,11 +209,11 @@ impl<'a> Iterator for MDBChildIter<'a> {
 
 pub struct MDBChildIterMut<'a> {
     next_child: Option<MDBAddr>,
-    _marker: PhantomData<Option<Cap<'a>>>
+    _marker: PhantomData<SharedWriteGuard<'a, Option<Cap>>>,
 }
 
 impl<'a> Iterator for MDBChildIterMut<'a> {
-    type Item = SharedWriteGuard<'a, Option<Cap<'a>>>;
+    type Item = SharedWriteGuard<'a, Option<Cap>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.next_child.is_some() {

@@ -168,21 +168,25 @@ impl CPoolHalf {
     }
 
     pub fn read<'a, 'b>(&'a self, index: usize) -> SharedReadGuard<'b, Option<Cap>> {
+        assert!(index < self.size);
         let paddr = self.item_paddr(index);
         unsafe { SharedReadGuard::new(MemoryObject::<RwLock<Option<Cap>>>::new(paddr)) }
     }
 
     pub fn try_read<'a, 'b>(&'a self, index: usize) -> Option<SharedReadGuard<'b, Option<Cap>>> {
+        assert!(index < self.size);
         let paddr = self.item_paddr(index);
         unsafe { SharedReadGuard::try_new(MemoryObject::<RwLock<Option<Cap>>>::new(paddr)) }
     }
 
     pub fn write<'a, 'b>(&'a mut self, index: usize) -> SharedWriteGuard<'b, Option<Cap>> {
+        assert!(index < self.size);
         let paddr = self.item_paddr(index);
         unsafe { SharedWriteGuard::new(MemoryObject::<RwLock<Option<Cap>>>::new(paddr)) }
     }
 
     pub fn try_write<'a, 'b>(&'a mut self, index: usize) -> Option<SharedWriteGuard<'b, Option<Cap>>> {
+        assert!(index < self.size);
         let paddr = self.item_paddr(index);
         unsafe { SharedWriteGuard::try_new(MemoryObject::<RwLock<Option<Cap>>>::new(paddr)) }
     }

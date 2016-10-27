@@ -155,11 +155,65 @@ impl<'a, 'b> GodfatherLocker<[Option<SharedWriteGuard<'b, Option<Cap>>>; 1]> for
     }
 }
 
+impl<'a, 'b> GodfatherLocker<[Option<SharedWriteGuard<'b, Option<Cap>>>; 2]> for [Option<&'a mut MDB>; 2] {
+    fn lock_godfathers<'c>(&'c self)
+                           -> [Option<SharedWriteGuard<'b, Option<Cap>>>; 2] {
+        [ {
+            let ref mdb = self[0];
+            if let &Some(ref mdb) = mdb {
+                let godfather = mdb.godfather();
+                if let Some((mut cpool, cpool_index)) = godfather {
+                    Some(cpool.write(cpool_index))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }, {
+            let ref mdb = self[1];
+            if let &Some(ref mdb) = mdb {
+                let godfather = mdb.godfather();
+                if let Some((mut cpool, cpool_index)) = godfather {
+                    Some(cpool.write(cpool_index))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } ]
+    }
+}
+
 impl<'a, 'b> GodfatherLocker<[Option<SharedWriteGuard<'b, Option<Cap>>>; 1]> for [MDB; 1] {
     fn lock_godfathers<'c>(&'c self)
                            -> [Option<SharedWriteGuard<'b, Option<Cap>>>; 1] {
         [ {
             let ref mdb = self[0];
+            let godfather = mdb.godfather();
+            if let Some((mut cpool, cpool_index)) = godfather {
+                Some(cpool.write(cpool_index))
+            } else {
+                None
+            }
+        } ]
+    }
+}
+
+impl<'a, 'b> GodfatherLocker<[Option<SharedWriteGuard<'b, Option<Cap>>>; 2]> for [MDB; 2] {
+    fn lock_godfathers<'c>(&'c self)
+                           -> [Option<SharedWriteGuard<'b, Option<Cap>>>; 2] {
+        [ {
+            let ref mdb = self[0];
+            let godfather = mdb.godfather();
+            if let Some((mut cpool, cpool_index)) = godfather {
+                Some(cpool.write(cpool_index))
+            } else {
+                None
+            }
+        }, {
+            let ref mdb = self[1];
             let godfather = mdb.godfather();
             if let Some((mut cpool, cpool_index)) = godfather {
                 Some(cpool.write(cpool_index))
@@ -186,7 +240,7 @@ impl CPoolHalf {
         self.size
     }
 
-    pub fn insert<Half, M, U, MC, MR>(&mut self, mut cap: U)
+    pub fn insert<Half, M, U, MC, MR>(&mut self, mut cap: U) -> usize
         where U: IntoFull<Half, M> + MDBCollection<MC>, Cap: From<CapFull<Half, M>>, MC: GodfatherLocker<MR> {
         let godfathers = cap.mdbs().lock_godfathers();
         let cpool = self.clone();
@@ -196,11 +250,11 @@ impl CPoolHalf {
                 let mut item = item.unwrap();
                 if item.is_none() {
                     *item = unsafe { Some(cap.into_full(cpool, index).into()) };
-                    return;
+                    return index;
                 }
             }
         }
-        assert!(false);
+        panic!();
     }
 
     fn item_paddr(&self, index: usize) -> PAddr {

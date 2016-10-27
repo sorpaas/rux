@@ -4,8 +4,8 @@ use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
            RwLock, RwLockReadGuard, RwLockWriteGuard};
 use cap::{UntypedFull, CapFull, MDB, CapNearlyFull, CapReadRefObject, CapWriteRefObject};
 
-pub type PageNearlyFull<'a> = CapNearlyFull<PageHalf, [Option<&'a mut MDB>; 1]>;
-pub type PageFull = CapFull<PageHalf, [MDB; 1]>;
+pub type PageNearlyFull<'a> = CapNearlyFull<PageHalf, [Option<&'a mut MDB>; 2]>;
+pub type PageFull = CapFull<PageHalf, [MDB; 2]>;
 
 impl PageFull {
     pub fn retype<'a>(untyped: &'a mut UntypedFull) -> PageNearlyFull<'a> {
@@ -21,7 +21,7 @@ impl PageFull {
             *u = 0x0: u8;
         }
 
-        PageNearlyFull::new(half, [ mdb ])
+        PageNearlyFull::new(half, [ mdb, None ])
     }
 }
 

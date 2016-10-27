@@ -31,22 +31,29 @@ impl<Half, M> CapNearlyFull<Half, M> {
     }
 }
 
-impl<'a, Half> IntoFull<Half, [MDB; 1]> for CapNearlyFull<Half, [Option<&'a mut MDB>; 1]>
-    where CapFull<Half, [MDB; 1]>: Into<Cap> {
-    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: usize) -> CapFull<Half, [MDB; 1]> {
-        let mut cap = CapFull::new(self.half, [ MDB::default() ]);
-        let mut index = 0;
-        for hold in self.holdings.iter_mut() {
-            unsafe { cap.set_mdb(cpool.clone(), cpool_index); }
-            if hold.is_some() {
-                let hold = hold.take().unwrap();
-                cap.mdb_mut(index).associate(hold);
+macro_rules! from_nearly_full {
+    ( $tomdb: ty, $tmdb: ty, $init_mdb: expr ) => (
+        impl<'a, Half> IntoFull<Half, $tmdb> for CapNearlyFull<Half, $tomdb>
+            where CapFull<Half, $tmdb>: Into<Cap> {
+            unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: usize) -> CapFull<Half, $tmdb> {
+                let mut cap = CapFull::new(self.half, $init_mdb);
+                let mut index = 0;
+                for hold in self.holdings.iter_mut() {
+                    unsafe { cap.set_mdb(cpool.clone(), cpool_index); }
+                    if hold.is_some() {
+                        let hold = hold.take().unwrap();
+                        cap.mdb_mut(index).associate(hold);
+                    }
+                    index += 1;
+                }
+                cap
             }
-            index += 1;
         }
-        cap
-    }
+    )
 }
+
+from_nearly_full!([Option<&'a mut MDB>; 1], [MDB; 1], [ MDB::default() ]);
+from_nearly_full!([Option<&'a mut MDB>; 2], [MDB; 2], [ MDB::default(), MDB::default() ]);
 
 impl<Half, M> Deref for CapNearlyFull<Half, M> {
     type Target = Half;
@@ -112,13 +119,44 @@ impl<Half> CapFull<Half, [MDB; 1]> {
     }
 }
 
-impl<'a, Half> IntoFull<Half, [MDB; 1]> for CapFull<Half, [MDB; 1]>
-    where CapFull<Half, [MDB; 1]>: Into<Cap> {
-    unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: usize) -> CapFull<Half, [MDB; 1]> {
-        self.set_mdb(cpool.clone(), cpool_index);
-        self
+impl<Half> CapFull<Half, [MDB; 2]> {
+    pub unsafe fn set_mdb(&mut self, cpool: CPoolHalf, cpool_index: usize) {
+        let mut mdb_index = 0;
+        for mdb in self.mdbs.iter_mut() {
+            mdb.set(MDBAddr {
+                cpool: cpool.clone(),
+                cpool_index: cpool_index,
+                mdb_index: mdb_index,
+            });
+            mdb_index += 1;
+        }
+    }
+
+    pub fn mdb(&self, index: usize) -> &MDB {
+        assert!(index < 1);
+        &self.mdbs[index]
+    }
+
+    pub fn mdb_mut(&mut self, index: usize) -> &mut MDB {
+        assert!(index < 1);
+        &mut self.mdbs[index]
     }
 }
+
+macro_rules! from_full {
+    ( $tmdb: ty ) => (
+        impl<'a, Half> IntoFull<Half, $tmdb> for CapFull<Half, $tmdb>
+            where CapFull<Half, $tmdb>: Into<Cap> {
+            unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: usize) -> CapFull<Half, $tmdb> {
+                self.set_mdb(cpool.clone(), cpool_index);
+                self
+            }
+        }
+    )
+}
+
+from_full!([MDB; 1]);
+from_full!([MDB; 2]);
 
 impl<Half, M> Deref for CapFull<Half, M> {
     type Target = Half;
@@ -200,6 +238,10 @@ impl MDB {
         } else {
             None
         }
+    }
+
+    pub fn has_parent(&self) -> bool {
+        self.parent.is_some()
     }
 
     pub fn associate(&mut self, holding_parent: &mut MDB) {

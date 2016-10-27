@@ -56,23 +56,12 @@ impl Cap {
     }
 }
 
-impl From<CPoolFull> for Cap {
-    fn from(full: CPoolFull) -> Cap {
-        Cap::CPool(full)
-    }
-}
-
-impl From<UntypedFull> for Cap {
-    fn from(full: UntypedFull) -> Cap {
-        Cap::Untyped(full)
-    }
-}
-
-impl From<TCBFull> for Cap {
-    fn from(full: TCBFull) -> Cap {
-        Cap::TCB(full)
-    }
-}
+impl From<CPoolFull> for Cap { fn from(full: CPoolFull) -> Cap { Cap::CPool(full) } }
+impl From<UntypedFull> for Cap { fn from(full: UntypedFull) -> Cap { Cap::Untyped(full) } }
+impl From<TCBFull> for Cap { fn from(full: TCBFull) -> Cap { Cap::TCB(full) } }
+impl From<TopPageTableFull> for Cap { fn from(full: TopPageTableFull) -> Cap { Cap::TopPageTable(full) } }
+impl From<PageFull> for Cap { fn from(full: PageFull) -> Cap { Cap::Page(full) } }
+impl From<ArchCap> for Cap { fn from(full: ArchCap) -> Cap { Cap::Arch(full) } }
 
 pub trait SystemCallable {
     fn handle_send(&mut self, CapSendMessage);

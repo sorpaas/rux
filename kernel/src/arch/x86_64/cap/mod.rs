@@ -4,7 +4,7 @@ pub use self::paging::{PageHalf, PageFull, PML4Half, PML4Full,
                        PDPTHalf, PDPTFull, PDHalf, PDFull,
                        PTHalf, PTFull};
 
-use cap::{MDB, CPoolHalf};
+use cap::{MDB, CPoolHalf, Cap};
 
 #[derive(Debug)]
 pub enum ArchCap {
@@ -38,3 +38,7 @@ impl ArchCap {
         }
     }
 }
+
+impl From<PDPTFull> for Cap { fn from(full: PDPTFull) -> Cap { Cap::Arch(ArchCap::PDPT(full)) } }
+impl From<PDFull> for Cap { fn from(full: PDFull) -> Cap { Cap::Arch(ArchCap::PD(full)) } }
+impl From<PTFull> for Cap { fn from(full: PTFull) -> Cap { Cap::Arch(ArchCap::PT(full)) } }

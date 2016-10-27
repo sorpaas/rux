@@ -86,10 +86,12 @@ impl<Half> CapFull<Half, [MDB; 1]> {
     }
 
     pub fn mdb(&self, index: usize) -> &MDB {
+        assert!(index < 1);
         &self.mdbs[index]
     }
 
     pub fn mdb_mut(&mut self, index: usize) -> &mut MDB {
+        assert!(index < 1);
         &mut self.mdbs[index]
     }
 }

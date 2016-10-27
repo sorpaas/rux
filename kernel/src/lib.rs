@@ -87,6 +87,8 @@ pub fn kmain(archinfo: InitInfo)
         ((), ())
     };
 
+    log!("hello, world!");
+
 
     //     let mut untyped_target = {
     //         let mut untyped_target = cpool_target_untyped;

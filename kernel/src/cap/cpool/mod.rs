@@ -13,75 +13,6 @@ pub type CPoolFull = CapFull<CPoolHalf, [MDB; 1]>;
 pub type CPoolNearlyFull<'a> = CapNearlyFull<CPoolHalf, [Option<&'a mut MDB>; 1]>;
 pub type CPool = [RwLock<Option<Cap>>; 256];
 
-macro_rules! cpool_default {
-    () => ({
-        [RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None),
-         RwLock::new(None), RwLock::new(None), RwLock::new(None), RwLock::new(None)]
-    })
-}
-
 impl CPoolFull {
     pub unsafe fn bootstrap(mut untyped: UntypedFull) -> CPoolHalf {
         let alignment = align_of::<CPool>();
@@ -92,8 +23,9 @@ impl CPoolFull {
 
         unsafe {
             let obj = MemoryObject::<CPool>::new(cap.start_paddr);
-            *(obj.as_mut().unwrap()) =
-                cpool_default!();
+            for i in 0..256 {
+                obj.as_mut().unwrap()[i] = RwLock::new(None);
+            }
         }
 
         cap.insert(untyped);
@@ -118,8 +50,9 @@ impl CPoolFull {
 
         unsafe {
             let obj = MemoryObject::<CPool>::new(cap.start_paddr);
-            *(obj.as_mut().unwrap()) =
-                cpool_default!();
+            for i in 0..256 {
+                obj.as_mut().unwrap()[i] = RwLock::new(None);
+            }
         }
 
         CPoolNearlyFull::new(cap, [ mdb ])

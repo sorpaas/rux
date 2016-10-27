@@ -207,16 +207,22 @@ impl Default for MDB {
 
 impl MDB {
     pub fn children<'a, 'b>(&'a self) -> MDBChildIter<'b> {
+        let godfather = self.godfather();
         MDBChildIter {
             next_child: self.first_child.clone(),
-            _marker: PhantomData,
+            lock: godfather.map(|(mut cpool, cpool_index)| {
+                cpool.read(cpool_index)
+            }),
         }
     }
 
     pub fn children_mut<'a, 'b>(&'a mut self) -> MDBChildIterMut<'b> {
+        let godfather = self.godfather();
         MDBChildIterMut {
             next_child: self.first_child.clone(),
-            _marker: PhantomData,
+            lock: godfather.map(|(mut cpool, cpool_index)| {
+                cpool.read(cpool_index)
+            }),
         }
     }
 
@@ -295,7 +301,7 @@ impl MDB {
 
 pub struct MDBChildIter<'a> {
     next_child: Option<MDBAddr>,
-    _marker: PhantomData<SharedReadGuard<'a, Option<Cap>>>,
+    lock: Option<SharedReadGuard<'a, Option<Cap>>>
 }
 
 impl<'a> Iterator for MDBChildIter<'a> {
@@ -318,7 +324,7 @@ impl<'a> Iterator for MDBChildIter<'a> {
 
 pub struct MDBChildIterMut<'a> {
     next_child: Option<MDBAddr>,
-    _marker: PhantomData<SharedWriteGuard<'a, Option<Cap>>>,
+    lock: Option<SharedReadGuard<'a, Option<Cap>>>
 }
 
 impl<'a> Iterator for MDBChildIterMut<'a> {

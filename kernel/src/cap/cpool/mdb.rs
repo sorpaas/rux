@@ -7,9 +7,19 @@ pub trait IntoFull<Half, M> where CapFull<Half, M>: Into<Cap> {
     unsafe fn into_full(mut self, cpool: CPoolHalf, cpool_index: usize) -> CapFull<Half, M>;
 }
 
+pub trait MDBCollection<M> {
+    fn mdbs(&self) -> &M;
+}
+
 pub struct CapNearlyFull<Half, M> {
     half: Half,
     holdings: M
+}
+
+impl<Half, M> MDBCollection<M> for CapNearlyFull<Half, M> {
+    fn mdbs(&self) -> &M {
+        &self.holdings
+    }
 }
 
 impl<Half, M> CapNearlyFull<Half, M> {
@@ -56,6 +66,12 @@ pub struct CapFull<Half, M> {
     half: Half,
     mdbs: M,
     deleted: bool,
+}
+
+impl<Half, M> MDBCollection<M> for CapFull<Half, M> {
+    fn mdbs(&self) -> &M {
+        &self.mdbs
+    }
 }
 
 impl<Half, M> CapFull<Half, M> {
@@ -163,6 +179,26 @@ impl MDB {
         MDBChildIterMut {
             next_child: self.first_child.clone(),
             _marker: PhantomData,
+        }
+    }
+
+    pub fn godfather(&self) -> Option<(CPoolHalf, usize)> {
+        let mut current = self.parent.clone();
+
+        while current.is_some() {
+            let parent = current.clone().unwrap();
+            let full = parent.cpool.read(parent.cpool_index);
+            let mdb = full.as_ref().unwrap().mdb(parent.mdb_index);
+            if mdb.parent.is_some() {
+                current = mdb.parent.clone();
+            }
+        }
+
+        if current.is_some() {
+            let current = current.unwrap();
+            Some((current.cpool, current.cpool_index))
+        } else {
+            None
         }
     }
 

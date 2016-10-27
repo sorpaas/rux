@@ -7,6 +7,7 @@ use core::mem::{size_of, align_of};
 use core::ops::{Index, IndexMut, Deref, DerefMut};
 use core::slice::Iter;
 use util::{RwLock, SharedReadGuard, SharedWriteGuard, MemoryObject};
+use self::mdb::{MDBCollection};
 
 pub type CPoolFull = CapFull<CPoolHalf, [MDB; 1]>;
 pub type CPoolNearlyFull<'a> = CapNearlyFull<CPoolHalf, [Option<&'a mut MDB>; 1]>;
@@ -131,6 +132,44 @@ pub struct CPoolHalf {
     size: usize,
 }
 
+pub trait GodfatherLocker<N> {
+    fn lock_godfathers(&self) -> N;
+}
+
+impl<'a, 'b> GodfatherLocker<[Option<SharedWriteGuard<'b, Option<Cap>>>; 1]> for [Option<&'a mut MDB>; 1] {
+    fn lock_godfathers<'c>(&'c self)
+                           -> [Option<SharedWriteGuard<'b, Option<Cap>>>; 1] {
+        [ {
+            let ref mdb = self[0];
+            if let &Some(ref mdb) = mdb {
+                let godfather = mdb.godfather();
+                if let Some((mut cpool, cpool_index)) = godfather {
+                    Some(cpool.write(cpool_index))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } ]
+    }
+}
+
+impl<'a, 'b> GodfatherLocker<[Option<SharedWriteGuard<'b, Option<Cap>>>; 1]> for [MDB; 1] {
+    fn lock_godfathers<'c>(&'c self)
+                           -> [Option<SharedWriteGuard<'b, Option<Cap>>>; 1] {
+        [ {
+            let ref mdb = self[0];
+            let godfather = mdb.godfather();
+            if let Some((mut cpool, cpool_index)) = godfather {
+                Some(cpool.write(cpool_index))
+            } else {
+                None
+            }
+        } ]
+    }
+}
+
 impl CPoolHalf {
     pub unsafe fn new(start_paddr: PAddr, size: usize) -> Self {
         CPoolHalf {
@@ -147,8 +186,9 @@ impl CPoolHalf {
         self.size
     }
 
-    pub fn insert<Half, M, U>(&mut self, mut cap: U)
-        where U: IntoFull<Half, M>, Cap: From<CapFull<Half, M>> {
+    pub fn insert<Half, M, U, MC, MR>(&mut self, mut cap: U)
+        where U: IntoFull<Half, M> + MDBCollection<MC>, Cap: From<CapFull<Half, M>>, MC: GodfatherLocker<MR> {
+        let godfathers = cap.mdbs().lock_godfathers();
         let cpool = self.clone();
         for index in 0..self.size {
             let mut item = self.try_write(index);

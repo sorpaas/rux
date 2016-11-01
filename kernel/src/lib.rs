@@ -12,6 +12,7 @@
 #![feature(nonzero)]
 #![feature(unsize)]
 #![feature(coerce_unsized)]
+#![feature(core_slice_ext)]
 #![no_std]
 
 extern crate x86;

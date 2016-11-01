@@ -10,6 +10,7 @@ pub use self::guard::{UniqueReadGuard, UniqueWriteGuard, SharedReadGuard, Shared
                       RwLock, RwLockReadGuard, RwLockWriteGuard, IndexedSharedReadGuard, IndexedSharedWriteGuard,
                       RefGuard, RefMutGuard};
 pub use self::streamer::{Streamer};
+pub use spin::{Mutex};
 
 use common::{PAddr, VAddr};
 use core::ops::{Deref, DerefMut};

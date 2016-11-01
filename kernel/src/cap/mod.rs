@@ -1,6 +1,7 @@
 mod cpool;
 mod untyped;
 mod thread;
+mod mapping;
 
 pub use self::cpool::{CPoolHalf, CPoolFull, CPool, MDB, MDBAddr, CapFull, CapNearlyFull};
 pub use self::untyped::{UntypedHalf, UntypedFull, UntypedNearlyFull};

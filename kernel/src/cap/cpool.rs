@@ -1,4 +1,5 @@
 use common::*;
+use core::any::{Any, TypeId};
 use util::{align_up};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool256Arc};
 use spin::{RwLock};
@@ -32,5 +33,17 @@ impl CPoolCap {
         }) };
 
         arc.unwrap()
+    }
+
+    pub fn upgrade<T: Any>(&self, index: usize) -> Option<ManagedArc<T>> {
+        self.read().weak_pool.upgrade(index)
+    }
+
+    pub fn downgrade_at<T: Any>(&self, arc: &ManagedArc<T>, index: usize) {
+        self.read().weak_pool.downgrade_at(arc, index)
+    }
+
+    pub fn downgrade_free<T: Any>(&self, arc: &ManagedArc<T>) -> Option<usize> {
+        self.read().weak_pool.downgrade_free(arc)
     }
 }

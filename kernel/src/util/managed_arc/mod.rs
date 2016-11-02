@@ -16,6 +16,7 @@ mod weak_pool;
 pub use self::rwlock::{ManagedArcRwLockReadGuard, ManagedArcRwLockWriteGuard};
 pub use self::weak_pool::{ManagedWeakPool1Arc, ManagedWeakPool256Arc};
 
+#[derive(Debug)]
 struct ManagedWeakNode {
     ptr: PAddr,
     type_id: TypeId,
@@ -25,7 +26,8 @@ struct ManagedWeakNode {
 
 #[derive(Copy, Clone, Debug)]
 struct ManagedWeakAddr {
-    pool_addr: PAddr,
+    inner_addr: PAddr,
+    inner_type_id: TypeId,
     offset: usize,
 }
 
@@ -42,14 +44,8 @@ impl<T> Drop for ManagedArcInner<T> {
         let lead = self.lead.lock();
         assert!(*lead == 0);
 
-        let mut next_weak_ptr_option = *self.first_weak.lock();
-        while next_weak_ptr_option.is_some() {
-            let next_weak_ptr = next_weak_ptr_option.take().unwrap();
-            let next_weak_obj = unsafe { MemoryObject::<Mutex<Option<ManagedWeakNode>>>::new(next_weak_ptr.pool_addr + next_weak_ptr.offset * mem::size_of::<ManagedWeakNode>()) };
-            let mut next_weak_node = unsafe { next_weak_obj.as_mut().unwrap().lock() };
-            next_weak_ptr_option = next_weak_node.as_ref().map(|node| { node.next }).unwrap();
-            *next_weak_node = None;
-        }
+        // TODO drop all weak pointers
+        panic!();
     }
 }
 
@@ -133,10 +129,8 @@ impl<T> ManagedArc<T> {
     }
 
     pub unsafe fn new(ptr: PAddr, data: T) -> Self {
-        log!("new called");
         let arc = ManagedArc { ptr: ptr, _marker: PhantomData };
         let inner = arc.inner_object();
-        log!("got inner");
         ptr::write(inner.as_mut().unwrap(), ManagedArcInner {
             ptr: ptr,
             lead: Mutex::new(1),

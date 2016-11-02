@@ -74,6 +74,15 @@ pub fn kmain(archinfo: InitInfo)
     log!("cpool descriptor: {:?}", cpool.read().deref());
     log!("untyped descriptor: {:?}", untyped.read().deref());
 
+    cpool.downgrade_at(&cpool, 0);
+    cpool.downgrade_at(&untyped, 1);
+
+    let u1 = cpool.upgrade(0): Option<CPoolCap>;
+    let u2 = cpool.upgrade(1): Option<UntypedCap>;
+
+    log!("u1: {:?}", u1);
+    log!("u2: {:?}", u2);
+
     // let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
     // let mut rinit_entry: u64 = 0x0;
 

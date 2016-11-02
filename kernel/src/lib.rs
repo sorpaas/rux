@@ -13,6 +13,7 @@
 #![feature(unsize)]
 #![feature(coerce_unsized)]
 #![feature(core_slice_ext)]
+#![feature(reflect_marker)]
 #![no_std]
 
 extern crate x86;
@@ -49,9 +50,8 @@ mod cap;
 use core::mem;
 use core::slice;
 use common::*;
-use arch::{InitInfo, ThreadRuntime};
-use cap::{UntypedFull, CPoolFull, TCBHalf, MDB, Cap,
-          CapReadObject, CapWriteObject};
+use arch::{InitInfo};
+use cap::{UntypedCap};
 use core::ops::{Deref, DerefMut};
 use util::{MemoryObject};
 
@@ -59,34 +59,43 @@ use util::{MemoryObject};
 pub fn kmain(archinfo: InitInfo)
 {
     log!("archinfo: {:?}", &archinfo);
-    let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
-    let mut rinit_entry: u64 = 0x0;
+    let mut region_iter = archinfo.free_regions();
+    let cpool_target_region = region_iter.next().unwrap();
 
-    let (mut cpool_cap, mut tcb_half) = {
-        let mut region_iter = archinfo.free_regions();
-        let cpool_target_region = region_iter.next().unwrap();
+    let untyped = unsafe { UntypedCap::bootstrap(cpool_target_region.start_paddr(),
+                                                 cpool_target_region.length()) };
 
-        let mut cpool_cap_half = unsafe {
-            CPoolFull::bootstrap(
-                UntypedFull::bootstrap(cpool_target_region.start_paddr(), cpool_target_region.length())
-            )
-        };
+    log!("untyped initialized.");
+    log!("untyped descriptor: {:?}", untyped.read().deref());
 
-        {
-            let cpool_target_untyped_cap = cpool_cap_half.read(0);
-            let cpool_target_untyped = match cpool_target_untyped_cap.as_ref().unwrap() {
-                &Cap::Untyped(ref untyped) => untyped,
-                _ => panic!(),
-            };
-            for child in cpool_target_untyped.mdb(0).children() {
-                log!("child of index 0: {:?}", child.deref());
-            }
-        }
-        log!("CPool index 0: {:?}", cpool_cap_half.read(0).deref());
-        log!("CPool index 1: {:?}", cpool_cap_half.read(1).deref());
+    // let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
+    // let mut rinit_entry: u64 = 0x0;
 
-        ((), ())
-    };
+    // let (mut cpool_cap, mut tcb_half) = {
+    //     let mut region_iter = archinfo.free_regions();
+    //     let cpool_target_region = region_iter.next().unwrap();
+
+    //     let mut cpool_cap_half = unsafe {
+    //         CPoolFull::bootstrap(
+    //             UntypedFull::bootstrap(cpool_target_region.start_paddr(), cpool_target_region.length())
+    //         )
+    //     };
+
+    //     {
+    //         let cpool_target_untyped_cap = cpool_cap_half.read(0);
+    //         let cpool_target_untyped = match cpool_target_untyped_cap.as_ref().unwrap() {
+    //             &Cap::Untyped(ref untyped) => untyped,
+    //             _ => panic!(),
+    //         };
+    //         for child in cpool_target_untyped.mdb(0).children() {
+    //             log!("child of index 0: {:?}", child.deref());
+    //         }
+    //     }
+    //     log!("CPool index 0: {:?}", cpool_cap_half.read(0).deref());
+    //     log!("CPool index 1: {:?}", cpool_cap_half.read(1).deref());
+
+    //     ((), ())
+    // };
 
     log!("hello, world!");
 

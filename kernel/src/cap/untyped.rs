@@ -1,51 +1,39 @@
-use common::{PAddr, VAddr};
+use common::*;
 use util::{align_up};
-use cap::{CapFull, CapNearlyFull, MDB};
-
-pub type UntypedFull = CapFull<UntypedHalf, [MDB; 1]>;
-pub type UntypedNearlyFull<'a> = CapNearlyFull<UntypedHalf, [Option<&'a mut MDB>; 1]>;
+use util::managed_arc::{ManagedArc, ManagedArcAny};
+use spin::{RwLock};
 
 #[derive(Debug)]
-pub struct UntypedHalf {
+pub struct UntypedDescriptor {
     start_paddr: PAddr,
     length: usize,
     watermark: PAddr,
+    first_child: Option<ManagedArcAny>
 }
+pub type UntypedCap = ManagedArc<RwLock<UntypedDescriptor>>;
 
-impl UntypedFull {
-    pub unsafe fn bootstrap(start_paddr: PAddr, length: usize) -> UntypedFull {
-        UntypedFull::new(UntypedHalf {
+impl UntypedCap {
+    pub unsafe fn bootstrap(start_paddr: PAddr, length: usize) -> Self {
+        let des_paddr = align_up(start_paddr, UntypedCap::inner_alignment());
+        assert!(des_paddr + UntypedCap::inner_length() <= start_paddr + length);
+
+        log!("des_paddr: {:?}", des_paddr);
+
+        Self::new(des_paddr, RwLock::new(UntypedDescriptor {
             start_paddr: start_paddr,
             length: length,
-            watermark: start_paddr,
-        }, [ MDB::default() ])
+            watermark: des_paddr + UntypedCap::inner_length(),
+            first_child: None,
+        }))
     }
+}
 
-    pub fn allocate(&mut self, length: usize, alignment: usize) -> (PAddr, Option<&mut MDB>) {
+impl UntypedDescriptor {
+    pub unsafe fn allocate<F>(&mut self, length: usize, alignment: usize, f: F) where F: FnOnce(PAddr, Option<ManagedArcAny>) -> ManagedArcAny {
         let paddr = align_up(self.watermark, alignment);
         assert!(paddr + length <= self.start_paddr + self.length);
 
         self.watermark = paddr + length;
-        (paddr, Some(self.mdb_mut(0)))
-    }
-
-    pub fn retype<'a>(untyped: &'a mut UntypedFull, length: usize, alignment: usize) -> UntypedNearlyFull<'a> {
-        let (start_paddr, mdb) = untyped.allocate(length, alignment);
-
-        UntypedNearlyFull::new(UntypedHalf {
-            start_paddr: start_paddr,
-            length: length,
-            watermark: start_paddr,
-        }, [ mdb ])
-    }
-}
-
-impl UntypedHalf {
-    pub fn length(&self) -> usize {
-        self.length
-    }
-
-    pub fn start_paddr(&self) -> PAddr {
-        self.start_paddr
+        self.first_child = Some(f(paddr, self.first_child.take()));
     }
 }

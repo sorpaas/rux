@@ -1,6 +1,7 @@
 mod object;
 mod guard;
 mod streamer;
+pub mod managed_arc;
 
 #[macro_use]
 pub mod field_offset;

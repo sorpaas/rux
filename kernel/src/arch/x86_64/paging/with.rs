@@ -20,6 +20,7 @@ use core::fmt;
 
 /// `ObjectGuard` requires T must be Sized.
 pub struct MemoryObject<T: ?Sized> {
+    paddr: PAddr,
     mapping_start_index: usize,
     mapping_size: usize,
     pointer: NonZero<*const T>,
@@ -33,6 +34,10 @@ impl<T: ?Sized> !Send for MemoryObject<T> { }
 impl<T: ?Sized> !Sync for MemoryObject<T> { }
 
 impl<T: ?Sized> MemoryObject<T> {
+    pub fn paddr(&self) -> PAddr {
+        self.paddr
+    }
+
     /// Safety: PAddr must be a non-zero pointer.
     pub unsafe fn new(paddr: PAddr) -> Self where T: Sized {
         Self::slice(paddr, 1)
@@ -76,6 +81,7 @@ impl<T: ?Sized> MemoryObject<T> {
         let vaddr = OBJECT_POOL_START_VADDR + ((mapping_start_index * BASE_PAGE_LENGTH) + before_start);
 
         MemoryObject::<T> {
+            paddr: paddr,
             mapping_start_index: mapping_start_index,
             mapping_size: required_page_size,
             pointer: NonZero::new(vaddr.into(): usize as *mut T),

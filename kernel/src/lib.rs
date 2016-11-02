@@ -51,7 +51,7 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo};
-use cap::{UntypedCap};
+use cap::{UntypedCap, CPoolCap};
 use core::ops::{Deref, DerefMut};
 use util::{MemoryObject};
 
@@ -66,6 +66,12 @@ pub fn kmain(archinfo: InitInfo)
                                                  cpool_target_region.length()) };
 
     log!("untyped initialized.");
+
+    let cpool = CPoolCap::retype_from(untyped.write().deref_mut());
+
+    log!("cpool initialized.");
+
+    log!("cpool descriptor: {:?}", cpool.read().deref());
     log!("untyped descriptor: {:?}", untyped.read().deref());
 
     // let rinit_stack_vaddr = VAddr::from(0x80000000: usize);

@@ -3,6 +3,7 @@ use core::ops::{Index, IndexMut, Deref, DerefMut};
 use core::marker::{PhantomData, Reflect};
 use core::slice::{SliceExt};
 use core::convert::{From, Into};
+use core::fmt;
 use core::mem;
 use core::ptr;
 use common::*;
@@ -13,7 +14,7 @@ mod rwlock;
 mod weak_pool;
 
 pub use self::rwlock::{ManagedArcRwLockReadGuard, ManagedArcRwLockWriteGuard};
-pub use self::weak_pool::{ManagedWeakPool1, ManagedWeakPool256};
+pub use self::weak_pool::{ManagedWeakPool1Arc, ManagedWeakPool256Arc};
 
 struct ManagedWeakNode {
     ptr: PAddr,
@@ -52,10 +53,15 @@ impl<T> Drop for ManagedArcInner<T> {
     }
 }
 
-#[derive(Debug)]
 pub struct ManagedArc<T> {
     ptr: PAddr,
     _marker: PhantomData<T>,
+}
+
+impl<T> fmt::Debug for ManagedArc<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ManagedArc {{ ptr: 0x{:x} }}", self.ptr)
+    }
 }
 
 impl<T> Drop for ManagedArc<T> {
@@ -64,6 +70,20 @@ impl<T> Drop for ManagedArc<T> {
         let inner = unsafe { inner_obj.as_mut().unwrap() };
         let mut lead = inner.lead.lock();
         *lead -= 1;
+    }
+}
+
+impl<T> Clone for ManagedArc<T> {
+    fn clone(&self) -> Self {
+        let inner_obj = self.inner_object();
+        let inner = unsafe { inner_obj.as_mut().unwrap() };
+        let mut lead = inner.lead.lock();
+        *lead += 1;
+
+        ManagedArc {
+            ptr: self.ptr,
+            _marker: PhantomData,
+        }
     }
 }
 

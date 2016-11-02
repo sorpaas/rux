@@ -29,11 +29,16 @@ impl UntypedCap {
 }
 
 impl UntypedDescriptor {
-    pub unsafe fn allocate<F>(&mut self, length: usize, alignment: usize, f: F) where F: FnOnce(PAddr, Option<ManagedArcAny>) -> ManagedArcAny {
+    pub unsafe fn allocate(&mut self, length: usize, alignment: usize) -> PAddr {
         let paddr = align_up(self.watermark, alignment);
         assert!(paddr + length <= self.start_paddr + self.length);
 
         self.watermark = paddr + length;
+        paddr
+    }
+
+    pub unsafe fn derive<F>(&mut self, length: usize, alignment: usize, f: F) where F: FnOnce(PAddr, Option<ManagedArcAny>) -> ManagedArcAny {
+        let paddr = self.allocate(length, alignment);
         self.first_child = Some(f(paddr, self.first_child.take()));
     }
 }

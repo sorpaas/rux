@@ -23,8 +23,8 @@ mod init;
 mod addr;
 mod interrupt;
 mod segmentation;
-// mod cap;
 
+pub mod cap;
 const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
 extern {

@@ -34,6 +34,10 @@ impl CPoolCap {
         arc.unwrap()
     }
 
+    pub fn size(&self) -> usize {
+        256
+    }
+
     pub fn upgrade_any(&self, index: usize) -> Option<ManagedArcAny> {
         let cpool = self.read();
 

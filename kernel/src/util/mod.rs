@@ -7,11 +7,9 @@ pub mod managed_arc;
 pub mod field_offset;
 
 pub use self::object::{ExternMutex, ExternReadonlyObject, MutexGuard, MemoryObject};
-pub use self::guard::{UniqueReadGuard, UniqueWriteGuard, SharedReadGuard, SharedWriteGuard,
-                      RwLock, RwLockReadGuard, RwLockWriteGuard, IndexedSharedReadGuard, IndexedSharedWriteGuard,
-                      RefGuard, RefMutGuard};
+pub use self::guard::{UniqueReadGuard, UniqueWriteGuard};
 pub use self::streamer::{Streamer};
-pub use spin::{Mutex};
+pub use spin::{Mutex, RwLock};
 
 use common::{PAddr, VAddr};
 use core::ops::{Deref, DerefMut};

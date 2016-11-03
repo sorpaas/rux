@@ -1,88 +1,113 @@
 mod page;
 mod pml4;
 
-pub use self::page::{PageHalf, PageFull};
-pub use self::pml4::{PML4Half, PML4Full};
-
 use common::*;
 use arch::paging::{BASE_PAGE_LENGTH,
                    PT, PTEntry, PT_P, PT_RW, PT_US,
                    PD, PDEntry, PD_P, PD_RW, PD_US,
                    PDPT, PDPTEntry, PDPT_P, PDPT_RW, PDPT_US};
-use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
-           RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedFull, CapFull, CapNearlyFull, MDB, Cap, CapReadRefObject};
+use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard, RwLock};
+use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool1Arc};
+use cap::{UntypedDescriptor};
 
-pub type PDPTFull = CapFull<PDPTHalf, [MDB; 2]>;
-pub type PDFull = CapFull<PDHalf, [MDB; 2]>;
-pub type PTFull = CapFull<PTHalf, [MDB; 2]>;
+pub struct PML4Descriptor {
+    start_paddr: PAddr,
+    next: Option<ManagedArcAny>,
+}
+pub type PML4Cap = ManagedArc<RwLock<PML4Descriptor>>;
 
-macro_rules! paging_half {
-    ( $t:ident, $sub_half: ty, $actual: ty, $entry: ident, $access: expr, $map_name: ident ) => {
-        #[derive(Debug)]
-        pub struct $t {
-            start_paddr: PAddr,
-            lock: RwLock<()>,
-        }
+pub struct PDPTDescriptor {
+    mapped_weak_pool: ManagedWeakPool1Arc,
+    start_paddr: PAddr,
+    next: Option<ManagedArcAny>,
+}
+pub type PDPTCap = ManagedArc<RwLock<PDPTDescriptor>>;
 
-        impl<'a> CapReadRefObject<'a, $actual, UniqueReadGuard<'a, $actual>> for $t {
-            fn read(&'a self) -> UniqueReadGuard<'a, $actual> {
-                unsafe { UniqueReadGuard::new(
-                    MemoryObject::<$actual>::new(self.start_paddr),
-                    self.lock.read()
-                ) }
-            }
-        }
+pub struct PDDescriptor {
+    mapped_weak_pool: ManagedWeakPool1Arc,
+    start_paddr: PAddr,
+    next: Option<ManagedArcAny>,
+}
+pub type PDCap = ManagedArc<RwLock<PDDescriptor>>;
 
-        impl CapFull<$t, [MDB; 2]> {
-            pub fn retype<'a>(untyped: &'a mut UntypedFull) -> CapNearlyFull<$t, [Option<&'a mut MDB>; 2]> {
-                let alignment = BASE_PAGE_LENGTH;
-                let (paddr, mdb) = untyped.allocate(BASE_PAGE_LENGTH, alignment);
+pub struct PTDescriptor {
+    mapped_weak_pool: ManagedWeakPool1Arc,
+    start_paddr: PAddr,
+    next: Option<ManagedArcAny>,
+}
+pub type PTCap = ManagedArc<RwLock<PTDescriptor>>;
 
-                let mut half = $t {
-                    start_paddr: paddr,
-                    lock: RwLock::new(()),
-                };
+pub struct PageDescriptor {
+    mapped_weak_pool: ManagedWeakPool1Arc,
+    start_paddr: PAddr,
+    next: Option<ManagedArcAny>,
+}
+pub type PageCap = ManagedArc<RwLock<PageDescriptor>>;
 
-                for entry in half.write().iter_mut() {
-                    *entry = $entry::empty();
+macro_rules! paging_cap {
+    ( $cap:ty, $desc:tt, $paging:ty, $entry:tt, $map_fn:ident, $sub_cap:ty, $access:expr ) => (
+        impl $cap {
+            pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
+                let mut arc: Option<Self> = None;
+
+                let start_paddr = unsafe { untyped.allocate(BASE_PAGE_LENGTH, BASE_PAGE_LENGTH) };
+
+                let mapped_weak_pool = unsafe { ManagedWeakPool1Arc::create(
+                    untyped.allocate(ManagedWeakPool1Arc::inner_length(),
+                                     ManagedWeakPool1Arc::inner_alignment())) };
+
+                unsafe {
+                    untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
+                        arc = Some(unsafe {
+                            Self::new(paddr, RwLock::new($desc {
+                                mapped_weak_pool: mapped_weak_pool,
+                                start_paddr: start_paddr,
+                                next: next_child,
+                            }))
+                        });
+
+                        arc.clone().unwrap().into()
+                    });
                 }
 
-                CapNearlyFull::<$t, [Option<&mut MDB>; 2]>::new(half, [ mdb, None ])
+                arc.unwrap()
             }
 
-            pub fn $map_name(&mut self, index: usize, sub: &mut $sub_half) {
-                assert!(!sub.mdb_mut(1).has_parent());
-                {
-                    let mut current = self.write();
-                    assert!(!current[index].is_present());
+            pub fn $map_fn(&mut self, index: usize, sub: &$sub_cap) {
+                let mut current_desc = self.write();
+                let mut current = current_desc.write();
+                let sub_desc = sub.read();
+                assert!(!current[index].is_present());
 
-                    current[index] = $entry::new(sub.start_paddr(), $access);
-                }
-                sub.mdb_mut(1).associate(self.mdb_mut(1));
+                sub_desc.mapped_weak_pool.downgrade_at(self, 0);
+                current[index] = $entry::new(sub_desc.start_paddr(), $access);
             }
         }
 
-        impl $t {
-            fn write(&mut self) -> UniqueWriteGuard<$actual> {
-                unsafe { UniqueWriteGuard::new(
-                    MemoryObject::<$actual>::new(self.start_paddr),
-                    self.lock.write()
-                ) }
-            }
-
+        impl $desc {
             pub fn start_paddr(&self) -> PAddr {
                 self.start_paddr
             }
 
-            pub fn length() -> usize {
+            pub fn length(&self) -> usize {
                 BASE_PAGE_LENGTH
             }
-        }
 
-    }
+            fn page_object(&self) -> MemoryObject<$paging> {
+                unsafe { MemoryObject::new(self.start_paddr) }
+            }
+
+            pub fn read(&self) -> UniqueReadGuard<$paging> {
+                unsafe { UniqueReadGuard::new(self.page_object()) }
+            }
+
+            fn write(&mut self) -> UniqueWriteGuard<$paging> {
+                unsafe { UniqueWriteGuard::new(self.page_object()) }
+            }
+        }
+    )
 }
 
-paging_half!(PTHalf, PageFull, PT, PTEntry, PT_P | PT_RW | PT_US, map_page);
-paging_half!(PDPTHalf, PDFull, PDPT, PDPTEntry, PDPT_P | PDPT_RW | PDPT_US, map_pd);
-paging_half!(PDHalf, PTFull, PD, PDEntry, PD_P | PD_RW | PD_US, map_pt);
+paging_cap!(PDPTCap, PDPTDescriptor, PDPT, PDPTEntry, map_pd, PDCap, PDPT_P | PDPT_RW | PDPT_US);
+paging_cap!(PDCap, PDDescriptor, PD, PDEntry, map_pt, PTCap, PD_P | PD_RW | PD_US);
+paging_cap!(PTCap, PTDescriptor, PT, PTEntry, map_page, PageCap, PT_P | PT_RW | PT_US);

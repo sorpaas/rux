@@ -89,7 +89,13 @@ pub struct ManagedArcAny {
     type_id: TypeId
 }
 
-impl<T: Reflect + 'static> From<ManagedArcAny> for ManagedArc<T> {
+impl ManagedArcAny {
+    pub fn is<T: Any>(&self) -> bool {
+        self.type_id == TypeId::of::<T>()
+    }
+}
+
+impl<T: Any> From<ManagedArcAny> for ManagedArc<T> {
     fn from(any: ManagedArcAny) -> Self {
         assert!(any.type_id == TypeId::of::<T>());
         let ptr = any.ptr;
@@ -101,7 +107,7 @@ impl<T: Reflect + 'static> From<ManagedArcAny> for ManagedArc<T> {
     }
 }
 
-impl<T: Reflect + 'static> Into<ManagedArcAny> for ManagedArc<T> {
+impl<T: Any> Into<ManagedArcAny> for ManagedArc<T> {
     fn into(self) -> ManagedArcAny {
         let ptr = self.ptr;
         mem::forget(self);

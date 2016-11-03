@@ -1,62 +1,56 @@
 use common::*;
 use arch::paging::{BASE_PAGE_LENGTH};
-use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard,
-           RwLock, RwLockReadGuard, RwLockWriteGuard};
-use cap::{UntypedFull, CapFull, MDB, CapNearlyFull, CapReadRefObject, CapWriteRefObject};
+use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard, RwLock};
+use util::managed_arc::{ManagedWeakPool1Arc};
+use super::{PageDescriptor, PageCap};
+use cap::{UntypedDescriptor};
 
-pub type PageNearlyFull<'a> = CapNearlyFull<PageHalf, [Option<&'a mut MDB>; 2]>;
-pub type PageFull = CapFull<PageHalf, [MDB; 2]>;
+impl PageCap {
+    pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
+        let mut arc: Option<Self> = None;
 
-impl PageFull {
-    pub fn retype<'a>(untyped: &'a mut UntypedFull) -> PageNearlyFull<'a> {
-        let alignment = BASE_PAGE_LENGTH;
-        let (paddr, mdb) = untyped.allocate(BASE_PAGE_LENGTH, alignment);
+        let start_paddr = unsafe { untyped.allocate(BASE_PAGE_LENGTH, BASE_PAGE_LENGTH) };
 
-        let mut half = PageHalf {
-            start_paddr: paddr,
-            lock: RwLock::new(()),
-        };
+        let mapped_weak_pool = unsafe { ManagedWeakPool1Arc::create(
+            untyped.allocate(ManagedWeakPool1Arc::inner_length(),
+                             ManagedWeakPool1Arc::inner_alignment())) };
 
-        for u in half.write().iter_mut() {
-            *u = 0x0: u8;
+        unsafe {
+            untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
+                arc = Some(unsafe {
+                    Self::new(paddr, RwLock::new(PageDescriptor {
+                        mapped_weak_pool: mapped_weak_pool,
+                        start_paddr: start_paddr,
+                        next: next_child,
+                    }))
+                });
+
+                arc.clone().unwrap().into()
+            });
         }
 
-        PageNearlyFull::new(half, [ mdb, None ])
+        arc.unwrap()
     }
 }
 
-/// Non-clonable, lock in CapHalf.
-
-#[derive(Debug)]
-pub struct PageHalf {
-    start_paddr: PAddr,
-    lock: RwLock<()>,
-}
-
-impl<'a> CapReadRefObject<'a, [u8; BASE_PAGE_LENGTH], UniqueReadGuard<'a, [u8; BASE_PAGE_LENGTH]>> for PageHalf {
-    fn read(&'a self) -> UniqueReadGuard<'a, [u8; BASE_PAGE_LENGTH]> {
-        unsafe { UniqueReadGuard::new(
-            MemoryObject::<[u8; BASE_PAGE_LENGTH]>::new(self.start_paddr),
-            self.lock.read()
-        ) }
-    }
-}
-
-impl<'a> CapWriteRefObject<'a, [u8; BASE_PAGE_LENGTH], UniqueWriteGuard<'a, [u8; BASE_PAGE_LENGTH]>> for PageHalf {
-    fn write(&'a mut self) -> UniqueWriteGuard<'a, [u8; BASE_PAGE_LENGTH]> {
-        unsafe { UniqueWriteGuard::new(
-            MemoryObject::<[u8; BASE_PAGE_LENGTH]>::new(self.start_paddr),
-            self.lock.write()
-        ) }
-    }
-}
-
-impl PageHalf {
+impl PageDescriptor {
     pub fn start_paddr(&self) -> PAddr {
         self.start_paddr
     }
 
-    pub fn length() -> usize {
+    pub fn length(&self) -> usize {
         BASE_PAGE_LENGTH
+    }
+
+    fn page_object(&self) -> MemoryObject<[u8; BASE_PAGE_LENGTH]> {
+        unsafe { MemoryObject::new(self.start_paddr) }
+    }
+
+    pub fn read(&self) -> UniqueReadGuard<[u8; BASE_PAGE_LENGTH]> {
+        unsafe { UniqueReadGuard::new(self.page_object()) }
+    }
+
+    pub fn write(&mut self) -> UniqueWriteGuard<[u8; BASE_PAGE_LENGTH]> {
+        unsafe { UniqueWriteGuard::new(self.page_object()) }
     }
 }

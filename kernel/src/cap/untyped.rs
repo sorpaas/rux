@@ -1,7 +1,6 @@
 use common::*;
-use util::{align_up};
+use util::{RwLock, align_up};
 use util::managed_arc::{ManagedArc, ManagedArcAny};
-use spin::{RwLock};
 
 #[derive(Debug)]
 pub struct UntypedDescriptor {

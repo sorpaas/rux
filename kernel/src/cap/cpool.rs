@@ -1,8 +1,7 @@
 use common::*;
 use core::any::{Any, TypeId};
-use util::{align_up};
+use util::{RwLock, align_up};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool256Arc};
-use spin::{RwLock};
 
 use super::{UntypedDescriptor};
 
@@ -33,6 +32,12 @@ impl CPoolCap {
         }) };
 
         arc.unwrap()
+    }
+
+    pub fn upgrade_any(&self, index: usize) -> Option<ManagedArcAny> {
+        let cpool = self.read();
+
+        super::upgrade_any(&cpool.weak_pool, index)
     }
 
     pub fn upgrade<T: Any>(&self, index: usize) -> Option<ManagedArc<T>> {

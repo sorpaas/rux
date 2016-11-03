@@ -34,19 +34,21 @@ macro_rules! weak_pool {
                 let upgrading_obj = inner.data[index].lock();
                 let upgrading_weak = upgrading_obj.as_ref();
 
-                upgrading_weak.map(|weak| {
-                    assert!(weak.type_id == TypeId::of::<T>());
+                upgrading_weak.and_then(|weak| {
+                    if weak.type_id != TypeId::of::<T>() {
+                        None
+                    } else {
+                        let arc = ManagedArc {
+                            ptr: weak.ptr,
+                            _marker: PhantomData,
+                        };
+                        let arc_inner_obj = arc.inner_object();
+                        let arc_inner = unsafe { inner_obj.as_ref().unwrap() };
+                        let mut lead = inner.lead.lock();
+                        *lead += 1;
 
-                    let arc = ManagedArc {
-                        ptr: weak.ptr,
-                        _marker: PhantomData,
-                    };
-                    let arc_inner_obj = arc.inner_object();
-                    let arc_inner = unsafe { inner_obj.as_ref().unwrap() };
-                    let mut lead = inner.lead.lock();
-                    *lead += 1;
-
-                    arc
+                        Some(arc)
+                    }
                 })
             }
 

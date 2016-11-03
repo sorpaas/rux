@@ -3,6 +3,7 @@ mod cpool;
 
 pub use self::untyped::{UntypedDescriptor, UntypedCap};
 pub use self::cpool::{CPoolDescriptor, CPoolCap};
+pub use arch::cap::{TopPageTableCap, PageCap};
 
 use arch;
 use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny};

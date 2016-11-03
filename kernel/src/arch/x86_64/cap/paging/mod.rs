@@ -58,12 +58,18 @@ macro_rules! paging_cap {
 
                 unsafe {
                     untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
+                        let mut desc = $desc {
+                            mapped_weak_pool: mapped_weak_pool,
+                            start_paddr: start_paddr,
+                            next: next_child,
+                        };
+
+                        for item in desc.write().iter_mut() {
+                            *item = $entry::empty();
+                        }
+
                         arc = Some(unsafe {
-                            Self::new(paddr, RwLock::new($desc {
-                                mapped_weak_pool: mapped_weak_pool,
-                                start_paddr: start_paddr,
-                                next: next_child,
-                            }))
+                            Self::new(paddr, RwLock::new(desc))
                         });
 
                         arc.clone().unwrap().into()

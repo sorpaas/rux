@@ -28,6 +28,14 @@ impl UntypedCap {
 }
 
 impl UntypedDescriptor {
+    pub fn length(&self) -> usize {
+        self.length
+    }
+
+    pub fn start_paddr(&self) -> PAddr {
+        self.start_paddr
+    }
+
     pub unsafe fn allocate(&mut self, length: usize, alignment: usize) -> PAddr {
         let paddr = align_up(self.watermark, alignment);
         assert!(paddr + length <= self.start_paddr + self.length);

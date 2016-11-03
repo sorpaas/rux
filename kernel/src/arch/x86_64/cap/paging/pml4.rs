@@ -1,6 +1,7 @@
 use common::*;
 use arch::{KERNEL_BASE};
-use arch::paging::{BASE_PAGE_LENGTH, PML4, PML4Entry};
+use arch::init::{KERNEL_PDPT};
+use arch::paging::{BASE_PAGE_LENGTH, PML4, PML4Entry, pml4_index};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard, RwLock};
 use util::managed_arc::{ManagedWeakPool1Arc};
 use super::{PML4Descriptor, PML4Cap, PDPTCap, PDCap, PTCap, PageCap};
@@ -14,12 +15,23 @@ impl PML4Cap {
         let start_paddr = unsafe { untyped.allocate(BASE_PAGE_LENGTH, BASE_PAGE_LENGTH) };
 
         unsafe {
+            use arch::paging::{PML4_P, PML4_RW};
+
             untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
+                let mut desc = PML4Descriptor {
+                    start_paddr: start_paddr,
+                    next: next_child,
+                };
+
+                for item in desc.write().iter_mut() {
+                    *item = PML4Entry::empty();
+                }
+
+                desc.write()[pml4_index(VAddr::from(KERNEL_BASE))] =
+                    PML4Entry::new(KERNEL_PDPT.paddr(), PML4_P | PML4_RW);
+
                 arc = Some(unsafe {
-                    Self::new(paddr, RwLock::new(PML4Descriptor {
-                        start_paddr: start_paddr,
-                        next: next_child,
-                    }))
+                    Self::new(paddr, RwLock::new(desc))
                 });
 
                 arc.clone().unwrap().into()

@@ -51,102 +51,109 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo};
-use cap::{UntypedCap, CPoolCap};
+use cap::{UntypedCap, CPoolCap, PageCap, TopPageTableCap};
 use core::ops::{Deref, DerefMut};
 use util::{MemoryObject};
+
+fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &mut UntypedCap) -> (TopPageTableCap, VAddr) {
+    use elf::{ElfBinary};
+
+    let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
+    let mut rinit_entry: u64 = 0x0;
+
+    let mut rinit_pml4 = TopPageTableCap::retype_from(untyped.write().deref_mut());
+    cpool.downgrade_free(&rinit_pml4);
+
+    let slice_object = unsafe { MemoryObject::<u8>::slice(archinfo.rinit_region().start_paddr(),
+                                                          archinfo.rinit_region().length()) };
+    let bin_raw = unsafe { slice::from_raw_parts(*slice_object,
+                                                 archinfo.rinit_region().length()) };
+    let bin = ElfBinary::new("rinit", bin_raw).unwrap();
+
+    log!("fheader = {:?}", bin.file_header());
+    log!("entry = 0x{:x}", bin.file_header().entry);
+    rinit_entry = bin.file_header().entry;
+
+    for p in bin.program_headers() {
+        use elf::{PT_LOAD};
+
+        if p.progtype == PT_LOAD {
+            log!("pheader = {}", p);
+            assert!(p.filesz == p.memsz);
+
+            let mut next_page_vaddr = VAddr::from(p.vaddr);
+            let mut offset = 0x0;
+            let end_vaddr = VAddr::from(p.vaddr + p.memsz as usize);
+
+            while next_page_vaddr <= end_vaddr {
+                use core::cmp::{min};
+                log!("mapping from: 0x{:x}", next_page_vaddr);
+
+                let page_cap = PageCap::retype_from(untyped.write().deref_mut());
+                cpool.downgrade_free(&page_cap);
+                rinit_pml4.map(next_page_vaddr, &page_cap, untyped, cpool);
+
+                let mut page = page_cap.write();
+                let page_length = page.length();
+                let mut page_raw = page.write();
+
+                for i in 0..min(page_length, (p.memsz as usize) - offset) {
+                    page_raw[i] = bin_raw[(p.offset as usize) + offset + i];
+                }
+
+                offset += page_length;
+                next_page_vaddr += page_length;
+            }
+        }
+    }
+
+    log!("mapping the rinit stack ...");
+    let mut rinit_stack_page = PageCap::retype_from(untyped.write().deref_mut());
+    cpool.downgrade_free(&rinit_stack_page);
+    rinit_pml4.map(rinit_stack_vaddr, &rinit_stack_page, untyped, cpool);
+
+    (rinit_pml4, VAddr::from(rinit_entry))
+}
 
 #[no_mangle]
 pub fn kmain(archinfo: InitInfo)
 {
     log!("archinfo: {:?}", &archinfo);
     let mut region_iter = archinfo.free_regions();
-    let cpool_target_region = region_iter.next().unwrap();
 
-    let untyped = unsafe { UntypedCap::bootstrap(cpool_target_region.start_paddr(),
-                                                 cpool_target_region.length()) };
+    let (mut cpool, mut untyped) = {
+        let cpool_target_region = region_iter.next().unwrap();
 
-    log!("untyped initialized.");
+        let untyped = unsafe { UntypedCap::bootstrap(cpool_target_region.start_paddr(),
+                                                     cpool_target_region.length()) };
+        let cpool = CPoolCap::retype_from(untyped.write().deref_mut());
 
-    let cpool = CPoolCap::retype_from(untyped.write().deref_mut());
+        cpool.downgrade_at(&cpool, 0);
+        cpool.downgrade_free(&untyped);
 
-    log!("cpool initialized.");
+        let mut untyped_target = untyped;
 
-    log!("cpool descriptor: {:?}", cpool.read().deref());
-    log!("untyped descriptor: {:?}", untyped.read().deref());
+        for region in region_iter {
+            let untyped = unsafe { UntypedCap::bootstrap(region.start_paddr(),
+                                                         region.length()) };
+            cpool.downgrade_free(&untyped);
 
-    cpool.downgrade_at(&cpool, 0);
-    cpool.downgrade_at(&untyped, 1);
+            if untyped.read().length() > untyped_target.read().length() {
+                untyped_target = untyped;
+            }
+        }
 
-    let u1 = cpool.upgrade(0): Option<CPoolCap>;
-    let u2 = cpool.upgrade(1): Option<UntypedCap>;
+        (cpool, untyped_target)
+    };
 
-    log!("u1: {:?}", u1);
-    log!("u2: {:?}", u2);
+    log!("CPool: {:?}", cpool);
+    log!("Untyped: {:?}", untyped);
 
-    // let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
-    // let mut rinit_entry: u64 = 0x0;
+    let (rinit_pml4, rinit_entry) = bootstrap_rinit_paging(&archinfo, &mut cpool, &mut untyped);
 
-    // let (mut cpool_cap, mut tcb_half) = {
-    //     let mut region_iter = archinfo.free_regions();
-    //     let cpool_target_region = region_iter.next().unwrap();
-
-    //     let mut cpool_cap_half = unsafe {
-    //         CPoolFull::bootstrap(
-    //             UntypedFull::bootstrap(cpool_target_region.start_paddr(), cpool_target_region.length())
-    //         )
-    //     };
-
-    //     {
-    //         let cpool_target_untyped_cap = cpool_cap_half.read(0);
-    //         let cpool_target_untyped = match cpool_target_untyped_cap.as_ref().unwrap() {
-    //             &Cap::Untyped(ref untyped) => untyped,
-    //             _ => panic!(),
-    //         };
-    //         for child in cpool_target_untyped.mdb(0).children() {
-    //             log!("child of index 0: {:?}", child.deref());
-    //         }
-    //     }
-    //     log!("CPool index 0: {:?}", cpool_cap_half.read(0).deref());
-    //     log!("CPool index 1: {:?}", cpool_cap_half.read(1).deref());
-
-    //     ((), ())
-    // };
-
+    log!("Rinit pml4: {:?}", rinit_pml4);
+    log!("Rinit entry: {:?}", rinit_entry);
     log!("hello, world!");
-
-
-    //     let mut untyped_target = {
-    //         let mut untyped_target = cpool_target_untyped;
-
-    //         let mut cpool = cpool_cap.write();
-    //         cpool.insert(Capability::CPool(cpool_cap_cloned));
-
-    //         for region in region_iter {
-    //             let untyped = unsafe {
-    //                 UntypedHalf::bootstrap(region.start_paddr(),
-    //                                        region.length())
-    //             };
-                
-    //             if untyped.length() > untyped_target.length() {
-    //                 cpool.insert(Capability::Untyped(untyped_target));
-    //                 untyped_target = untyped;
-    //             } else {
-    //                 cpool.insert(Capability::Untyped(untyped));
-    //             }
-    //         }
-
-    //         untyped_target
-    //     };
-
-    //     let mut rinit_pml4_half = TopPageTableHalf::new(&mut untyped_target);
-    //     let mut rinit_stack_half = PageHalf::new(&mut untyped_target);
-
-    //     {
-    //         use elf::{ElfBinary};
-    //         let slice_object = unsafe { MemoryObject::<u8>::slice(archinfo.rinit_region().start_paddr(),
-    //                                                               archinfo.rinit_region().length()) };
-    //         let bin_raw = unsafe { slice::from_raw_parts(*slice_object, archinfo.rinit_region().length()) };
-    //         let bin = ElfBinary::new("rinit", bin_raw).unwrap();
 
     //         log!("fheader = {:?}", bin.file_header());
     //         log!("entry = 0x{:x}", bin.file_header().entry);

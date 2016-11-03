@@ -6,7 +6,7 @@ pub use self::paging::{PML4Descriptor, PML4Cap,
                        PTDescriptor, PTCap,
                        PageDescriptor, PageCap};
 
-pub type ToplevelPageTableCap = PML4Cap;
+pub type TopPageTableCap = PML4Cap;
 
 use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny};
 

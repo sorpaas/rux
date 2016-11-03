@@ -17,12 +17,18 @@ impl PageCap {
 
         unsafe {
             untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
+                let mut desc = PageDescriptor {
+                    mapped_weak_pool: mapped_weak_pool,
+                    start_paddr: start_paddr,
+                    next: next_child,
+                };
+
+                for raw in desc.write().iter_mut() {
+                    *raw = 0x0;
+                }
+
                 arc = Some(unsafe {
-                    Self::new(paddr, RwLock::new(PageDescriptor {
-                        mapped_weak_pool: mapped_weak_pool,
-                        start_paddr: start_paddr,
-                        next: next_child,
-                    }))
+                    Self::new(paddr, RwLock::new(desc))
                 });
 
                 arc.clone().unwrap().into()

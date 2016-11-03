@@ -1,5 +1,6 @@
 use arch::segmentation::{self, SegmentSelector};
 use super::bit_field::BitField;
+use super::{HandlerFunc};
 
 pub struct Idt([Entry; 256]);
 
@@ -16,8 +17,6 @@ pub struct Entry {
 
 #[derive(Debug, Clone, Copy)]
 pub struct EntryOptions(BitField<u16>);
-
-pub type HandlerFunc = extern "C" fn() -> !;
 
 impl EntryOptions {
     fn minimal() -> Self {

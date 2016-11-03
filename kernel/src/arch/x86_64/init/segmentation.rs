@@ -15,6 +15,10 @@ pub unsafe fn load_tr(sel: SegmentSelector) {
     asm!("ltr $0" :: "r" (sel));
 }
 
+pub unsafe fn set_kernel_stack(addr: u64) {
+    TSS.sp0 = addr;
+}
+
 pub fn init() {
     unsafe {
         use arch::segmentation::{DESC_P, DESC_L, DESC_AVL, DESC_DPL3,
@@ -22,8 +26,8 @@ pub fn init() {
                                  TYPE_C_ER};
         let kernel_stack = &init_stack as *const _ as u64;
         let tss_vaddr = &TSS as *const _ as u64;
-        
-        TSS.sp0 = kernel_stack;
+
+        set_kernel_stack(kernel_stack);
         GDT[7] = SegmentDescriptor::new((tss_vaddr & 0xFFFFFFFF) as u32,
                                         size_of::<TaskStateSegment>() as u32);
         GDT[7].insert(DESC_P | TYPE_SYS_TSS_AVAILABLE | DESC_DPL3);

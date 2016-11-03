@@ -5,6 +5,7 @@ mod segmentation;
 
 pub use self::paging::{KERNEL_PML4, KERNEL_PDPT, KERNEL_PD,
                        OBJECT_POOL_PT, OBJECT_POOL_START_VADDR};
+pub use self::segmentation::{set_kernel_stack};
 
 use ::{kmain};
 use super::{kernel_end_paddr, kernel_start_paddr, kernel_start_vaddr, kernel_end_vaddr, KERNEL_BASE};

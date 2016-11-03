@@ -5,7 +5,7 @@ use arch::paging::{BASE_PAGE_LENGTH, PML4, PML4Entry, pml4_index};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard, RwLock};
 use util::managed_arc::{ManagedWeakPool1Arc};
 use super::{PML4Descriptor, PML4Cap, PDPTCap, PDCap, PTCap, PageCap};
-use cap::{UntypedCap, UntypedDescriptor, CPoolCap};
+use cap::{self, UntypedCap, UntypedDescriptor, CPoolCap};
 use core::ops::{Deref, DerefMut};
 
 impl PML4Cap {
@@ -75,6 +75,7 @@ impl PML4Cap {
                         let cap_desc = cap.read();
                         cap_desc.start_paddr() == { self.read().read()[index] }.get_address()
                     } else {
+                        cap::drop_any(any);
                         false
                     }
                 } else {
@@ -104,6 +105,7 @@ impl PML4Cap {
                         let cap_desc = cap.read();
                         cap_desc.start_paddr() == { pdpt_cap.read().read()[index] }.get_address()
                     } else {
+                        cap::drop_any(any);
                         false
                     }
                 } else {
@@ -133,6 +135,7 @@ impl PML4Cap {
                         let cap_desc = cap.read();
                         cap_desc.start_paddr() == { pd_cap.read().read()[index] }.get_address()
                     } else {
+                        cap::drop_any(any);
                         false
                     }
                 } else {
@@ -166,7 +169,13 @@ impl PML4Descriptor {
         unsafe { UniqueReadGuard::new(self.page_object()) }
     }
 
-    pub fn write(&mut self) -> UniqueWriteGuard<PML4> {
+    fn write(&mut self) -> UniqueWriteGuard<PML4> {
         unsafe { UniqueWriteGuard::new(self.page_object()) }
+    }
+
+    pub fn switch_to(&self) {
+        use arch::paging;
+
+        unsafe { paging::switch_to(self.start_paddr); }
     }
 }

@@ -54,6 +54,7 @@ use arch::{InitInfo};
 use cap::{UntypedCap, CPoolCap, PageCap, TopPageTableCap};
 use core::ops::{Deref, DerefMut};
 use util::{MemoryObject};
+use core::any::{Any, TypeId};
 
 fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &mut UntypedCap) -> (TopPageTableCap, VAddr) {
     use elf::{ElfBinary};
@@ -149,7 +150,16 @@ pub fn kmain(archinfo: InitInfo)
     log!("CPool: {:?}", cpool);
     log!("Untyped: {:?}", untyped);
 
+    log!("type_id: {:?}", TypeId::of::<CPoolCap>());
+    {
+        use util::{RwLock};
+        use util::managed_arc::{ManagedArc};
+        use cap::{CPoolDescriptor};
+        log!("type_id: {:?}", TypeId::of::<ManagedArc<RwLock<CPoolDescriptor>>>());
+    }
+
     let (rinit_pml4, rinit_entry) = bootstrap_rinit_paging(&archinfo, &mut cpool, &mut untyped);
+    rinit_pml4.read().switch_to();
 
     log!("Rinit pml4: {:?}", rinit_pml4);
     log!("Rinit entry: {:?}", rinit_entry);

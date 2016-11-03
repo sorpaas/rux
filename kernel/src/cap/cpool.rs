@@ -44,15 +44,18 @@ impl CPoolCap {
         super::upgrade_any(&cpool.weak_pool, index)
     }
 
-    pub fn upgrade<T: Any>(&self, index: usize) -> Option<ManagedArc<T>> {
+    pub fn upgrade<T: Any>(&self, index: usize) -> Option<ManagedArc<T>>
+        where ManagedArc<T>: Any {
         self.read().weak_pool.upgrade(index)
     }
 
-    pub fn downgrade_at<T: Any>(&self, arc: &ManagedArc<T>, index: usize) {
+    pub fn downgrade_at<T: Any>(&self, arc: &ManagedArc<T>, index: usize)
+        where ManagedArc<T>: Any {
         self.read().weak_pool.downgrade_at(arc, index)
     }
 
-    pub fn downgrade_free<T: Any>(&self, arc: &ManagedArc<T>) -> Option<usize> {
+    pub fn downgrade_free<T: Any>(&self, arc: &ManagedArc<T>) -> Option<usize>
+        where ManagedArc<T>: Any {
         self.read().weak_pool.downgrade_free(arc)
     }
 }

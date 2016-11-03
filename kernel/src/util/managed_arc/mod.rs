@@ -19,7 +19,7 @@ pub use self::weak_pool::{ManagedWeakPool1Arc, ManagedWeakPool256Arc};
 #[derive(Debug)]
 struct ManagedWeakNode {
     ptr: PAddr,
-    type_id: TypeId,
+    strong_type_id: TypeId,
     prev: Option<ManagedWeakAddr>,
     next: Option<ManagedWeakAddr>
 }
@@ -90,14 +90,15 @@ pub struct ManagedArcAny {
 }
 
 impl ManagedArcAny {
-    pub fn is<T: Any>(&self) -> bool {
+    pub fn is<T: Any>(&self) -> bool
+        where ManagedArc<T>: Any {
         self.type_id == TypeId::of::<T>()
     }
 }
 
 impl<T: Any> From<ManagedArcAny> for ManagedArc<T> {
     fn from(any: ManagedArcAny) -> Self {
-        assert!(any.type_id == TypeId::of::<T>());
+        assert!(any.type_id == TypeId::of::<ManagedArc<T>>());
         let ptr = any.ptr;
         mem::forget(any);
         ManagedArc {
@@ -113,7 +114,7 @@ impl<T: Any> Into<ManagedArcAny> for ManagedArc<T> {
         mem::forget(self);
         ManagedArcAny {
             ptr: ptr,
-            type_id: TypeId::of::<T>(),
+            type_id: TypeId::of::<ManagedArc<T>>(),
         }
     }
 }

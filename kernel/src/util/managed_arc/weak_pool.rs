@@ -27,7 +27,8 @@ macro_rules! weak_pool {
                 arc
             }
 
-            pub fn upgrade<T: Any>(&self, index: usize) -> Option<ManagedArc<T>> {
+            pub fn upgrade<T: Any>(&self, index: usize) -> Option<ManagedArc<T>>
+                where ManagedArc<T>: Any {
                 let inner_obj = self.inner_object();
                 let inner = unsafe { inner_obj.as_ref().unwrap() };
 
@@ -35,16 +36,16 @@ macro_rules! weak_pool {
                 let upgrading_weak = upgrading_obj.as_ref();
 
                 upgrading_weak.and_then(|weak| {
-                    if weak.type_id != TypeId::of::<T>() {
+                    if weak.strong_type_id != TypeId::of::<ManagedArc<T>>() {
                         None
                     } else {
-                        let arc = ManagedArc {
+                        let arc = ManagedArc::<T> {
                             ptr: weak.ptr,
                             _marker: PhantomData,
                         };
                         let arc_inner_obj = arc.inner_object();
-                        let arc_inner = unsafe { inner_obj.as_ref().unwrap() };
-                        let mut lead = inner.lead.lock();
+                        let arc_inner = unsafe { arc_inner_obj.as_ref().unwrap() };
+                        let mut lead = arc_inner.lead.lock();
                         *lead += 1;
 
                         Some(arc)
@@ -52,7 +53,8 @@ macro_rules! weak_pool {
                 })
             }
 
-            pub fn downgrade_at<T: Any>(&self, arc: &ManagedArc<T>, index: usize) {
+            pub fn downgrade_at<T: Any>(&self, arc: &ManagedArc<T>, index: usize)
+                where ManagedArc<T>: Any {
                 let inner_obj = self.inner_object();
                 let inner = unsafe { inner_obj.as_ref().unwrap() };
                 let ptr = inner.ptr;
@@ -64,7 +66,7 @@ macro_rules! weak_pool {
                 };
                 let mut weak_node = ManagedWeakNode {
                     ptr: arc.ptr,
-                    type_id: TypeId::of::<T>(),
+                    strong_type_id: TypeId::of::<ManagedArc<T>>(),
                     prev: None,
                     next: None
                 };
@@ -100,7 +102,8 @@ macro_rules! weak_pool {
                 }
             }
 
-            pub fn downgrade_free<T: Any>(&self, arc: &ManagedArc<T>) -> Option<usize> {
+            pub fn downgrade_free<T: Any>(&self, arc: &ManagedArc<T>) -> Option<usize>
+                where ManagedArc<T>: Any {
                 let inner_obj = self.inner_object();
                 let inner = unsafe { inner_obj.as_mut().unwrap() };
 

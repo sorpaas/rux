@@ -14,6 +14,7 @@
 #![feature(coerce_unsized)]
 #![feature(core_slice_ext)]
 #![feature(reflect_marker)]
+#![feature(relaxed_adts)]
 #![no_std]
 
 extern crate x86;
@@ -63,7 +64,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     let mut rinit_entry: u64 = 0x0;
 
     let mut rinit_pml4 = TopPageTableCap::retype_from(untyped.write().deref_mut());
-    cpool.downgrade_free(&rinit_pml4);
+    cpool.read().downgrade_free(&rinit_pml4);
 
     let slice_object = unsafe { MemoryObject::<u8>::slice(archinfo.rinit_region().start_paddr(),
                                                           archinfo.rinit_region().length()) };
@@ -91,7 +92,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
                 log!("mapping from: 0x{:x}", next_page_vaddr);
 
                 let page_cap = PageCap::retype_from(untyped.write().deref_mut());
-                cpool.downgrade_free(&page_cap);
+                cpool.read().downgrade_free(&page_cap);
                 rinit_pml4.map(next_page_vaddr, &page_cap, untyped, cpool);
 
                 let mut page = page_cap.write();
@@ -110,7 +111,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
 
     log!("mapping the rinit stack ...");
     let mut rinit_stack_page = PageCap::retype_from(untyped.write().deref_mut());
-    cpool.downgrade_free(&rinit_stack_page);
+    cpool.read().downgrade_free(&rinit_stack_page);
     rinit_pml4.map(rinit_stack_vaddr, &rinit_stack_page, untyped, cpool);
 
     (rinit_pml4, VAddr::from(rinit_entry), rinit_stack_vaddr + (PageCap::length() - 4))
@@ -129,15 +130,15 @@ pub fn kmain(archinfo: InitInfo)
                                                      cpool_target_region.length()) };
         let cpool = CPoolCap::retype_from(untyped.write().deref_mut());
 
-        cpool.downgrade_at(&cpool, 0);
-        cpool.downgrade_free(&untyped);
+        cpool.read().downgrade_at(&cpool, 0);
+        cpool.read().downgrade_free(&untyped);
 
         let mut untyped_target = untyped;
 
         for region in region_iter {
             let untyped = unsafe { UntypedCap::bootstrap(region.start_paddr(),
                                                          region.length()) };
-            cpool.downgrade_free(&untyped);
+            cpool.read().downgrade_free(&untyped);
 
             if untyped.read().length() > untyped_target.read().length() {
                 untyped_target = untyped;

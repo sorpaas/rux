@@ -50,7 +50,7 @@ impl PML4Cap {
         assert!(!(pml4_index(VAddr::from(KERNEL_BASE)) == index));
         assert!(!current[index].is_present());
 
-        sub_desc.mapped_weak_pool.downgrade_at(self, 0);
+        sub_desc.mapped_weak_pool.read().downgrade_at(self, 0);
         current[index] = PML4Entry::new(sub_desc.start_paddr(), PML4_P | PML4_RW | PML4_US);
     }
 
@@ -58,6 +58,8 @@ impl PML4Cap {
                untyped: &mut UntypedCap, cpool: &mut CPoolCap) {
         use arch::paging::{pml4_index, pdpt_index, pd_index, pt_index,
                            PML4Entry, PDPTEntry, PDEntry, PTEntry};
+        let cpool = cpool.read();
+
         let mut pdpt_cap: PDPTCap = {
             let index = pml4_index(vaddr);
 

@@ -48,19 +48,19 @@ impl TaskDescriptor {
     }
 
     pub fn downgrade_cpool(&self, cpool: &CPoolCap) {
-        self.weak_pool.downgrade_at(cpool, 0)
+        self.weak_pool.read().downgrade_at(cpool, 0)
     }
 
     pub fn upgrade_cpool(&self) -> Option<CPoolCap> {
-        self.weak_pool.upgrade(0)
+        self.weak_pool.read().upgrade(0)
     }
 
     pub fn downgrade_top_page_table(&self, pml4: &TopPageTableCap) {
-        self.weak_pool.downgrade_at(pml4, 1)
+        self.weak_pool.read().downgrade_at(pml4, 1)
     }
 
     pub fn upgrade_top_page_table(&self) -> Option<TopPageTableCap> {
-        self.weak_pool.upgrade(1)
+        self.weak_pool.read().upgrade(1)
     }
 
     pub fn switch_to(&mut self) {

@@ -1,5 +1,6 @@
 use common::*;
 use core::any::{Any, TypeId};
+use core::ops::{Deref, DerefMut};
 use util::{RwLock, align_up};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool256Arc};
 
@@ -11,6 +12,31 @@ pub struct CPoolDescriptor {
     next: Option<ManagedArcAny>,
 }
 pub type CPoolCap = ManagedArc<RwLock<CPoolDescriptor>>;
+
+impl CPoolDescriptor {
+    pub fn upgrade_any(&self, index: usize) -> Option<ManagedArcAny> {
+        unsafe { self.weak_pool.read().upgrade_any(index, |ptr, type_id| { super::upgrade_any(ptr, type_id) }) }
+    }
+
+    pub fn upgrade<T: Any>(&self, index: usize) -> Option<ManagedArc<T>>
+        where ManagedArc<T>: Any {
+        self.weak_pool.read().upgrade(index)
+    }
+
+    pub fn downgrade_at<T: Any>(&self, arc: &ManagedArc<T>, index: usize)
+        where ManagedArc<T>: Any {
+        self.weak_pool.read().downgrade_at(arc, index)
+    }
+
+    pub fn downgrade_free<T: Any>(&self, arc: &ManagedArc<T>) -> Option<usize>
+        where ManagedArc<T>: Any {
+        self.weak_pool.read().downgrade_free(arc)
+    }
+
+    pub fn size(&self) -> usize {
+        256
+    }
+}
 
 impl CPoolCap {
     pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
@@ -32,30 +58,5 @@ impl CPoolCap {
         }) };
 
         arc.unwrap()
-    }
-
-    pub fn size(&self) -> usize {
-        256
-    }
-
-    pub fn upgrade_any(&self, index: usize) -> Option<ManagedArcAny> {
-        let cpool = self.read();
-
-        super::upgrade_any(&cpool.weak_pool, index)
-    }
-
-    pub fn upgrade<T: Any>(&self, index: usize) -> Option<ManagedArc<T>>
-        where ManagedArc<T>: Any {
-        self.read().weak_pool.upgrade(index)
-    }
-
-    pub fn downgrade_at<T: Any>(&self, arc: &ManagedArc<T>, index: usize)
-        where ManagedArc<T>: Any {
-        self.read().weak_pool.downgrade_at(arc, index)
-    }
-
-    pub fn downgrade_free<T: Any>(&self, arc: &ManagedArc<T>) -> Option<usize>
-        where ManagedArc<T>: Any {
-        self.read().weak_pool.downgrade_free(arc)
     }
 }

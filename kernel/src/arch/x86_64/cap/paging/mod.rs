@@ -85,7 +85,7 @@ macro_rules! paging_cap {
                 let sub_desc = sub.read();
                 assert!(!current[index].is_present());
 
-                sub_desc.mapped_weak_pool.downgrade_at(self, 0);
+                sub_desc.mapped_weak_pool.read().downgrade_at(self, 0);
                 current[index] = $entry::new(sub_desc.start_paddr(), $access);
             }
         }

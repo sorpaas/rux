@@ -8,19 +8,21 @@ pub use self::paging::{PML4Descriptor, PML4Cap,
 
 pub type TopPageTableCap = PML4Cap;
 
-use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny};
+use common::*;
+use core::any::{TypeId};
+use util::managed_arc::{ManagedArc, ManagedWeakPool256Arc, ManagedArcAny};
 
-pub fn upgrade_any(weak_pool: &ManagedWeakPool256Arc, index: usize) -> Option<ManagedArcAny> {
-    if let Some(r) = weak_pool.upgrade(index): Option<PML4Cap> {
-        Some(r.into())
-    } else if let Some(r) = weak_pool.upgrade(index): Option<PDPTCap> {
-        Some(r.into())
-    } else if let Some(r) = weak_pool.upgrade(index): Option<PDCap> {
-        Some(r.into())
-    } else if let Some(r) = weak_pool.upgrade(index): Option<PTCap> {
-        Some(r.into())
-    } else if let Some(r) = weak_pool.upgrade(index): Option<PageCap> {
-        Some(r.into())
+pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
+    if type_id == TypeId::of::<PML4Cap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): PML4Cap }.into())
+    } else if type_id == TypeId::of::<PDPTCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): PDPTCap }.into())
+    } else if type_id == TypeId::of::<PDCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): PDCap }.into())
+    } else if type_id == TypeId::of::<PTCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): PTCap }.into())
+    } else if type_id == TypeId::of::<PageCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): PageCap }.into())
     } else {
         None
     }

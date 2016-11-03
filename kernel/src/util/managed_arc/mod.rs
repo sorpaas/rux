@@ -35,7 +35,6 @@ struct ManagedArcInner<T> {
     lead: Mutex<usize>,
     // TODO: Implement weak pool lock.
     first_weak: Mutex<Option<ManagedWeakAddr>>,
-    ptr: PAddr, // A pointer to self
     data: T
 }
 
@@ -135,11 +134,21 @@ impl<T> ManagedArc<T> {
         mem::align_of::<ManagedArcInner<T>>()
     }
 
+    pub unsafe fn from_ptr(ptr: PAddr) -> Self {
+        let arc = ManagedArc { ptr: ptr, _marker: PhantomData };
+
+        let inner_obj = arc.inner_object();
+        let inner = unsafe { inner_obj.as_ref().unwrap() };
+        let mut lead = inner.lead.lock();
+        *lead += 1;
+
+        arc
+    }
+
     pub unsafe fn new(ptr: PAddr, data: T) -> Self {
         let arc = ManagedArc { ptr: ptr, _marker: PhantomData };
         let inner = arc.inner_object();
         ptr::write(inner.as_mut().unwrap(), ManagedArcInner {
-            ptr: ptr,
             lead: Mutex::new(1),
             first_weak: Mutex::new(None),
             data: data,

@@ -8,17 +8,19 @@ pub use self::task::{TaskDescriptor, TaskCap};
 pub use arch::cap::{TopPageTableCap, PageCap};
 
 use arch;
+use common::*;
+use core::any::{TypeId};
 use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny, ManagedArc};
 
-pub fn upgrade_any(weak_pool: &ManagedWeakPool256Arc, index: usize) -> Option<ManagedArcAny> {
-    if let Some(r) = weak_pool.upgrade(index): Option<CPoolCap> {
-        Some(r.into())
-    } else if let Some(r) = weak_pool.upgrade(index): Option<UntypedCap> {
-        Some(r.into())
-    } else if let Some(r) = weak_pool.upgrade(index): Option<TaskCap> {
-        Some(r.into())
+pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
+    if type_id == TypeId::of::<CPoolCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): CPoolCap }.into())
+    } else if type_id == TypeId::of::<UntypedCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): UntypedCap }.into())
+    } else if type_id == TypeId::of::<TaskCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): TaskCap }.into())
     } else {
-        arch::cap::upgrade_any(weak_pool, index)
+        arch::cap::upgrade_any(ptr, type_id)
     }
 }
 

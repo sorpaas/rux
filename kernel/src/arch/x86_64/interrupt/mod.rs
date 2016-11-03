@@ -39,13 +39,23 @@ lazy_static! {
 }
 
 #[derive(Debug)]
-pub struct ThreadRuntime {
+pub struct TaskRuntime {
     instruction_pointer: u64,
     cpu_flags: u64,
     stack_pointer: u64
 }
 
-impl ThreadRuntime {
+impl Default for TaskRuntime {
+    fn default() -> TaskRuntime {
+        TaskRuntime {
+            instruction_pointer: 0x0,
+            cpu_flags: 0b110,
+            stack_pointer: 0x0
+        }
+    }
+}
+
+impl TaskRuntime {
     pub unsafe fn switch_to(&mut self) -> (u64, Option<u64>) {
         switch_to_raw(self.stack_pointer, self.instruction_pointer, self.cpu_flags);
 
@@ -59,14 +69,6 @@ impl ThreadRuntime {
         return (exception.exception_code, exception.error_code);
     }
 
-    pub fn new(instruction_pointer: VAddr, cpu_flags: u64, stack_pointer: VAddr) -> ThreadRuntime {
-        ThreadRuntime {
-            instruction_pointer: instruction_pointer.into(),
-            cpu_flags: cpu_flags,
-            stack_pointer: stack_pointer.into()
-        }
-    }
-
     pub fn set_instruction_pointer(&mut self, instruction_pointer: VAddr) {
         self.instruction_pointer = instruction_pointer.into();
     }
@@ -75,64 +77,6 @@ impl ThreadRuntime {
         self.stack_pointer = stack_pointer.into();
     }
 }
-
-// extern "C" fn system_call_handler(stack_frame: *const ExceptionStackFrame) {
-//     log!("interrupt: system call");
-//     unsafe {
-//         let ref message = fetch_message!(CapSystemCall);
-//         log!("message is: {:?}", message);
-
-//         let ref exception = *stack_frame;
-//         update_active_tcb(&exception);
-
-//         let mut tcb = active_tcb.as_mut().unwrap().write();
-//         let (target_index, target_cpool_routes) = message.target.split_last().unwrap();
-//         let target_cpool = {
-//             match tcb.cpool_mut() {
-//                 &mut Capability::CPool(ref mut cpool_half) => {
-//                     cpool_half.traverse(target_cpool_routes)
-//                 },
-//                 _ => None
-//             }
-//         };
-
-//         if target_cpool.is_some() {
-//             let mut unwrapped = target_cpool.unwrap();
-//             let mut locked = unwrapped.write();
-//             match locked[*target_index as usize] {
-//                 Some(ref mut cap) => {
-//                     cap.handle_send(message.message);
-//                 },
-//                 _ => ()
-//             }
-//         }
-
-//         // If we didn't call switch_to in the handler, then switch back to the active_tcb.
-//         active_tcb.as_mut().unwrap().switch_to();
-//     }
-//     loop {}
-// }
-
-// extern "C" fn debug_call_handler(stack_frame: *const ExceptionStackFrame) {
-//     log!("interrupt: debug call");
-//     unsafe {
-//         let ref message = fetch_message!(&str);
-
-//         let ref exception = *stack_frame;
-//         update_active_tcb(&exception);
-
-//         log!("[debug] {} from {}", message, unsafe { active_tcb.as_ref().unwrap() });
-
-//         // active_tcb.as_mut().unwrap().switch_to();
-//     }
-//     // loop {}
-// }
-
-// extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame) {
-//     log!("interrupt: divide by zero");
-//     unsafe { log!("{:?}", *stack_frame); }
-//     loop {}
-// }
 
 pub unsafe fn enable_interrupt() { }
 pub unsafe fn disable_interrupt() { }

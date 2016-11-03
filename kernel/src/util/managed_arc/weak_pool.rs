@@ -122,6 +122,7 @@ macro_rules! weak_pool {
 }
 
 weak_pool!(ManagedWeakPool1Arc, [Mutex<Option<ManagedWeakNode>>; 1]);
+weak_pool!(ManagedWeakPool2Arc, [Mutex<Option<ManagedWeakNode>>; 2]);
 weak_pool!(ManagedWeakPool256Arc, [Mutex<Option<ManagedWeakNode>>; 256]);
 
 fn set_weak_node<F>(addr: ManagedWeakAddr, f: F) where F: FnOnce(Option<ManagedWeakNode>) -> Option<ManagedWeakNode> {
@@ -133,6 +134,12 @@ fn set_weak_node<F>(addr: ManagedWeakAddr, f: F) where F: FnOnce(Option<ManagedW
         *weak_node = f((*weak_node).take());
     } else if addr.inner_type_id == TypeId::of::<ManagedArcInner<[Mutex<Option<ManagedWeakNode>>; 256]>>() {
         let inner_obj: MemoryObject<ManagedArcInner<[Mutex<Option<ManagedWeakNode>>; 256]>> =
+            unsafe { MemoryObject::new(addr.inner_addr) };
+        let inner = unsafe { inner_obj.as_ref().unwrap() };
+        let mut weak_node = inner.data[addr.offset].lock();
+        *weak_node = f((*weak_node).take());
+    } else if addr.inner_type_id == TypeId::of::<ManagedArcInner<[Mutex<Option<ManagedWeakNode>>; 2]>>() {
+        let inner_obj: MemoryObject<ManagedArcInner<[Mutex<Option<ManagedWeakNode>>; 2]>> =
             unsafe { MemoryObject::new(addr.inner_addr) };
         let inner = unsafe { inner_obj.as_ref().unwrap() };
         let mut weak_node = inner.data[addr.offset].lock();

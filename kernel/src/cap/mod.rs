@@ -1,8 +1,10 @@
 mod untyped;
 mod cpool;
+mod task;
 
 pub use self::untyped::{UntypedDescriptor, UntypedCap};
 pub use self::cpool::{CPoolDescriptor, CPoolCap};
+pub use self::task::{TaskDescriptor, TaskCap};
 pub use arch::cap::{TopPageTableCap, PageCap};
 
 use arch;
@@ -12,6 +14,8 @@ pub fn upgrade_any(weak_pool: &ManagedWeakPool256Arc, index: usize) -> Option<Ma
     if let Some(r) = weak_pool.upgrade(index): Option<CPoolCap> {
         Some(r.into())
     } else if let Some(r) = weak_pool.upgrade(index): Option<UntypedCap> {
+        Some(r.into())
+    } else if let Some(r) = weak_pool.upgrade(index): Option<TaskCap> {
         Some(r.into())
     } else {
         arch::cap::upgrade_any(weak_pool, index)
@@ -23,6 +27,8 @@ pub fn drop_any(any: ManagedArcAny) {
         any.into(): CPoolCap;
     } else if any.is::<UntypedCap>() {
         any.into(): UntypedCap;
+    } else if any.is::<TaskCap>() {
+        any.into(): TaskCap;
     } else {
         arch::cap::drop_any(any);
     }

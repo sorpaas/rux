@@ -14,7 +14,7 @@ mod rwlock;
 mod weak_pool;
 
 pub use self::rwlock::{ManagedArcRwLockReadGuard, ManagedArcRwLockWriteGuard};
-pub use self::weak_pool::{ManagedWeakPool1Arc, ManagedWeakPool256Arc};
+pub use self::weak_pool::{ManagedWeakPool1Arc, ManagedWeakPool2Arc, ManagedWeakPool256Arc};
 
 #[derive(Debug)]
 struct ManagedWeakNode {

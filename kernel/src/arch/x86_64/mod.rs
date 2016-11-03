@@ -55,7 +55,7 @@ unsafe fn kernel_paddr_to_vaddr(addr: PAddr) -> VAddr {
 // Public interfaces
 pub use self::paging::{MemoryObject};
 pub use self::interrupt::{enable_interrupt, disable_interrupt, set_interrupt_handler,
-                          InterruptInfo};
+                          InterruptInfo, TaskRuntime};
 pub use self::init::{InitInfo};
 // pub use self::cap::{ArchCap, PageHalf, PageFull};
 pub use self::addr::{PAddr, VAddr};

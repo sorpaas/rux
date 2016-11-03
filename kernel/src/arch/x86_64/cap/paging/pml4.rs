@@ -173,7 +173,7 @@ impl PML4Descriptor {
         unsafe { UniqueWriteGuard::new(self.page_object()) }
     }
 
-    pub fn switch_to(&self) {
+    pub fn switch_to(&mut self) {
         use arch::paging;
 
         unsafe { paging::switch_to(self.start_paddr); }

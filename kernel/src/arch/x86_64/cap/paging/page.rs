@@ -37,6 +37,10 @@ impl PageCap {
 
         arc.unwrap()
     }
+
+    pub fn length() -> usize {
+        BASE_PAGE_LENGTH
+    }
 }
 
 impl PageDescriptor {

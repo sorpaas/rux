@@ -33,11 +33,19 @@ impl B {
 #[no_mangle]
 fn start(_argc: isize, _argv: *const *const u8) {
     // divide_by_zero();
-    let b = B(A);
-    b.a();
-    b.b();
-    debug!("Test 1");
-    debug!("Test 2");
+    // let b = B(A);
+    // b.a();
+    // b.b();
+    // debug!("Test 1");
+    // debug!("Test 2");
+    system_call(CapSystemCall {
+        target: &[0, 0, 20],
+        message: CapSendMessage::TCBYield
+    });
+    system_call(CapSystemCall {
+        target: &[0, 0, 20],
+        message: CapSendMessage::TCBYield
+    });
     system_call(CapSystemCall {
         target: &[0, 0, 20],
         message: CapSendMessage::TCBYield

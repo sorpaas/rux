@@ -52,15 +52,16 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo};
-use cap::{UntypedCap, CPoolCap, RawPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
+use cap::{UntypedCap, CPoolCap, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
 use util::{MemoryObject};
 use core::any::{Any, TypeId};
 
-fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &mut UntypedCap) -> (TopPageTableCap, VAddr, VAddr) {
+fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &mut UntypedCap) -> (TopPageTableCap, TaskBufferPageCap, VAddr, VAddr) {
     use elf::{ElfBinary};
 
     let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
+    let rinit_buffer_vaddr = VAddr::from(0x80001000: usize);
     let mut rinit_entry: u64 = 0x0;
 
     let mut rinit_pml4 = TopPageTableCap::retype_from(untyped.write().deref_mut());
@@ -102,7 +103,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
                 let mut page_raw = page.write();
 
                 for i in 0..min(page_length, (p.memsz as usize) - offset) {
-                    page_raw[i] = bin_raw[(p.offset as usize) + offset + i];
+                    page_raw.0[i] = bin_raw[(p.offset as usize) + offset + i];
                 }
 
                 offset += page_length;
@@ -118,7 +119,14 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
                    untyped.write().deref_mut(),
                    cpool.write().deref_mut());
 
-    (rinit_pml4, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH - 4))
+    log!("mapping the rinit buffer ...");
+    let mut rinit_buffer_page = TaskBufferPageCap::retype_from(untyped.write().deref_mut());
+    cpool.read().downgrade_free(&rinit_buffer_page);
+    rinit_pml4.map(rinit_buffer_vaddr, &rinit_buffer_page,
+                   untyped.write().deref_mut(),
+                   cpool.write().deref_mut());
+
+    (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH - 4))
 }
 
 #[no_mangle]
@@ -163,7 +171,7 @@ pub fn kmain(archinfo: InitInfo)
         log!("type_id: {:?}", TypeId::of::<ManagedArc<RwLock<CPoolDescriptor>>>());
     }
 
-    let (rinit_pml4, rinit_entry, rinit_stack) =
+    let (rinit_pml4, rinit_buffer_page, rinit_entry, rinit_stack) =
         bootstrap_rinit_paging(&archinfo, &mut cpool, &mut untyped);
     let rinit_task_cap = TaskCap::retype_from(untyped.write().deref_mut());
     let mut rinit_task = rinit_task_cap.write();
@@ -171,6 +179,7 @@ pub fn kmain(archinfo: InitInfo)
     rinit_task.set_stack_pointer(rinit_stack);
     rinit_task.downgrade_cpool(&cpool);
     rinit_task.downgrade_top_page_table(&rinit_pml4);
+    rinit_task.downgrade_buffer(&rinit_buffer_page);
 
     log!("Rinit pml4: {:?}", rinit_pml4);
     log!("Rinit entry: {:?}", rinit_entry);
@@ -178,7 +187,8 @@ pub fn kmain(archinfo: InitInfo)
     log!("hello, world!");
     while true {
         rinit_task.switch_to();
-        log!("returned from rinit.");
+        let buffer = rinit_task.upgrade_buffer();
+        log!("Request: {:?}", buffer.as_ref().unwrap().read().read().deref());
     }
     
     loop {}

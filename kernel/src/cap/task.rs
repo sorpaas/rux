@@ -1,14 +1,14 @@
 use common::*;
 use core::any::{Any, TypeId};
 use util::{RwLock, align_up};
-use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool2Arc};
+use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
 use arch::{TaskRuntime};
 
-use super::{UntypedDescriptor, TopPageTableCap, CPoolCap};
+use super::{UntypedDescriptor, TopPageTableCap, CPoolCap, TaskBufferPageCap};
 
 #[derive(Debug)]
 pub struct TaskDescriptor {
-    weak_pool: ManagedWeakPool2Arc,
+    weak_pool: ManagedWeakPool3Arc,
     runtime: TaskRuntime,
     next: Option<ManagedArcAny>,
 }
@@ -18,9 +18,9 @@ impl TaskCap {
     pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
         let mut arc: Option<Self> = None;
 
-        let weak_pool = unsafe { ManagedWeakPool2Arc::create(
-            untyped.allocate(ManagedWeakPool2Arc::inner_length(),
-                             ManagedWeakPool2Arc::inner_alignment())) };
+        let weak_pool = unsafe { ManagedWeakPool3Arc::create(
+            untyped.allocate(ManagedWeakPool3Arc::inner_length(),
+                             ManagedWeakPool3Arc::inner_alignment())) };
 
         unsafe { untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
             arc = Some(unsafe {
@@ -61,6 +61,14 @@ impl TaskDescriptor {
 
     pub fn upgrade_top_page_table(&self) -> Option<TopPageTableCap> {
         self.weak_pool.read().upgrade(1)
+    }
+
+    pub fn downgrade_buffer(&self, buffer: &TaskBufferPageCap) {
+        self.weak_pool.read().downgrade_at(buffer, 2)
+    }
+
+    pub fn upgrade_buffer(&self) -> Option<TaskBufferPageCap> {
+        self.weak_pool.read().upgrade(2)
     }
 
     pub fn switch_to(&mut self) {

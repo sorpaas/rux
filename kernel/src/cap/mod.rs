@@ -12,15 +12,14 @@ use common::*;
 use core::any::{TypeId};
 use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny, ManagedArc};
 
-pub type RawPageCap = PageCap<[u8; PAGE_LENGTH]>;
+pub use abi::{SetDefault, TaskBuffer};
+pub struct RawPage(pub [u8; PAGE_LENGTH]);
+pub type RawPageCap = PageCap<RawPage>;
+pub type TaskBufferPageCap = PageCap<TaskBuffer>;
 
-pub trait SetDefault {
-    fn set_default(&mut self);
-}
-
-impl SetDefault for [u8; 0x1000] {
+impl SetDefault for RawPage {
     fn set_default(&mut self) {
-        for raw in self.iter_mut() {
+        for raw in self.0.iter_mut() {
             *raw = 0x0;
         }
     }
@@ -35,6 +34,8 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
         Some(unsafe { ManagedArc::from_ptr(ptr): TaskCap }.into())
     } else if type_id == TypeId::of::<RawPageCap>() {
         Some(unsafe { ManagedArc::from_ptr(ptr): RawPageCap }.into())
+    } else if type_id == TypeId::of::<TaskBufferPageCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): TaskBufferPageCap }.into())
     } else {
         arch::cap::upgrade_any(ptr, type_id)
     }
@@ -49,6 +50,8 @@ pub fn drop_any(any: ManagedArcAny) {
         any.into(): TaskCap;
     } else if any.is::<RawPageCap>() {
         any.into(): RawPageCap;
+    } else if any.is::<TaskBufferPageCap>() {
+        any.into(): TaskBufferPageCap;
     } else {
         arch::cap::drop_any(any);
     }

@@ -4,6 +4,7 @@ use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard, RwLock};
 use util::managed_arc::{ManagedWeakPool1Arc};
 use core::marker::{PhantomData};
 use core::any::{Any};
+use core::mem;
 use super::{PageDescriptor, PageCap};
 use cap::{UntypedDescriptor, SetDefault};
 
@@ -11,6 +12,8 @@ pub const PAGE_LENGTH: usize = BASE_PAGE_LENGTH;
 
 impl<T: SetDefault + Any> PageCap<T> {
     pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
+        assert!(mem::size_of::<T>() <= PAGE_LENGTH);
+
         let mut arc: Option<Self> = None;
 
         let start_paddr = unsafe { untyped.allocate(BASE_PAGE_LENGTH, BASE_PAGE_LENGTH) };

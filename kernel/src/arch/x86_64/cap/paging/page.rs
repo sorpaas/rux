@@ -2,10 +2,14 @@ use common::*;
 use arch::paging::{BASE_PAGE_LENGTH};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard, RwLock};
 use util::managed_arc::{ManagedWeakPool1Arc};
+use core::marker::{PhantomData};
+use core::any::{Any};
 use super::{PageDescriptor, PageCap};
-use cap::{UntypedDescriptor};
+use cap::{UntypedDescriptor, SetDefault};
 
-impl PageCap {
+pub const PAGE_LENGTH: usize = BASE_PAGE_LENGTH;
+
+impl<T: SetDefault + Any> PageCap<T> {
     pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
         let mut arc: Option<Self> = None;
 
@@ -17,15 +21,14 @@ impl PageCap {
 
         unsafe {
             untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
-                let mut desc = PageDescriptor {
+                let mut desc = PageDescriptor::<T> {
                     mapped_weak_pool: mapped_weak_pool,
                     start_paddr: start_paddr,
                     next: next_child,
+                    _marker: PhantomData
                 };
 
-                for raw in desc.write().iter_mut() {
-                    *raw = 0x0;
-                }
+                desc.write().set_default();
 
                 arc = Some(unsafe {
                     Self::new(paddr, RwLock::new(desc))
@@ -38,12 +41,12 @@ impl PageCap {
         arc.unwrap()
     }
 
-    pub fn length() -> usize {
+    pub const fn length() -> usize {
         BASE_PAGE_LENGTH
     }
 }
 
-impl PageDescriptor {
+impl<T: SetDefault + Any> PageDescriptor<T> {
     pub fn start_paddr(&self) -> PAddr {
         self.start_paddr
     }
@@ -52,15 +55,15 @@ impl PageDescriptor {
         BASE_PAGE_LENGTH
     }
 
-    fn page_object(&self) -> MemoryObject<[u8; BASE_PAGE_LENGTH]> {
+    fn page_object(&self) -> MemoryObject<T> {
         unsafe { MemoryObject::new(self.start_paddr) }
     }
 
-    pub fn read(&self) -> UniqueReadGuard<[u8; BASE_PAGE_LENGTH]> {
+    pub fn read(&self) -> UniqueReadGuard<T> {
         unsafe { UniqueReadGuard::new(self.page_object()) }
     }
 
-    pub fn write(&mut self) -> UniqueWriteGuard<[u8; BASE_PAGE_LENGTH]> {
+    pub fn write(&mut self) -> UniqueWriteGuard<T> {
         unsafe { UniqueWriteGuard::new(self.page_object()) }
     }
 }

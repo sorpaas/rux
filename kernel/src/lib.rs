@@ -52,7 +52,7 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo};
-use cap::{UntypedCap, CPoolCap, PageCap, TopPageTableCap, TaskCap};
+use cap::{UntypedCap, CPoolCap, RawPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
 use util::{MemoryObject};
 use core::any::{Any, TypeId};
@@ -91,9 +91,11 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
                 use core::cmp::{min};
                 log!("mapping from: 0x{:x}", next_page_vaddr);
 
-                let page_cap = PageCap::retype_from(untyped.write().deref_mut());
+                let page_cap = RawPageCap::retype_from(untyped.write().deref_mut());
                 cpool.read().downgrade_free(&page_cap);
-                rinit_pml4.map(next_page_vaddr, &page_cap, untyped, cpool);
+                rinit_pml4.map(next_page_vaddr, &page_cap,
+                               untyped.write().deref_mut(),
+                               cpool.write().deref_mut());
 
                 let mut page = page_cap.write();
                 let page_length = page.length();
@@ -110,11 +112,13 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     }
 
     log!("mapping the rinit stack ...");
-    let mut rinit_stack_page = PageCap::retype_from(untyped.write().deref_mut());
+    let mut rinit_stack_page = RawPageCap::retype_from(untyped.write().deref_mut());
     cpool.read().downgrade_free(&rinit_stack_page);
-    rinit_pml4.map(rinit_stack_vaddr, &rinit_stack_page, untyped, cpool);
+    rinit_pml4.map(rinit_stack_vaddr, &rinit_stack_page,
+                   untyped.write().deref_mut(),
+                   cpool.write().deref_mut());
 
-    (rinit_pml4, VAddr::from(rinit_entry), rinit_stack_vaddr + (PageCap::length() - 4))
+    (rinit_pml4, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH - 4))
 }
 
 #[no_mangle]

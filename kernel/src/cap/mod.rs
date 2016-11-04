@@ -5,12 +5,26 @@ mod task;
 pub use self::untyped::{UntypedDescriptor, UntypedCap};
 pub use self::cpool::{CPoolDescriptor, CPoolCap};
 pub use self::task::{TaskDescriptor, TaskCap};
-pub use arch::cap::{TopPageTableCap, PageCap};
+pub use arch::cap::{TopPageTableCap, PageCap, PAGE_LENGTH};
 
 use arch;
 use common::*;
 use core::any::{TypeId};
 use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny, ManagedArc};
+
+pub type RawPageCap = PageCap<[u8; PAGE_LENGTH]>;
+
+pub trait SetDefault {
+    fn set_default(&mut self);
+}
+
+impl SetDefault for [u8; 0x1000] {
+    fn set_default(&mut self) {
+        for raw in self.iter_mut() {
+            *raw = 0x0;
+        }
+    }
+}
 
 pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
     if type_id == TypeId::of::<CPoolCap>() {
@@ -19,6 +33,8 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
         Some(unsafe { ManagedArc::from_ptr(ptr): UntypedCap }.into())
     } else if type_id == TypeId::of::<TaskCap>() {
         Some(unsafe { ManagedArc::from_ptr(ptr): TaskCap }.into())
+    } else if type_id == TypeId::of::<RawPageCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): RawPageCap }.into())
     } else {
         arch::cap::upgrade_any(ptr, type_id)
     }
@@ -31,6 +47,8 @@ pub fn drop_any(any: ManagedArcAny) {
         any.into(): UntypedCap;
     } else if any.is::<TaskCap>() {
         any.into(): TaskCap;
+    } else if any.is::<RawPageCap>() {
+        any.into(): RawPageCap;
     } else {
         arch::cap::drop_any(any);
     }

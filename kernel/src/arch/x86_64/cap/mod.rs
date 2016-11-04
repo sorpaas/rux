@@ -4,7 +4,8 @@ pub use self::paging::{PML4Descriptor, PML4Cap,
                        PDPTDescriptor, PDPTCap,
                        PDDescriptor, PDCap,
                        PTDescriptor, PTCap,
-                       PageDescriptor, PageCap};
+                       PageDescriptor, PageCap,
+                       PAGE_LENGTH};
 
 pub type TopPageTableCap = PML4Cap;
 
@@ -21,8 +22,6 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
         Some(unsafe { ManagedArc::from_ptr(ptr): PDCap }.into())
     } else if type_id == TypeId::of::<PTCap>() {
         Some(unsafe { ManagedArc::from_ptr(ptr): PTCap }.into())
-    } else if type_id == TypeId::of::<PageCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): PageCap }.into())
     } else {
         None
     }
@@ -37,8 +36,6 @@ pub fn drop_any(any: ManagedArcAny) {
         any.into(): PDCap;
     } else if any.is::<PTCap>() {
         any.into(): PTCap;
-    } else if any.is::<PageCap>() {
-        any.into(): PageCap;
     } else {
         panic!();
     }

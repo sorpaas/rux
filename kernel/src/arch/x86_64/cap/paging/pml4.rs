@@ -5,8 +5,9 @@ use arch::paging::{BASE_PAGE_LENGTH, PML4, PML4Entry, pml4_index};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard, RwLock};
 use util::managed_arc::{ManagedWeakPool1Arc};
 use super::{PML4Descriptor, PML4Cap, PDPTCap, PDCap, PTCap, PageCap};
-use cap::{self, UntypedCap, UntypedDescriptor, CPoolCap};
+use cap::{self, UntypedCap, UntypedDescriptor, CPoolDescriptor, CPoolCap, SetDefault};
 use core::ops::{Deref, DerefMut};
+use core::any::{Any};
 
 impl PML4Cap {
     pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
@@ -54,17 +55,16 @@ impl PML4Cap {
         current[index] = PML4Entry::new(sub_desc.start_paddr(), PML4_P | PML4_RW | PML4_US);
     }
 
-    pub fn map(&mut self, vaddr: VAddr, page: &PageCap,
-               untyped: &mut UntypedCap, cpool: &mut CPoolCap) {
+    pub fn map<T: SetDefault + Any>(&mut self, vaddr: VAddr, page: &PageCap<T>,
+                                    untyped: &mut UntypedDescriptor, cpool: &mut CPoolDescriptor) {
         use arch::paging::{pml4_index, pdpt_index, pd_index, pt_index,
                            PML4Entry, PDPTEntry, PDEntry, PTEntry};
-        let cpool = cpool.read();
 
         let mut pdpt_cap: PDPTCap = {
             let index = pml4_index(vaddr);
 
             if !{ self.read().read()[index] }.is_present() {
-                let pdpt_cap = PDPTCap::retype_from(untyped.write().deref_mut());
+                let pdpt_cap = PDPTCap::retype_from(untyped);
                 self.map_pdpt(index, &pdpt_cap);
                 cpool.downgrade_free(&pdpt_cap);
             }
@@ -94,7 +94,7 @@ impl PML4Cap {
             let index = pdpt_index(vaddr);
 
             if !{ pdpt_cap.read().read()[index] }.is_present() {
-                let pd_cap = PDCap::retype_from(untyped.write().deref_mut());
+                let pd_cap = PDCap::retype_from(untyped);
                 pdpt_cap.map_pd(index, &pd_cap);
                 cpool.downgrade_free(&pd_cap);
             }
@@ -124,7 +124,7 @@ impl PML4Cap {
             let index = pd_index(vaddr);
 
             if !{ pd_cap.read().read()[index] }.is_present() {
-                let pt_cap = PTCap::retype_from(untyped.write().deref_mut());
+                let pt_cap = PTCap::retype_from(untyped);
                 pd_cap.map_pt(index, &pt_cap);
                 cpool.downgrade_free(&pt_cap);
             }

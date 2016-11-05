@@ -1,10 +1,12 @@
+
 #[lang="panic_fmt"]
 #[no_mangle]
 pub extern "C" fn rust_begin_unwind(args: ::core::fmt::Arguments, file: &str, line: usize) -> !
 {
-	// 'args' will print to the formatted string passed to panic!
-	// log!("file='{}', line={} :: {}", file, line, args);
-	loop {}
+    // 'args' will print to the formatted string passed to panic!
+    use core::fmt::Write;
+    let _ = write!(&mut ::PrintWriter::new(), "file='{}', line={} :: {}", file, line, args);
+    loop {}
 }
 
 #[allow(non_camel_case_types)]

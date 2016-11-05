@@ -52,7 +52,7 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo};
-use cap::{UntypedCap, CPoolCap, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
+use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
 use abi::{SystemCall, TaskBuffer};
 use util::{MemoryObject};
@@ -130,11 +130,10 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH - 4))
 }
 
-fn handle_system_call(call: &mut SystemCall) {
+fn handle_system_call(call: &mut SystemCall, cpool: &CPoolDescriptor) {
     match call {
         &mut SystemCall::Print {
-            request: ref request,
-            response: ref response,
+            request: ref request
         } => {
             use core::str;
             let buffer = request.0.clone();
@@ -142,9 +141,30 @@ fn handle_system_call(call: &mut SystemCall) {
             let s = str::from_utf8(slice).unwrap();
             log!("Userspace print: {}", s);
         },
-        any => {
-            log!("Not yet handled system call: {:?}", any);
-        }
+        &mut SystemCall::CPoolListDebug => {
+            for i in 0..256 {
+                let arc = cpool.upgrade_any(i);
+                if arc.is_some() {
+                    let arc = arc.unwrap();
+                    if arc.is::<CPoolCap>() {
+                        log!("CPool index {} => {:?}", i, arc.into(): CPoolCap);
+                    } else if arc.is::<UntypedCap>() {
+                        log!("CPool index {} => {:?}", i, arc.into(): UntypedCap);
+                    } else if arc.is::<TaskCap>() {
+                        log!("CPool index {} => {:?}", i, arc.into(): TaskCap);
+                    } else if arc.is::<RawPageCap>() {
+                        log!("CPool index {} => {:?}", i, arc.into(): RawPageCap);
+                    } else if arc.is::<TaskBufferPageCap>() {
+                        log!("CPool index {} => {:?}", i, arc.into(): TaskBufferPageCap);
+                    } else if arc.is::<TopPageTableCap>() {
+                        log!("CPool index {} => {:?}", i, arc.into(): TopPageTableCap);
+                    } else {
+                        log!("CPool index {} (arch specific) => {:?}", i, arc);
+                        cap::drop_any(arc);
+                    }
+                }
+            }
+        },
     }
 }
 
@@ -206,8 +226,10 @@ pub fn kmain(archinfo: InitInfo)
     log!("hello, world!");
     while true {
         rinit_task.switch_to();
+        let cpool = rinit_task.upgrade_cpool();
         let buffer = rinit_task.upgrade_buffer();
-        handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap());
+        handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
+                           cpool.as_ref().unwrap().read().deref());
     }
     
     loop {}

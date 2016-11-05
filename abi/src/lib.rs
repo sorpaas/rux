@@ -19,13 +19,9 @@ pub enum CapSendMessage {
 
 #[derive(Debug, Clone)]
 pub enum SystemCall {
-    CPoolDebug {
-        request: usize,
-        response: Option<Result<(), ()>>,
-    },
+    CPoolListDebug,
     Print {
-        request: ([u8; 32], usize),
-        response: Option<Result<(), ()>>,
+        request: ([u8; 32], usize)
     },
 }
 

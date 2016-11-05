@@ -15,6 +15,7 @@ struct B(A);
 fn start(_argc: isize, _argv: *const *const u8) {
     system::set_task_buffer(0x80001000);
     system_print!("hello: {}", "a value");
+    system::cpool_list_debug();
     loop {};
 }
 

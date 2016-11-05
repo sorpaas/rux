@@ -8,7 +8,7 @@ extern crate abi;
 pub mod unwind;
 mod call;
 
-pub use self::call::{set_task_buffer};
+pub use self::call::{set_task_buffer, cpool_list_debug};
 
 use core::fmt;
 

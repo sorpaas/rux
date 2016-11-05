@@ -1,17 +1,13 @@
 use abi::{SystemCall, TaskBuffer};
 
-pub fn print(buffer: [u8; 32], size: usize) -> Result<(), ()> {
+pub fn print(buffer: [u8; 32], size: usize) {
     let result = system_call(SystemCall::Print {
-        request: (buffer, size),
-        response: None,
+        request: (buffer, size)
     });
-    match result {
-        SystemCall::Print {
-            request: _,
-            response: res,
-        } => return res.unwrap(),
-        _ => panic!(),
-    };
+}
+
+pub fn cpool_list_debug() {
+    system_call(SystemCall::CPoolListDebug);
 }
 
 static mut TASK_BUFFER_ADDR: Option<usize> = None;

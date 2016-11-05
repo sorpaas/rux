@@ -55,7 +55,7 @@ pub struct ManagedArc<T> {
 
 impl<T> fmt::Debug for ManagedArc<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ManagedArc {{ ptr: 0x{:x} }}", self.ptr)
+        write!(f, "{}(0x{:x})", unsafe { ::core::intrinsics::type_name::<Self>() }, self.ptr)
     }
 }
 

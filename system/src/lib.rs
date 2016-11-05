@@ -5,30 +5,59 @@
 extern crate rlibc;
 extern crate abi;
 
-pub use abi::{CapSystemCall, CapSendMessage, TaskBuffer, SystemCallRequest};
-
 pub mod unwind;
-pub mod debug;
+mod call;
 
-pub fn system_call(message: CapSystemCall) {
-    unsafe {
-        let buffer = unsafe { &mut *(0x80001000 as *mut TaskBuffer) };
-        let hello = "hello";
-        let mut str_buffer: [u8; 32] = [0; 32];
-        for (i, u) in hello.as_bytes().iter().enumerate() {
-            str_buffer[i] = *u;
+pub use self::call::{set_task_buffer};
+
+use core::fmt;
+
+pub struct PrintWriter {
+    buffer: [u8; 32],
+    size: usize,
+}
+
+impl PrintWriter {
+    pub fn new() -> Self {
+        PrintWriter {
+            buffer: [0u8; 32],
+            size: 0,
         }
-        buffer.request = Some(SystemCallRequest::Print(str_buffer, hello.len()));
-        system_call_raw()
+    }
+
+    pub fn flush(&mut self) {
+        if self.size > 0 {
+            call::print(self.buffer.clone(), self.size);
+            self.buffer = [0u8; 32];
+            self.size = 0;
+        }
     }
 }
 
-unsafe fn system_call_raw() {
-    unsafe {
-        asm!("int 80h"
-             ::
-             : "rax", "rbx", "rcx", "rdx",
-               "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
-             : "volatile", "intel");
+impl fmt::Write for PrintWriter {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for u in s.as_bytes().iter() {
+            self.buffer[self.size] = *u;
+            self.size += 1;
+
+            if self.size >= 32 {
+                self.flush();
+            }
+        }
+        Result::Ok(())
     }
+}
+
+impl Drop for PrintWriter {
+    fn drop(&mut self) {
+        self.flush();
+    }
+}
+
+#[macro_export]
+macro_rules! system_print {
+    ( $($arg:tt)* ) => ({
+        use core::fmt::Write;
+        let _ = write!(&mut $crate::PrintWriter::new(), $($arg)*);
+    })
 }

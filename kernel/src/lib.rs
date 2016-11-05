@@ -54,6 +54,7 @@ use common::*;
 use arch::{InitInfo};
 use cap::{UntypedCap, CPoolCap, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
+use abi::{SystemCall, TaskBuffer};
 use util::{MemoryObject};
 use core::any::{Any, TypeId};
 
@@ -129,6 +130,24 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH - 4))
 }
 
+fn handle_system_call(call: &mut SystemCall) {
+    match call {
+        &mut SystemCall::Print {
+            request: ref request,
+            response: ref response,
+        } => {
+            use core::str;
+            let buffer = request.0.clone();
+            let slice = &buffer[0..request.1];
+            let s = str::from_utf8(slice).unwrap();
+            log!("Userspace print: {}", s);
+        },
+        any => {
+            log!("Not yet handled system call: {:?}", any);
+        }
+    }
+}
+
 #[no_mangle]
 pub fn kmain(archinfo: InitInfo)
 {
@@ -188,7 +207,7 @@ pub fn kmain(archinfo: InitInfo)
     while true {
         rinit_task.switch_to();
         let buffer = rinit_task.upgrade_buffer();
-        log!("Request: {:?}", buffer.as_ref().unwrap().read().read().deref());
+        handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap());
     }
     
     loop {}

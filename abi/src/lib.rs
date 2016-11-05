@@ -17,19 +17,25 @@ pub enum CapSendMessage {
     TCBYield
 }
 
-#[derive(Debug)]
-pub enum SystemCallRequest {
-    CPoolDebug(usize),
-    Print([u8; 32], usize),
+#[derive(Debug, Clone)]
+pub enum SystemCall {
+    CPoolDebug {
+        request: usize,
+        response: Option<Result<(), ()>>,
+    },
+    Print {
+        request: ([u8; 32], usize),
+        response: Option<Result<(), ()>>,
+    },
 }
 
 #[derive(Debug)]
 pub struct TaskBuffer {
-    pub request: Option<SystemCallRequest>
+    pub call: Option<SystemCall>
 }
 
 impl SetDefault for TaskBuffer {
     fn set_default(&mut self) {
-        self.request = None;
+        self.call = None;
     }
 }

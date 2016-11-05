@@ -58,12 +58,27 @@ use abi::{SystemCall, TaskBuffer};
 use util::{MemoryObject};
 use core::any::{Any, TypeId};
 
+#[cfg(any(target_arch = "x86_64"))]
+pub unsafe fn outportb(port: u16, val: u8)
+{
+    asm!("outb %al, %dx" : : "{dx}"(port), "{al}"(val));
+}
+
+#[cfg(any(target_arch = "x86_64"))]
+pub unsafe fn inportb(port: u16) -> u8
+{
+    let ret: u8;
+    asm!("inb %dx, %al" : "={ax}"(ret): "{dx}"(port));
+    ret
+}
+
 fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &mut UntypedCap) -> (TopPageTableCap, TaskBufferPageCap, VAddr, VAddr) {
     use elf::{ElfBinary};
 
     let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
-    let rinit_buffer_vaddr = VAddr::from(0x80001000: usize);
-    let rinit_vga_vaddr = VAddr::from(0x80002000: usize);
+    let rinit_stack_size = 4;
+    let rinit_buffer_vaddr = VAddr::from(0x90001000: usize);
+    let rinit_vga_vaddr = VAddr::from(0x90002000: usize);
     let mut rinit_entry: u64 = 0x0;
 
     let mut rinit_pml4 = TopPageTableCap::retype_from(untyped.write().deref_mut());
@@ -115,11 +130,13 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     }
 
     log!("mapping the rinit stack ...");
-    let mut rinit_stack_page = RawPageCap::retype_from(untyped.write().deref_mut());
-    cpool.read().downgrade_free(&rinit_stack_page);
-    rinit_pml4.map(rinit_stack_vaddr, &rinit_stack_page,
-                   untyped.write().deref_mut(),
-                   cpool.write().deref_mut());
+    for i in 0..rinit_stack_size {
+        let mut rinit_stack_page = RawPageCap::retype_from(untyped.write().deref_mut());
+        cpool.read().downgrade_free(&rinit_stack_page);
+        rinit_pml4.map(rinit_stack_vaddr + i * PAGE_LENGTH, &rinit_stack_page,
+                       untyped.write().deref_mut(),
+                       cpool.write().deref_mut());
+    }
 
     log!("mapping the rinit task buffer ...");
     let mut rinit_buffer_page = TaskBufferPageCap::retype_from(untyped.write().deref_mut());
@@ -135,7 +152,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
                    untyped.write().deref_mut(),
                    cpool.write().deref_mut());
 
-    (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH - 4))
+    (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH * rinit_stack_size - 4))
 }
 
 fn handle_system_call(call: &mut SystemCall, cpool: &CPoolDescriptor) {
@@ -173,6 +190,27 @@ fn handle_system_call(call: &mut SystemCall, cpool: &CPoolDescriptor) {
                 }
             }
         },
+        &mut SystemCall::RetypeCPool {
+            request: ref request,
+        } => {
+            let source: Option<UntypedCap> = cpool.upgrade(request.0);
+            if source.is_some() {
+                let source = source.unwrap();
+                let target = CPoolCap::retype_from(source.write().deref_mut());
+                let result = cpool.downgrade_at(&target, request.1);
+            }
+        },
+        &mut SystemCall::Inportb {
+            request: ref request,
+            response: ref mut response,
+        } => {
+            *response = Some(unsafe { inportb(*request) });
+        },
+        &mut SystemCall::Outportb {
+            request: ref request,
+        } => {
+            unsafe { outportb(request.0, request.1) };
+        }
     }
 }
 

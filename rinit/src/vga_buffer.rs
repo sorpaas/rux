@@ -1,6 +1,19 @@
 use core::ptr::Unique;
 use core::fmt::{self, Write};
 use spin::Mutex;
+use system;
+
+fn move_cursor(column: usize, row: usize) {
+    let crtc_adr : u16 = 0x3D4;
+    let offset : u16 = (column + row * 80) as u16;
+
+    unsafe {
+        system::outportb(crtc_adr + 0, 14);
+        system::outportb(crtc_adr + 1, (offset >> 8) as u8);
+        system::outportb(crtc_adr + 0, 15);
+        system::outportb(crtc_adr + 1, offset as u8);
+    }
+}
 
 #[allow(dead_code)]
 #[repr(u8)]
@@ -71,11 +84,11 @@ impl Writer {
                 };
                 self.column_position += 1;
 
-                // if (col + 1) >= BUFFER_WIDTH {
-                //     move_cursor(0, row + 1);
-                // } else {
-                //     move_cursor(col + 1, row);
-                // }
+                if (col + 1) >= BUFFER_WIDTH {
+                    move_cursor(0, row + 1);
+                } else {
+                    move_cursor(col + 1, row);
+                }
             }
         }
     }
@@ -98,7 +111,7 @@ impl Writer {
         let row = self.row_position;
         self.clear_row(row);
 
-        // move_cursor(0, row);
+        move_cursor(0, row);
     }
 
     fn clear_row(&mut self, row: usize) {
@@ -129,7 +142,7 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     column_position: 0,
     row_position: 0,
     color_code: ColorCode::new(Color::LightGreen, Color::Black),
-    buffer: unsafe { Unique::new(0x80002000 as *mut _) },
+    buffer: unsafe { Unique::new(0x90002000 as *mut _) },
 });
 
 pub fn clear_screen() {

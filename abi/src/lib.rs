@@ -23,6 +23,16 @@ pub enum SystemCall {
     Print {
         request: ([u8; 32], usize)
     },
+    Inportb {
+        request: u16,
+        response: Option<u8>
+    },
+    Outportb {
+        request: (u16, u8),
+    },
+    RetypeCPool {
+        request: (usize, usize),
+    },
 }
 
 #[derive(Debug)]

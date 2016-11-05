@@ -60,7 +60,6 @@ impl TaskRuntime {
         switch_to_raw(self.stack_pointer, self.instruction_pointer, self.cpu_flags);
 
         let exception = last_exception_return_value().unwrap();
-        log!("exception = {:?}", exception);
 
         self.instruction_pointer = exception.instruction_pointer;
         self.cpu_flags = exception.cpu_flags;

@@ -8,3 +8,6 @@ crate-type = ["staticlib"]
 
 [dependencies.system]
 path = "../system"
+
+[dependencies.spin]
+path = "../spin"

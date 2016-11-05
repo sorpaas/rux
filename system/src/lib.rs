@@ -1,9 +1,11 @@
 #![feature(lang_items)]
 #![feature(asm)]
+#![feature(const_fn)]
 #![no_std]
 
 extern crate rlibc;
 extern crate abi;
+extern crate spin;
 
 pub mod unwind;
 mod call;

@@ -8,3 +8,6 @@ version = "1.0"
 
 [dependencies.abi]
 path = "../abi"
+
+[dependencies.spin]
+path = "../spin"

@@ -1,4 +1,5 @@
 use abi::{SystemCall, TaskBuffer};
+use spin::{Mutex};
 
 pub fn print(buffer: [u8; 32], size: usize) {
     let result = system_call(SystemCall::Print {
@@ -10,15 +11,15 @@ pub fn cpool_list_debug() {
     system_call(SystemCall::CPoolListDebug);
 }
 
-static mut TASK_BUFFER_ADDR: Option<usize> = None;
+static TASK_BUFFER_ADDR: Mutex<Option<usize>> = Mutex::new(None);
 
 pub fn set_task_buffer(addr: usize) {
-    unsafe { TASK_BUFFER_ADDR = Some(addr); }
+    *TASK_BUFFER_ADDR.lock() = Some(addr);
 }
 
 fn system_call(message: SystemCall) -> SystemCall {
     unsafe {
-        let buffer = unsafe { &mut *(TASK_BUFFER_ADDR.unwrap() as *mut TaskBuffer) };
+        let buffer = unsafe { &mut *(TASK_BUFFER_ADDR.lock().unwrap() as *mut TaskBuffer) };
         buffer.call = Some(message);
         system_call_raw();
         buffer.call.take().unwrap()

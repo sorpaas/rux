@@ -12,11 +12,13 @@ pub const PAGE_LENGTH: usize = BASE_PAGE_LENGTH;
 
 impl<T: SetDefault + Any> PageCap<T> {
     pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
+        unsafe { Self::bootstrap(unsafe { untyped.allocate(BASE_PAGE_LENGTH, BASE_PAGE_LENGTH) }, untyped) }
+    }
+
+    pub unsafe fn bootstrap(start_paddr: PAddr, untyped: &mut UntypedDescriptor) -> Self {
         assert!(mem::size_of::<T>() <= PAGE_LENGTH);
 
         let mut arc: Option<Self> = None;
-
-        let start_paddr = unsafe { untyped.allocate(BASE_PAGE_LENGTH, BASE_PAGE_LENGTH) };
 
         let mapped_weak_pool = unsafe { ManagedWeakPool1Arc::create(
             untyped.allocate(ManagedWeakPool1Arc::inner_length(),

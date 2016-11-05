@@ -63,6 +63,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
 
     let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
     let rinit_buffer_vaddr = VAddr::from(0x80001000: usize);
+    let rinit_vga_vaddr = VAddr::from(0x80002000: usize);
     let mut rinit_entry: u64 = 0x0;
 
     let mut rinit_pml4 = TopPageTableCap::retype_from(untyped.write().deref_mut());
@@ -120,10 +121,17 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
                    untyped.write().deref_mut(),
                    cpool.write().deref_mut());
 
-    log!("mapping the rinit buffer ...");
+    log!("mapping the rinit task buffer ...");
     let mut rinit_buffer_page = TaskBufferPageCap::retype_from(untyped.write().deref_mut());
     cpool.read().downgrade_free(&rinit_buffer_page);
     rinit_pml4.map(rinit_buffer_vaddr, &rinit_buffer_page,
+                   untyped.write().deref_mut(),
+                   cpool.write().deref_mut());
+
+    log!("mapping the rinit vga buffer ...");
+    let mut rinit_vga_page = unsafe { RawPageCap::bootstrap(PAddr::from(0xb8000: usize), untyped.write().deref_mut()) };
+    cpool.read().downgrade_free(&rinit_vga_page);
+    rinit_pml4.map(rinit_vga_vaddr, &rinit_vga_page,
                    untyped.write().deref_mut(),
                    cpool.write().deref_mut());
 

@@ -4,7 +4,7 @@ mod interrupt;
 mod segmentation;
 
 pub use self::paging::{KERNEL_PML4, KERNEL_PDPT, KERNEL_PD,
-                       OBJECT_POOL_PT, OBJECT_POOL_START_VADDR};
+                       OBJECT_POOL_PT, OBJECT_POOL_START_VADDR, APIC_PAGE};
 pub use self::segmentation::{set_kernel_stack};
 
 use ::{kmain};
@@ -18,6 +18,7 @@ use util::{block_count, align_up};
 use core::mem;
 use core::slice::{self, Iter};
 use core::ptr::{Unique};
+use core::ops::{Deref};
 
 use common::{PAddr, VAddr, MemoryRegion};
 
@@ -140,6 +141,8 @@ pub fn kinit() {
     paging::init(&mut alloc_region);
     segmentation::init();
     interrupt::init();
+
+    log!("apic: {:?}", APIC_PAGE.lock().deref());
 
     archinfo.push_free_region(alloc_region);
     kmain(archinfo);

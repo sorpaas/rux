@@ -5,6 +5,7 @@ use arch::{kernel_start_paddr, kernel_start_vaddr,
 use arch::paging::{PTEntry, PML4, PDPT, PD, PT,
                    pml4_index, pdpt_index, pd_index, pt_index,
                    BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH};
+use arch::interrupt::{APICPage};
 use arch::{KERNEL_BASE};
 use common::{PAddr, VAddr, MemoryRegion};
 use util::{block_count, align_up, ExternReadonlyObject, ExternMutex};
@@ -29,6 +30,8 @@ const INITIAL_ALLOC_KERNEL_PT_START_OFFSET: usize = 0x4000;
 pub const OBJECT_POOL_START_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xe00000);
 pub const OBJECT_POOL_SIZE: usize = 511;
 pub const OBJECT_POOL_PT_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xfff000);
+
+pub static APIC_PAGE: ExternMutex<APICPage> = unsafe { ExternMutex::new(None) };
 
 // Variables
 static INITIAL_PD: ExternMutex<PD> =
@@ -144,6 +147,28 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
     pt_unique
 }
 
+fn alloc_apic(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
+    use arch::paging::{PT_P, PT_RW, PT_PWT, PT_PCD};
+    use x86::shared::msr;
+    use core::mem;
+
+    let apic_msr = unsafe { msr::rdmsr(0x1B) };
+    let apic_base = (apic_msr >> 12) << 3;
+    assert!(apic_msr & (0x1 << 11) == (0x1 << 11));
+    log!("apic base address: 0x{:x}", apic_base);
+
+    assert!(mem::size_of::<APICPage>() == 1024);
+
+    let paddr = PAddr::from(apic_base);
+    let vaddr = kernel_start_vaddr() + (offset_size * BASE_PAGE_LENGTH);
+
+    log!("apic allocated at 0x{:x}", vaddr);
+
+    pt[pt_index(vaddr)] = PTEntry::new(paddr, PT_P | PT_RW | PT_PWT | PT_PCD);
+
+    unsafe { APIC_PAGE.bootstrap(vaddr.into(): usize as *const APICPage) };
+}
+
 fn alloc_kernel_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
     use arch::paging::{PT_P, PT_RW};
     
@@ -176,7 +201,7 @@ fn alloc_kernel_pts(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAddr) {
 
     log!("guard_page_index: {}", guard_page_index);
 
-    for i in 0..kernel_page_size {
+    for i in 0..(kernel_page_size + 1) {
         if i % 512 == 0 {
             pd[pd_index(kernel_start_vaddr() + i * BASE_PAGE_LENGTH)] = PDEntry::new(region.start_paddr(), PD_P | PD_RW);
             let npaddr = region.start_paddr() + BASE_PAGE_LENGTH;
@@ -192,6 +217,8 @@ fn alloc_kernel_pts(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAddr) {
         
         if i == guard_page_index {
             alloc_kernel_guard_page(unsafe { pt_unique.get_mut() }, i % 512, alloc_base);
+        } else if i == kernel_page_size {
+            alloc_apic(unsafe { pt_unique.get_mut() }, i % 512, alloc_base);
         } else {
             alloc_kernel_page(unsafe { pt_unique.get_mut() }, i % 512, alloc_base);
         }

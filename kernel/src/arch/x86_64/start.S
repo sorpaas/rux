@@ -49,15 +49,15 @@ start:
 	mov %eax, multiboot_sig - KERNEL_BASE
 	mov %ebx, multiboot_ptr - KERNEL_BASE
 	
-	/* 2. Ensure that the CPU support long mode */
-	mov $0x80000000, %eax
-	cpuid
-	/* - Check if CPUID supports the field we want to query */
-	cmp $0x80000001, %eax
-	jbe not64bitCapable
-	/* - Test the IA-32e bit */
-	mov $0x80000001, %eax
-	cpuid
+        /* 2. Ensure that the CPU support long mode */
+        mov $0x80000000, %eax
+        cpuid
+        /* - Check if CPUID supports the field we want to query */
+        cmp $0x80000001, %eax
+        jbe not64bitCapable
+        /* - Test the IA-32e bit */
+        mov $0x80000001, %eax
+        cpuid
         test $0x20000000, %edx /* bit 29 = TM1 */
         jz not64bitCapable
         test $0x00000200, %edx /* bit 9 = APIC */
@@ -92,22 +92,22 @@ start:
 
 
 not64bitCapable:
-	/* If the CPU isn't 64-bit capable, print a message to serial/b8000 then busy wait */
-	mov $0x3f8, %dx
-	mov $'N', %al ; outb %al, %dx
-	movw $0x100|'N', 0xb8000
-	mov $'o', %al ; outb %al, %dx
-	movw $0x100|'o', 0xb8002
-	mov $'t', %al ; outb %al, %dx
-	movw $0x100|'t', 0xb8004
-	mov $'6', %al ; outb %al, %dx
-	movw $0x100|'6', 0xb8006
-	mov $'4', %al ; outb %al, %dx
-	movw $0x100|'4', 0xb8008
+        /* If the CPU isn't 64-bit capable, print a message to serial/b8000 then busy wait */
+        mov $0x3f8, %dx
+        mov $'N', %al ; outb %al, %dx
+        movw $0x100|'N', 0xb8000
+        mov $'o', %al ; outb %al, %dx
+        movw $0x100|'o', 0xb8002
+        mov $'t', %al ; outb %al, %dx
+        movw $0x100|'t', 0xb8004
+        mov $'6', %al ; outb %al, %dx
+        movw $0x100|'6', 0xb8006
+        mov $'4', %al ; outb %al, %dx
+        movw $0x100|'4', 0xb8008
 	
 not64bitCapable.loop:
-	hlt
-	jmp not64bitCapable.loop
+        hlt
+        jmp not64bitCapable.loop
 .code64
 .globl start64
 start64:

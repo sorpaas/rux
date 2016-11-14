@@ -153,7 +153,7 @@ fn alloc_apic(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
     use core::mem;
 
     let apic_msr = unsafe { msr::rdmsr(0x1B) };
-    let apic_base = (apic_msr >> 12) << 3;
+    let apic_base = (apic_msr >> 12) * 0x1000;
     assert!(apic_msr & (0x1 << 11) == (0x1 << 11));
     log!("apic base address: 0x{:x}", apic_base);
 

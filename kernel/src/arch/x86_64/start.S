@@ -58,8 +58,10 @@ start:
 	/* - Test the IA-32e bit */
 	mov $0x80000001, %eax
 	cpuid
-	test $0x20000000, %edx /* bit 29 = */
-	jz not64bitCapable
+        test $0x20000000, %edx /* bit 29 = TM1 */
+        jz not64bitCapable
+        test $0x00000200, %edx /* bit 9 = APIC */
+        jz not64bitCapable
 	
 	/* 3. Set up state for long mode */
 	/* Enable:

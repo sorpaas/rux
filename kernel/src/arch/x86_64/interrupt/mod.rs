@@ -11,7 +11,7 @@ use common::*;
 use self::switch::{last_exception_return_value, switch_to_raw, Exception};
 
 pub use self::switch::{HandlerFunc};
-pub use self::apic::{APICPage, APICSlot};
+pub use self::apic::{LOCAL_APIC};
 
 macro_rules! fetch_message {
     ($t: ty) => {

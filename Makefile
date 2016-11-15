@@ -38,7 +38,7 @@ rinit: $(libcore)
 	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) rinit
 
 run: kernel rinit
-	@qemu-system-$(arch) -cpu qemu64 -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot
+	@qemu-system-$(arch) -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot
 
 debug: kernel rinit
 	@qemu-system-$(arch) -d int -no-reboot -s -S -kernel $(kernel) -initrd $(rinit) -serial stdio

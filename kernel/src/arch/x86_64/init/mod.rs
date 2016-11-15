@@ -4,7 +4,7 @@ mod interrupt;
 mod segmentation;
 
 pub use self::paging::{KERNEL_PML4, KERNEL_PDPT, KERNEL_PD,
-                       OBJECT_POOL_PT, OBJECT_POOL_START_VADDR, APIC_PAGE};
+                       OBJECT_POOL_PT, OBJECT_POOL_START_VADDR, APIC_PAGE_VADDR};
 pub use self::segmentation::{set_kernel_stack};
 
 use ::{kmain};
@@ -142,8 +142,10 @@ pub fn kinit() {
     segmentation::init();
     interrupt::init();
 
-    log!("apic: {:?}", APIC_PAGE.lock().deref());
-
     archinfo.push_free_region(alloc_region);
+
+    log!("Local APIC id: 0x{:x}", ::arch::interrupt::LOCAL_APIC.id());
+    log!("Local APIC version: 0x{:x}", ::arch::interrupt::LOCAL_APIC.version());
+
     kmain(archinfo);
 }

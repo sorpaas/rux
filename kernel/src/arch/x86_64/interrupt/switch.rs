@@ -153,6 +153,7 @@ macro_rules! return_error_to_raw_fn {
     )
 }
 
+return_to_raw_fn!(keyboard_return_to_raw, 0x41);
 return_to_raw_fn!(system_call_return_to_raw, 0x80);
 return_to_raw_fn!(debug_call_return_to_raw, 0x81);
 

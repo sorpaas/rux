@@ -11,7 +11,7 @@ use common::*;
 use self::switch::{last_exception_return_value, switch_to_raw, Exception};
 
 pub use self::switch::{HandlerFunc};
-pub use self::apic::{LOCAL_APIC};
+pub use self::apic::{LOCAL_APIC, IO_APIC};
 
 macro_rules! fetch_message {
     ($t: ty) => {
@@ -34,6 +34,8 @@ lazy_static! {
         idt.set_handler(0x80, switch::system_call_return_to_raw)
             .set_privilege_level(0x3);
         idt.set_handler(0x81, switch::debug_call_return_to_raw)
+            .set_privilege_level(0x3);
+        idt.set_handler(0x41, switch::keyboard_return_to_raw)
             .set_privilege_level(0x3);
 
         idt

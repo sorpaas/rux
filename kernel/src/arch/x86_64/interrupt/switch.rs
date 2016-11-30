@@ -93,6 +93,7 @@ pub unsafe extern "C" fn switch_to_raw_naked(stack_vaddr: u64, code_start: u64, 
           push r8
           push rcx
           push rdx
+          sti
           iretq"
          :: "{rax}"(data_seg), "{rbx}"(stack_vaddr), "{rcx}"(code_seg), "{rdx}"(code_start), "{r8}"(cpu_flags)
          : "rax", "rbx", "rcx", "rdx",

@@ -51,26 +51,12 @@ mod cap;
 use core::mem;
 use core::slice;
 use common::*;
-use arch::{InitInfo};
+use arch::{InitInfo, inportb, outportb};
 use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
 use abi::{SystemCall, TaskBuffer};
 use util::{MemoryObject};
 use core::any::{Any, TypeId};
-
-#[cfg(any(target_arch = "x86_64"))]
-pub unsafe fn outportb(port: u16, val: u8)
-{
-    asm!("outb %al, %dx" : : "{dx}"(port), "{al}"(val));
-}
-
-#[cfg(any(target_arch = "x86_64"))]
-pub unsafe fn inportb(port: u16) -> u8
-{
-    let ret: u8;
-    asm!("inb %dx, %al" : "={ax}"(ret): "{dx}"(port));
-    ret
-}
 
 fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &mut UntypedCap) -> (TopPageTableCap, TaskBufferPageCap, VAddr, VAddr) {
     use elf::{ElfBinary};

@@ -52,6 +52,20 @@ unsafe fn kernel_paddr_to_vaddr(addr: PAddr) -> VAddr {
 }
 
 
+#[cfg(any(target_arch = "x86_64"))]
+pub unsafe fn outportb(port: u16, val: u8)
+{
+    asm!("outb %al, %dx" : : "{dx}"(port), "{al}"(val));
+}
+
+#[cfg(any(target_arch = "x86_64"))]
+pub unsafe fn inportb(port: u16) -> u8
+{
+    let ret: u8;
+    asm!("inb %dx, %al" : "={ax}"(ret): "{dx}"(port));
+    ret
+}
+
 // Public interfaces
 pub use self::paging::{MemoryObject};
 pub use self::interrupt::{enable_interrupt, disable_interrupt, set_interrupt_handler,

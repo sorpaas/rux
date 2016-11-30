@@ -27,9 +27,10 @@ const INITIAL_ALLOC_KERNEL_PT_START_OFFSET: usize = 0x4000;
 
 // Below should be used AFTER switching to new page table structure.
 pub const OBJECT_POOL_START_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xe00000);
-pub const OBJECT_POOL_SIZE: usize = 510;
+pub const OBJECT_POOL_SIZE: usize = 509;
 pub const OBJECT_POOL_PT_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xfff000);
-pub const APIC_PAGE_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xffe000);
+pub const LOCAL_APIC_PAGE_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xffe000);
+pub const IO_APIC_PAGE_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xffd000);
 
 // Variables
 static INITIAL_PD: ExternMutex<PD> =
@@ -144,9 +145,14 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
             let apic_msr = unsafe { msr::rdmsr(0x1B) };
             let apic_base = PAddr::from((apic_msr >> 12) * 0x1000);
             // Mapping APIC Page
-            let apic_pt_index = pt_index(APIC_PAGE_VADDR);
-            log!("apic index: {}", apic_pt_index);
+            let apic_pt_index = pt_index(LOCAL_APIC_PAGE_VADDR);
             pt[apic_pt_index] = PTEntry::new(apic_base, PT_P | PT_RW | PT_PWT | PT_PCD);
+        }
+
+        {
+            let io_apic_base = PAddr::from(0xfec00000: u64);
+            let io_apic_pt_index = pt_index(IO_APIC_PAGE_VADDR);
+            pt[io_apic_pt_index] = PTEntry::new(io_apic_base, PT_P | PT_RW | PT_PWT | PT_PCD);
         }
     }
 

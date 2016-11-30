@@ -4,7 +4,8 @@ mod interrupt;
 mod segmentation;
 
 pub use self::paging::{KERNEL_PML4, KERNEL_PDPT, KERNEL_PD,
-                       OBJECT_POOL_PT, OBJECT_POOL_START_VADDR, APIC_PAGE_VADDR};
+                       OBJECT_POOL_PT, OBJECT_POOL_START_VADDR,
+                       LOCAL_APIC_PAGE_VADDR, IO_APIC_PAGE_VADDR};
 pub use self::segmentation::{set_kernel_stack};
 
 use ::{kmain};

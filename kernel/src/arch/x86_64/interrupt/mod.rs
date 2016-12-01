@@ -37,7 +37,9 @@ lazy_static! {
             .set_privilege_level(0x3);
         idt.set_handler(0x81, switch::debug_call_return_to_raw)
             .set_privilege_level(0x3);
-        idt.set_handler(0x41, switch::keyboard_return_to_raw)
+        idt.set_handler(0x21, switch::keyboard_return_to_raw)
+            .set_privilege_level(0x3);
+        idt.set_handler(0xFF, switch::spurious_return_to_raw)
             .set_privilege_level(0x3);
 
         idt

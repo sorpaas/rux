@@ -93,7 +93,6 @@ pub unsafe extern "C" fn switch_to_raw_naked(stack_vaddr: u64, code_start: u64, 
           push r8
           push rcx
           push rdx
-          sti
           iretq"
          :: "{rax}"(data_seg), "{rbx}"(stack_vaddr), "{rcx}"(code_seg), "{rdx}"(code_start), "{r8}"(cpu_flags)
          : "rax", "rbx", "rcx", "rdx",
@@ -154,6 +153,7 @@ macro_rules! return_error_to_raw_fn {
     )
 }
 
+return_to_raw_fn!(timer_return_to_raw, 0x40);
 return_to_raw_fn!(spurious_return_to_raw, 0xFF);
 return_to_raw_fn!(keyboard_return_to_raw, 0x21);
 return_to_raw_fn!(system_call_return_to_raw, 0x80);

@@ -41,6 +41,8 @@ lazy_static! {
             .set_privilege_level(0x3);
         idt.set_handler(0xFF, switch::spurious_return_to_raw)
             .set_privilege_level(0x3);
+        idt.set_handler(0x40, switch::timer_return_to_raw)
+            .set_privilege_level(0x3);
 
         idt
     };
@@ -57,7 +59,7 @@ impl Default for TaskRuntime {
     fn default() -> TaskRuntime {
         TaskRuntime {
             instruction_pointer: 0x0,
-            cpu_flags: 0b110,
+            cpu_flags: 0b1000000110,
             stack_pointer: 0x0
         }
     }

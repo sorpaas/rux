@@ -47,11 +47,15 @@ impl LocalAPIC {
         unsafe { self.write(0xF0, value) }
     }
 
+    pub fn eoi(&mut self) {
+        unsafe { self.write(0xB0, 0) }
+    }
+
     pub fn enable_timer(&mut self) {
         unsafe {
             self.write(0x3E0, 0x3);
-            self.write(0x380, 0x1000);
-            self.write(0x320, (1<<16) | 0x40);
+            self.write(0x380, 0x100);
+            self.write(0x320, (1<<17) | 0x40);
             log!("timer register is 0b{:b}", self.read(0x320));
         }
     }

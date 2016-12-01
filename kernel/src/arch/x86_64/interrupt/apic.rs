@@ -2,10 +2,12 @@ use common::*;
 use arch::init::{LOCAL_APIC_PAGE_VADDR, IO_APIC_PAGE_VADDR};
 use util::{Mutex};
 
+#[derive(Debug)]
 pub struct LocalAPIC {
     address: VAddr,
 }
 
+#[derive(Debug)]
 pub struct IOAPIC {
     address: VAddr,
 }
@@ -39,6 +41,23 @@ impl LocalAPIC {
 
     pub fn siv(&self) -> u32 {
         unsafe { self.read(0xF0) }
+    }
+
+    pub fn set_siv(&mut self, value: u32) {
+        unsafe { self.write(0xF0, value) }
+    }
+
+    pub fn enable_timer(&mut self) {
+        unsafe {
+            self.write(0x3E0, 0x3);
+            self.write(0x380, 0x1000);
+            self.write(0x320, (1<<16) | 0x40);
+            log!("timer register is 0b{:b}", self.read(0x320));
+        }
+    }
+
+    pub fn error_status(&self) -> u32 {
+        unsafe { self.read(0x280) }
     }
 }
 

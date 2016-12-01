@@ -143,6 +143,7 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
             use x86::shared::msr;
 
             let apic_msr = unsafe { msr::rdmsr(0x1B) };
+            assert!(apic_msr & (1<<11) == (1<<11));
             let apic_base = PAddr::from((apic_msr >> 12) * 0x1000);
             // Mapping APIC Page
             let apic_pt_index = pt_index(LOCAL_APIC_PAGE_VADDR);

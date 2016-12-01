@@ -67,6 +67,10 @@ pub unsafe fn io_wait() {
     outportb(0x80, 0)
 }
 
+pub fn enable_timer() {
+    interrupt::LOCAL_APIC.lock().enable_timer();
+}
+
 // Public interfaces
 pub use self::paging::{MemoryObject};
 pub use self::interrupt::{enable_interrupt, disable_interrupt, set_interrupt_handler,

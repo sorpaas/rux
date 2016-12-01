@@ -256,6 +256,7 @@ pub fn kmain(archinfo: InitInfo)
     log!("Rinit entry: {:?}", rinit_entry);
 
     log!("hello, world!");
+    arch::enable_timer();
     while true {
         rinit_task.switch_to();
         let cpool = rinit_task.upgrade_cpool();

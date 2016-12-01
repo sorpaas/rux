@@ -13,6 +13,4 @@ pub fn init() {
     }
 
     local_apic.set_siv(0x1FF);
-    log!("SIV is: 0x{:x}", local_apic.siv());
-    local_apic.enable_timer();
 }

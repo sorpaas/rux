@@ -75,6 +75,11 @@ impl TaskRuntime {
         self.cpu_flags = exception.cpu_flags;
         self.stack_pointer = exception.stack_pointer;
 
+        // Send EOI for timer
+        if (exception.exception_code == 0x40) {
+            LOCAL_APIC.lock().eoi();
+        }
+
         return (exception.exception_code, exception.error_code);
     }
 

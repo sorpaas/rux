@@ -145,12 +145,14 @@ pub fn kinit() {
 
     archinfo.push_free_region(alloc_region);
 
-    let local_apic = ::arch::interrupt::LOCAL_APIC.lock();
-    let io_apic = ::arch::interrupt::IO_APIC.lock();
-    log!("Local APIC id: 0x{:x}", local_apic.id());
-    log!("Local APIC version: 0x{:x}", local_apic.version());
-    log!("I/O APIC id: 0x{:x}", io_apic.id());
-    log!("I/O APIC version: 0x{:x}", io_apic.version());
+    {
+        let local_apic = ::arch::interrupt::LOCAL_APIC.lock();
+        let io_apic = ::arch::interrupt::IO_APIC.lock();
+        log!("Local APIC id: 0x{:x}", local_apic.id());
+        log!("Local APIC version: 0x{:x}", local_apic.version());
+        log!("I/O APIC id: 0x{:x}", io_apic.id());
+        log!("I/O APIC version: 0x{:x}", io_apic.version());
+    }
 
     kmain(archinfo);
 }

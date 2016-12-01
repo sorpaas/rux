@@ -10,10 +10,6 @@
  * its use, and the author takes no liability.
  */
 
-// x86 port IO 
-#[path = "io.rs"]
-mod x86_io;
-
 // Debug output channel (uses serial)
 #[path = "debug.rs"]
 pub mod debug;
@@ -64,6 +60,11 @@ pub unsafe fn inportb(port: u16) -> u8
     let ret: u8;
     asm!("inb %dx, %al" : "={ax}"(ret): "{dx}"(port));
     ret
+}
+
+#[cfg(any(target_arch = "x86_64"))]
+pub unsafe fn io_wait() {
+    outportb(0x80, 0)
 }
 
 // Public interfaces

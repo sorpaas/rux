@@ -2,6 +2,7 @@ mod idt;
 mod bit_field;
 mod dtables;
 mod apic;
+mod pic;
 
 #[macro_use]
 mod switch;
@@ -12,6 +13,7 @@ use self::switch::{last_exception_return_value, switch_to_raw, Exception};
 
 pub use self::switch::{HandlerFunc};
 pub use self::apic::{LOCAL_APIC, IO_APIC};
+pub use self::pic::{disable_pic};
 
 macro_rules! fetch_message {
     ($t: ty) => {

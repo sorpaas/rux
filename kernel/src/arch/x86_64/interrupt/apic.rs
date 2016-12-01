@@ -36,6 +36,10 @@ impl LocalAPIC {
     pub fn version(&self) -> u32 {
         unsafe { self.read(0x30) }
     }
+
+    pub fn siv(&self) -> u32 {
+        unsafe { self.read(0xF0) }
+    }
 }
 
 impl IOAPIC {

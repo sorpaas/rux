@@ -33,5 +33,7 @@ pub fn init() {
         io_apic.set_irq(i as u8, local_apic_id, 0x40 + i as u8);
     }
 
+    log!("SIV is: 0x{:x}", LOCAL_APIC.lock().siv());
+
     IDT.load();
 }

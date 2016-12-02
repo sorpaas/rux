@@ -3,15 +3,29 @@ use core::fmt::{self, Write};
 use spin::Mutex;
 use system;
 
+#[cfg(any(target_arch = "x86_64"))]
+pub unsafe fn outportb(port: u16, val: u8)
+{
+    asm!("outb %al, %dx" : : "{dx}"(port), "{al}"(val));
+}
+
+#[cfg(any(target_arch = "x86_64"))]
+pub unsafe fn inportb(port: u16) -> u8
+{
+    let ret: u8;
+    asm!("inb %dx, %al" : "={ax}"(ret): "{dx}"(port));
+    ret
+}
+
 fn move_cursor(column: usize, row: usize) {
     let crtc_adr : u16 = 0x3D4;
     let offset : u16 = (column + row * 80) as u16;
 
     unsafe {
-        system::outportb(crtc_adr + 0, 14);
-        system::outportb(crtc_adr + 1, (offset >> 8) as u8);
-        system::outportb(crtc_adr + 0, 15);
-        system::outportb(crtc_adr + 1, offset as u8);
+        outportb(crtc_adr + 0, 14);
+        outportb(crtc_adr + 1, (offset >> 8) as u8);
+        outportb(crtc_adr + 0, 15);
+        outportb(crtc_adr + 1, offset as u8);
     }
 }
 

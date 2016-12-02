@@ -11,7 +11,7 @@ use lazy_static;
 use common::*;
 use self::switch::{last_exception_return_value, switch_to_raw, ExceptionInfo};
 
-pub use self::switch::{HandlerFunc};
+pub use self::switch::{HandlerFunc, Registers};
 pub use self::apic::{LOCAL_APIC, IO_APIC};
 pub use self::pic::{disable_pic};
 
@@ -82,7 +82,8 @@ impl Exception {
 pub struct TaskRuntime {
     instruction_pointer: u64,
     cpu_flags: u64,
-    stack_pointer: u64
+    stack_pointer: u64,
+    registers: Registers
 }
 
 impl Default for TaskRuntime {
@@ -90,7 +91,8 @@ impl Default for TaskRuntime {
         TaskRuntime {
             instruction_pointer: 0x0,
             cpu_flags: 0b11001000000110,
-            stack_pointer: 0x0
+            stack_pointer: 0x0,
+            registers: Registers::default(),
         }
     }
 }
@@ -100,7 +102,9 @@ impl TaskRuntime {
         let code_seg: u64 = if mode_change { 0x28 | 0x3 } else { 0x8 | 0x0 };
         let data_seg: u64 = if mode_change { 0x30 | 0x3 } else { 0x10 | 0x0 };
 
+        switch::set_cur_registers(self.registers.clone());
         switch_to_raw(self.stack_pointer, self.instruction_pointer, self.cpu_flags, code_seg, data_seg);
+        self.registers = switch::cur_registers();
 
         let exception_info = last_exception_return_value().unwrap();
 

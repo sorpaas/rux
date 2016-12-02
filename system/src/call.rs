@@ -54,58 +54,12 @@ fn system_call(message: SystemCall) -> SystemCall {
     }
 }
 
-macro_rules! save_registers {
-    () => {
-        asm!("push rax
-              push rbx
-              push rcx
-              push rdx
-              push rbp
-              push rsi
-              push rdi
-              push r8
-              push r9
-              push r10
-              push r11
-              push r12
-              push r13
-              push r14
-              push r15
-              push rsp
-        " :::: "intel", "volatile");
-    }
-}
-
-macro_rules! restore_registers {
-    () => {
-        asm!("pop rsp
-              pop r15
-              pop r14
-              pop r13
-              pop r12
-              pop r11
-              pop r10
-              pop r9
-              pop r8
-              pop rdi
-              pop rsi
-              pop rbp
-              pop rdx
-              pop rcx
-              pop rbx
-              pop rax
-            " :::: "intel", "volatile");
-    }
-}
-
 unsafe fn system_call_raw() {
     unsafe {
-        save_registers!();
         asm!("int 80h"
              ::
              : "rax", "rbx", "rcx", "rdx",
                "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
              : "volatile", "intel");
-        restore_registers!();
     }
 }

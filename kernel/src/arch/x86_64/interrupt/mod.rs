@@ -15,37 +15,67 @@ pub use self::switch::{HandlerFunc};
 pub use self::apic::{LOCAL_APIC, IO_APIC};
 pub use self::pic::{disable_pic};
 
-macro_rules! fetch_message {
-    ($t: ty) => {
-        *({
-            let param: u64;
-            asm!("":"={r15}"(param));
+pub type InterruptVector = u64;
 
-            param
-        } as *const $t)
-    }
-}
+pub const TIMER_INTERRUPT_CODE: InterruptVector = 0x40;
+pub const SPURIOUS_INTERRUPT_CODE: InterruptVector = 0xFF;
+pub const KEYBOARD_INTERRUPT_CODE: InterruptVector = 0x21;
+pub const SYSTEM_CALL_INTERRUPT_CODE: InterruptVector = 0x80;
+pub const DEBUG_CALL_INTERRUPT_CODE: InterruptVector = 0x81;
 
-pub struct InterruptInfo {}
+return_to_raw_fn!(timer_return_to_raw, TIMER_INTERRUPT_CODE);
+return_to_raw_fn!(spurious_return_to_raw, SPURIOUS_INTERRUPT_CODE);
+return_to_raw_fn!(keyboard_return_to_raw, KEYBOARD_INTERRUPT_CODE);
+return_to_raw_fn!(system_call_return_to_raw, SYSTEM_CALL_INTERRUPT_CODE);
+return_to_raw_fn!(debug_call_return_to_raw, DEBUG_CALL_INTERRUPT_CODE);
 
 lazy_static! {
     pub static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
 
-        // idt.set_handler(0x0, handler!(divide_by_zero_handler));
-        idt.set_handler(0x80, switch::system_call_return_to_raw)
+        idt.set_handler(SYSTEM_CALL_INTERRUPT_CODE, system_call_return_to_raw)
             .set_privilege_level(0x3);
-        idt.set_handler(0x81, switch::debug_call_return_to_raw)
+        idt.set_handler(DEBUG_CALL_INTERRUPT_CODE, debug_call_return_to_raw)
             .set_privilege_level(0x3);
-        idt.set_handler(0x21, switch::keyboard_return_to_raw)
+        idt.set_handler(KEYBOARD_INTERRUPT_CODE, keyboard_return_to_raw)
             .set_privilege_level(0x3);
-        idt.set_handler(0xFF, switch::spurious_return_to_raw)
+        idt.set_handler(SPURIOUS_INTERRUPT_CODE, spurious_return_to_raw)
             .set_privilege_level(0x3);
-        idt.set_handler(0x40, switch::timer_return_to_raw)
+        idt.set_handler(TIMER_INTERRUPT_CODE, timer_return_to_raw)
             .set_privilege_level(0x3);
 
         idt
     };
+}
+
+#[derive(Debug)]
+pub enum Exception {
+    SystemCall,
+    DebugCall,
+    Keyboard,
+    Spurious,
+    Timer
+}
+
+impl Exception {
+    fn new(code: u64, error: Option<u64>) -> Exception {
+        match code {
+            TIMER_INTERRUPT_CODE => Exception::Timer,
+            SPURIOUS_INTERRUPT_CODE => Exception::Spurious,
+            KEYBOARD_INTERRUPT_CODE => Exception::Keyboard,
+            SYSTEM_CALL_INTERRUPT_CODE => Exception::SystemCall,
+            DEBUG_CALL_INTERRUPT_CODE => Exception::DebugCall,
+            _ => panic!(),
+        }
+    }
+
+    pub unsafe fn send_eoi(&self) {
+        match self {
+            &Exception::Timer => LOCAL_APIC.lock().eoi(),
+            &Exception::Keyboard => LOCAL_APIC.lock().eoi(),
+            _ => (),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -66,24 +96,22 @@ impl Default for TaskRuntime {
 }
 
 impl TaskRuntime {
-    pub unsafe fn switch_to(&mut self, mode_change: bool) -> (u64, Option<u64>) {
+    pub unsafe fn switch_to(&mut self, mode_change: bool) -> Exception {
         let code_seg: u64 = if mode_change { 0x28 | 0x3 } else { 0x8 | 0x0 };
         let data_seg: u64 = if mode_change { 0x30 | 0x3 } else { 0x10 | 0x0 };
 
         switch_to_raw(self.stack_pointer, self.instruction_pointer, self.cpu_flags, code_seg, data_seg);
 
-        let exception = last_exception_return_value().unwrap();
+        let exception_info = last_exception_return_value().unwrap();
 
-        self.instruction_pointer = exception.instruction_pointer;
-        self.cpu_flags = exception.cpu_flags;
-        self.stack_pointer = exception.stack_pointer;
+        self.instruction_pointer = exception_info.instruction_pointer;
+        self.cpu_flags = exception_info.cpu_flags;
+        self.stack_pointer = exception_info.stack_pointer;
 
-        // Send EOI for timer
-        if (exception.exception_code == 0x40) {
-            LOCAL_APIC.lock().eoi();
-        }
+        let exception = Exception::new(exception_info.exception_code, exception_info.error_code);
+        unsafe { exception.send_eoi(); }
 
-        return (exception.exception_code, exception.error_code);
+        return exception;
     }
 
     pub fn set_instruction_pointer(&mut self, instruction_pointer: VAddr) {

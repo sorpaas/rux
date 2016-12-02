@@ -2,11 +2,11 @@ use common::*;
 use core::any::{Any, TypeId};
 use util::{RwLock, align_up};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
-use arch::{TaskRuntime};
+use arch::{TaskRuntime, Exception};
 
 use super::{UntypedDescriptor, TopPageTableCap, CPoolCap, TaskBufferPageCap};
 
-pub fn idle() {
+pub fn idle() -> Exception {
     #[naked]
     unsafe fn idle_task() -> ! {
         asm!("hlt");
@@ -17,7 +17,7 @@ pub fn idle() {
     task_runtime.set_instruction_pointer(VAddr::from(idle_task as *const () as u64));
 
     unsafe {
-        task_runtime.switch_to(false);
+        task_runtime.switch_to(false)
     }
 }
 
@@ -86,10 +86,10 @@ impl TaskDescriptor {
         self.weak_pool.read().upgrade(2)
     }
 
-    pub fn switch_to(&mut self) {
+    pub fn switch_to(&mut self) -> Exception {
         if let Some(pml4) = self.upgrade_top_page_table() {
             pml4.write().switch_to();
         }
-        unsafe { self.runtime.switch_to(true) };
+        unsafe { self.runtime.switch_to(true) }
     }
 }

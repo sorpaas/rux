@@ -1,6 +1,6 @@
 use arch::segmentation::{self, SegmentSelector};
 use super::bit_field::BitField;
-use super::{HandlerFunc};
+use super::{HandlerFunc, InterruptVector};
 
 pub struct Idt([Entry; 256]);
 
@@ -57,7 +57,7 @@ impl Idt {
         Idt([Entry::missing(); 256])
     }
 
-    pub fn set_handler(&mut self, entry: u8, handler: HandlerFunc)
+    pub fn set_handler(&mut self, entry: InterruptVector, handler: HandlerFunc)
         -> &mut EntryOptions
     {
         self.0[entry as usize] = Entry::new(segmentation::cs(), handler);

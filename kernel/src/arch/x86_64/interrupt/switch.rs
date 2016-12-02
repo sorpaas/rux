@@ -4,7 +4,7 @@ pub type HandlerFunc = unsafe extern "C" fn();
 
 #[derive(Debug, Clone)]
 #[repr(C)]
-struct ExceptionStackFrame {
+pub struct ExceptionStackFrame {
     pub instruction_pointer: u64,
     pub code_segment: u64,
     pub cpu_flags: u64,
@@ -101,14 +101,14 @@ static mut CUR_EXCEPTION_STACK_FRAME: Option<ExceptionStackFrame> = None;
 static mut CUR_EXCEPTION_ERROR_CODE: Option<u64> = None;
 static mut CUR_EXCEPTION_CODE: Option<u64> = None;
 
-unsafe extern "C" fn store_exception_stack(exception_raw: *const ExceptionStackFrame, exception_code: u64) {
+pub unsafe extern "C" fn store_exception_stack(exception_raw: *const ExceptionStackFrame, exception_code: u64) {
     let exception = unsafe {&*exception_raw};
     CUR_EXCEPTION_STACK_FRAME = Some(exception.clone());
     CUR_EXCEPTION_ERROR_CODE = None;
     CUR_EXCEPTION_CODE = Some(exception_code);
 }
 
-unsafe extern "C" fn store_error_exception_stack(exception_raw: *const ExceptionStackFrame, error_code: u64, exception_code: u64) {
+pub unsafe extern "C" fn store_error_exception_stack(exception_raw: *const ExceptionStackFrame, error_code: u64, exception_code: u64) {
     let exception = unsafe {&*exception_raw};
     CUR_EXCEPTION_STACK_FRAME = Some(exception.clone());
     CUR_EXCEPTION_ERROR_CODE = Some(error_code);
@@ -119,12 +119,12 @@ macro_rules! return_to_raw_fn {
     ($name: ident, $exception_code: expr) => (
         #[no_mangle]
         #[naked]
-        pub unsafe extern "C" fn $name() {
+        unsafe extern "C" fn $name() {
             asm!("mov rdi, rsp
                   sub rsp, 8
                   call $0
                   add rsp, 48"
-                 :: "i"(store_exception_stack as unsafe extern "C" fn(*const ExceptionStackFrame, u64)), "{rsi}"($exception_code)
+                 :: "i"(::arch::interrupt::switch::store_exception_stack as unsafe extern "C" fn(*const ::arch::interrupt::switch::ExceptionStackFrame, u64)), "{rsi}"($exception_code)
                  :: "volatile", "intel");
 
             restore_registers!();
@@ -136,25 +136,19 @@ macro_rules! return_error_to_raw_fn {
     ($name: ident, $exception_code: expr) => (
         #[no_mangle]
         #[naked]
-        pub unsafe extern "C" fn $name() {
+        unsafe extern "C" fn $name() {
             asm!("pop rsi
                   mov rdi, rsp
                   sub rsp, 8
                   call $0
                   add rsp, 48"
-                 :: "i"(store_error_exception_stack as unsafe extern "C" fn(*const ExceptionStackFrame, u64)), "{rdx}"($exception_code)
+                 :: "i"(::arch::interrupt::switch::store_error_exception_stack as unsafe extern "C" fn(*const ::arch::interrupt::switch::ExceptionStackFrame, u64)), "{rdx}"($exception_code)
                  :: "volatile", "intel");
 
             restore_registers!();
         }
     )
 }
-
-return_to_raw_fn!(timer_return_to_raw, 0x40);
-return_to_raw_fn!(spurious_return_to_raw, 0xFF);
-return_to_raw_fn!(keyboard_return_to_raw, 0x21);
-return_to_raw_fn!(system_call_return_to_raw, 0x80);
-return_to_raw_fn!(debug_call_return_to_raw, 0x81);
 
 pub fn last_exception_return_value() -> Option<ExceptionInfo> {
     unsafe {

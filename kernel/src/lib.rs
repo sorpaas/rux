@@ -51,7 +51,7 @@ mod cap;
 use core::mem;
 use core::slice;
 use common::*;
-use arch::{InitInfo, inportb, outportb};
+use arch::{InitInfo, inportb, outportb, Exception};
 use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
 use abi::{SystemCall, TaskBuffer};
@@ -256,13 +256,19 @@ pub fn kmain(archinfo: InitInfo)
     log!("Rinit entry: {:?}", rinit_entry);
 
     log!("hello, world!");
-    arch::enable_timer();
+    // arch::enable_timer();
     while true {
-        rinit_task.switch_to();
-        let cpool = rinit_task.upgrade_cpool();
-        let buffer = rinit_task.upgrade_buffer();
-        handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
-                           cpool.as_ref().unwrap().read().deref());
+        let exception = rinit_task.switch_to();
+        log!("exception: {:?}", exception);
+        match exception {
+            Exception::SystemCall => {
+                let cpool = rinit_task.upgrade_cpool();
+                let buffer = rinit_task.upgrade_buffer();
+                handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
+                                   cpool.as_ref().unwrap().read().deref());
+            },
+            _ => (),
+        }
     }
     
     loop {}

@@ -1,6 +1,7 @@
 use common::*;
 use arch::init::{LOCAL_APIC_PAGE_VADDR, IO_APIC_PAGE_VADDR};
 use util::{Mutex};
+use super::{InterruptVector};
 
 #[derive(Debug)]
 pub struct LocalAPIC {
@@ -90,7 +91,9 @@ impl IOAPIC {
         unsafe { self.read(0x2) }
     }
 
-    pub fn set_irq(&mut self, irq: u8, apic_id: u8, vector: u8) {
+    pub fn set_irq(&mut self, irq: u8, apic_id: u8, vector: InterruptVector) {
+        let vector = vector as u8;
+
         let low_index: u32 = 0x10 + (irq as u32) * 2;
         let high_index: u32 = 0x10 + (irq as u32) * 2 + 1;
 

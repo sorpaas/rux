@@ -59,15 +59,18 @@ impl Default for TaskRuntime {
     fn default() -> TaskRuntime {
         TaskRuntime {
             instruction_pointer: 0x0,
-            cpu_flags: 0b1000000110,
+            cpu_flags: 0b11001000000110,
             stack_pointer: 0x0
         }
     }
 }
 
 impl TaskRuntime {
-    pub unsafe fn switch_to(&mut self) -> (u64, Option<u64>) {
-        switch_to_raw(self.stack_pointer, self.instruction_pointer, self.cpu_flags);
+    pub unsafe fn switch_to(&mut self, mode_change: bool) -> (u64, Option<u64>) {
+        let code_seg: u64 = if mode_change { 0x28 | 0x3 } else { 0x8 | 0x0 };
+        let data_seg: u64 = if mode_change { 0x30 | 0x3 } else { 0x10 | 0x0 };
+
+        switch_to_raw(self.stack_pointer, self.instruction_pointer, self.cpu_flags, code_seg, data_seg);
 
         let exception = last_exception_return_value().unwrap();
 

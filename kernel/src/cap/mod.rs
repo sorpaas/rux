@@ -4,7 +4,7 @@ mod task;
 
 pub use self::untyped::{UntypedDescriptor, UntypedCap};
 pub use self::cpool::{CPoolDescriptor, CPoolCap};
-pub use self::task::{TaskDescriptor, TaskCap};
+pub use self::task::{TaskDescriptor, TaskCap, idle};
 pub use arch::cap::{TopPageTableCap, PageCap, PAGE_LENGTH};
 
 use arch;

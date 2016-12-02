@@ -71,10 +71,7 @@ unsafe extern "C" fn set_kernel_stack(addr: u64) {
     init::set_kernel_stack(addr);
 }
 
-pub unsafe fn switch_to_raw(stack_vaddr: u64, code_start: u64, cpu_flags: u64) {
-    let code_seg: u64 = 0x28 | 0x3;
-    let data_seg: u64 = 0x30 | 0x3;
-
+pub unsafe fn switch_to_raw(stack_vaddr: u64, code_start: u64, cpu_flags: u64, code_seg: u64, data_seg: u64) {
     asm!("call r15" :: "{rdi}"(stack_vaddr), "{rsi}"(code_start), "{rdx}"(cpu_flags), "{rcx}"(code_seg), "{r8}"(data_seg), "{r15}"(switch_to_raw_naked as unsafe extern "C" fn(u64, u64, u64, u64, u64)) :: "volatile", "intel");
 
     // WARNING: Everything below this before returning will not work.

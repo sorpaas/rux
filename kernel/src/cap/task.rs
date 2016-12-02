@@ -6,6 +6,21 @@ use arch::{TaskRuntime};
 
 use super::{UntypedDescriptor, TopPageTableCap, CPoolCap, TaskBufferPageCap};
 
+pub fn idle() {
+    #[naked]
+    unsafe fn idle_task() -> ! {
+        asm!("hlt");
+        ::core::intrinsics::unreachable();
+    }
+
+    let mut task_runtime = TaskRuntime::default();
+    task_runtime.set_instruction_pointer(VAddr::from(idle_task as *const () as u64));
+
+    unsafe {
+        task_runtime.switch_to(false);
+    }
+}
+
 #[derive(Debug)]
 pub struct TaskDescriptor {
     weak_pool: ManagedWeakPool3Arc,
@@ -75,6 +90,6 @@ impl TaskDescriptor {
         if let Some(pml4) = self.upgrade_top_page_table() {
             pml4.write().switch_to();
         }
-        unsafe { self.runtime.switch_to() };
+        unsafe { self.runtime.switch_to(true) };
     }
 }

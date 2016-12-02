@@ -17,6 +17,7 @@ pub unsafe fn load_tr(sel: SegmentSelector) {
 
 pub unsafe fn set_kernel_stack(addr: u64) {
     TSS.sp0 = addr;
+    TSS.ist1 = addr;
 }
 
 pub fn init() {

@@ -9,7 +9,7 @@ mod switch;
 
 use lazy_static;
 use common::*;
-use self::switch::{last_exception_return_value, switch_to_raw, Exception};
+use self::switch::{last_exception_return_value, switch_to_raw, ExceptionInfo};
 
 pub use self::switch::{HandlerFunc};
 pub use self::apic::{LOCAL_APIC, IO_APIC};

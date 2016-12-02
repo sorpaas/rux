@@ -13,7 +13,7 @@ struct ExceptionStackFrame {
 }
 
 #[derive(Debug, Clone)]
-pub struct Exception {
+pub struct ExceptionInfo {
     pub instruction_pointer: u64,
     pub code_segment: u64,
     pub cpu_flags: u64,
@@ -156,10 +156,10 @@ return_to_raw_fn!(keyboard_return_to_raw, 0x21);
 return_to_raw_fn!(system_call_return_to_raw, 0x80);
 return_to_raw_fn!(debug_call_return_to_raw, 0x81);
 
-pub fn last_exception_return_value() -> Option<Exception> {
+pub fn last_exception_return_value() -> Option<ExceptionInfo> {
     unsafe {
         CUR_EXCEPTION_STACK_FRAME.clone().map(|exp| {
-            Exception {
+            ExceptionInfo {
                 instruction_pointer: exp.instruction_pointer,
                 code_segment: exp.code_segment,
                 cpu_flags: exp.cpu_flags,

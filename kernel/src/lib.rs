@@ -52,7 +52,7 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo, inportb, outportb, Exception};
-use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, PAGE_LENGTH};
+use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskDescriptor, TaskStatus, ChannelCap, ChannelDescriptor, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
 use abi::{SystemCall, TaskBuffer};
 use util::{MemoryObject};
@@ -141,7 +141,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH * rinit_stack_size - 4))
 }
 
-fn handle_system_call(call: &mut SystemCall, cpool: &CPoolDescriptor) {
+fn handle_system_call(call: &mut SystemCall, task: &mut TaskDescriptor, cpool: &CPoolDescriptor) {
     match call {
         &mut SystemCall::Print {
             request: ref request
@@ -186,16 +186,22 @@ fn handle_system_call(call: &mut SystemCall, cpool: &CPoolDescriptor) {
                 let result = cpool.downgrade_at(&target, request.1);
             }
         },
-        &mut SystemCall::Inportb {
+        &mut SystemCall::ChannelTake {
             request: ref request,
             response: ref mut response,
         } => {
-            *response = Some(unsafe { inportb(*request) });
+            let mut chan_option: Option<ChannelCap> = cpool.upgrade(*request);
+            if let Some(chan) = chan_option {
+                task.set_status(TaskStatus::ChannelWait(chan))
+            }
         },
-        &mut SystemCall::Outportb {
+        &mut SystemCall::ChannelPut {
             request: ref request,
         } => {
-            unsafe { outportb(request.0, request.1) };
+            let chan_option: Option<ChannelCap> = cpool.upgrade(request.0);
+            if let Some(chan) = chan_option {
+                chan.write().put(request.1);
+            }
         }
     }
 }
@@ -252,20 +258,51 @@ pub fn kmain(archinfo: InitInfo)
     rinit_task.downgrade_top_page_table(&rinit_pml4);
     rinit_task.downgrade_buffer(&rinit_buffer_page);
 
+    let mut keyboard_cap = ChannelCap::retype_from(untyped.write().deref_mut());
+    cpool.read().downgrade_at(&keyboard_cap, 254);
+
     log!("Rinit pml4: {:?}", rinit_pml4);
     log!("Rinit entry: {:?}", rinit_entry);
 
     log!("hello, world!");
     // arch::enable_timer();
     while true {
-        let exception = rinit_task.switch_to();
+        let exception = match rinit_task.status() {
+            TaskStatus::Active =>
+                rinit_task.switch_to(),
+            TaskStatus::ChannelWait(ref chan) => {
+                let value = chan.write().take();
+                if let Some(value) = value {
+                    let buffer = rinit_task.upgrade_buffer();
+                    let mut buffer_desc = buffer.as_ref().unwrap().write().write();
+                    let system_call = buffer_desc.deref_mut().call.as_mut().unwrap();
+                    match system_call {
+                        &mut SystemCall::ChannelTake {
+                            request: ref request,
+                            response: ref mut response,
+                        } => {
+                            *response = Some(value);
+                            rinit_task.set_status(TaskStatus::Active);
+                            rinit_task.switch_to()
+                        }
+                        _ => panic!(),
+                    }
+                } else {
+                    cap::idle()
+                }
+            },
+        };
         log!("exception: {:?}", exception);
         match exception {
             Exception::SystemCall => {
                 let cpool = rinit_task.upgrade_cpool();
                 let buffer = rinit_task.upgrade_buffer();
                 handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
+                                   rinit_task.deref_mut(),
                                    cpool.as_ref().unwrap().read().deref());
+            },
+            Exception::Keyboard => {
+                keyboard_cap.write().put(unsafe { arch::inportb(0x60) } as u64);
             },
             _ => (),
         }

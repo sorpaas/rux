@@ -7,13 +7,13 @@ pub fn retype_cpool(source: usize, target: usize) {
     });
 }
 
-pub fn inportb(port: u16) -> u8 {
-    let result = system_call(SystemCall::Inportb {
-        request: port,
+pub fn channel_take(target: usize) -> u64 {
+    let result = system_call(SystemCall::ChannelTake {
+        request: target,
         response: None
     });
     match result {
-        SystemCall::Inportb {
+        SystemCall::ChannelTake {
             request: _,
             response: response,
         } => {
@@ -23,9 +23,9 @@ pub fn inportb(port: u16) -> u8 {
     };
 }
 
-pub fn outportb(port: u16, val: u8) {
-    system_call(SystemCall::Outportb {
-        request: (port, val)
+pub fn channel_put(target: usize, value: u64) {
+    system_call(SystemCall::ChannelPut {
+        request: (target, value)
     });
 }
 

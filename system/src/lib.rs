@@ -10,7 +10,7 @@ extern crate spin;
 pub mod unwind;
 mod call;
 
-pub use self::call::{set_task_buffer, cpool_list_debug, inportb, outportb, retype_cpool};
+pub use self::call::{set_task_buffer, cpool_list_debug, retype_cpool, channel_put, channel_take};
 
 use core::fmt;
 

@@ -4,7 +4,7 @@ use util::{RwLock, align_up};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
 use arch::{TaskRuntime, Exception};
 
-use super::{UntypedDescriptor, TopPageTableCap, CPoolCap, TaskBufferPageCap};
+use super::{UntypedDescriptor, TopPageTableCap, CPoolCap, TaskBufferPageCap, ChannelCap};
 
 pub fn idle() -> Exception {
     #[naked]
@@ -21,11 +21,18 @@ pub fn idle() -> Exception {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum TaskStatus {
+    Active,
+    ChannelWait(ChannelCap),
+}
+
 #[derive(Debug)]
 pub struct TaskDescriptor {
     weak_pool: ManagedWeakPool3Arc,
     runtime: TaskRuntime,
     next: Option<ManagedArcAny>,
+    status: TaskStatus
 }
 pub type TaskCap = ManagedArc<RwLock<TaskDescriptor>>;
 
@@ -43,6 +50,7 @@ impl TaskCap {
                     weak_pool: weak_pool,
                     runtime: TaskRuntime::default(),
                     next: next_child,
+                    status: TaskStatus::Active,
                 }))
             });
 
@@ -84,6 +92,14 @@ impl TaskDescriptor {
 
     pub fn upgrade_buffer(&self) -> Option<TaskBufferPageCap> {
         self.weak_pool.read().upgrade(2)
+    }
+
+    pub fn status(&self) -> TaskStatus {
+        self.status.clone()
+    }
+
+    pub fn set_status(&mut self, status: TaskStatus) {
+        self.status = status;
     }
 
     pub fn switch_to(&mut self) -> Exception {

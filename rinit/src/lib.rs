@@ -109,7 +109,7 @@ fn start(_argc: isize, _argv: *const *const u8) {
     let mut command = [0u8; 32];
     let mut command_size = 0;
     while true {
-        let key = from_scancode(unsafe { vga_buffer::inportb(0x60) } as usize);
+        let key = from_scancode(system::channel_take(254) as usize);
         if key == lastkey {
             continue;
         } else {

@@ -1,10 +1,12 @@
 mod untyped;
 mod cpool;
 mod task;
+mod channel;
 
 pub use self::untyped::{UntypedDescriptor, UntypedCap};
 pub use self::cpool::{CPoolDescriptor, CPoolCap};
-pub use self::task::{TaskDescriptor, TaskCap, idle};
+pub use self::task::{TaskDescriptor, TaskCap, TaskStatus, idle};
+pub use self::channel::{ChannelDescriptor, ChannelCap};
 pub use arch::cap::{TopPageTableCap, PageCap, PAGE_LENGTH};
 
 use arch;

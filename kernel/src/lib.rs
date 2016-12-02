@@ -169,6 +169,8 @@ fn handle_system_call(call: &mut SystemCall, task: &mut TaskDescriptor, cpool: &
                         log!("CPool index {} => {:?}", i, arc.into(): TaskBufferPageCap);
                     } else if arc.is::<TopPageTableCap>() {
                         log!("CPool index {} => {:?}", i, arc.into(): TopPageTableCap);
+                    } else if arc.is::<ChannelCap>() {
+                        log!("CPool index {} => {:?}", i, arc.into(): ChannelCap);
                     } else {
                         log!("CPool index {} (arch specific) => {:?}", i, arc);
                         cap::drop_any(arc);
@@ -248,63 +250,79 @@ pub fn kmain(archinfo: InitInfo)
         log!("type_id: {:?}", TypeId::of::<ManagedArc<RwLock<CPoolDescriptor>>>());
     }
 
-    let (rinit_pml4, rinit_buffer_page, rinit_entry, rinit_stack) =
-        bootstrap_rinit_paging(&archinfo, &mut cpool, &mut untyped);
-    let rinit_task_cap = TaskCap::retype_from(untyped.write().deref_mut());
-    let mut rinit_task = rinit_task_cap.write();
-    rinit_task.set_instruction_pointer(rinit_entry);
-    rinit_task.set_stack_pointer(rinit_stack);
-    rinit_task.downgrade_cpool(&cpool);
-    rinit_task.downgrade_top_page_table(&rinit_pml4);
-    rinit_task.downgrade_buffer(&rinit_buffer_page);
+    {
+        let (rinit_pml4, rinit_buffer_page, rinit_entry, rinit_stack) =
+            bootstrap_rinit_paging(&archinfo, &mut cpool, &mut untyped);
+        let rinit_task_cap = TaskCap::retype_from(untyped.write().deref_mut());
+        let mut rinit_task = rinit_task_cap.write();
+        rinit_task.set_instruction_pointer(rinit_entry);
+        rinit_task.set_stack_pointer(rinit_stack);
+        rinit_task.downgrade_cpool(&cpool);
+        rinit_task.downgrade_top_page_table(&rinit_pml4);
+        rinit_task.downgrade_buffer(&rinit_buffer_page);
+    }
 
     let mut keyboard_cap = ChannelCap::retype_from(untyped.write().deref_mut());
     cpool.read().downgrade_at(&keyboard_cap, 254);
 
-    log!("Rinit pml4: {:?}", rinit_pml4);
-    log!("Rinit entry: {:?}", rinit_entry);
-
     log!("hello, world!");
     // arch::enable_timer();
     while true {
-        let exception = match rinit_task.status() {
-            TaskStatus::Active =>
-                rinit_task.switch_to(),
-            TaskStatus::ChannelWait(ref chan) => {
-                let value = chan.write().take();
-                if let Some(value) = value {
-                    let buffer = rinit_task.upgrade_buffer();
-                    let mut buffer_desc = buffer.as_ref().unwrap().write().write();
-                    let system_call = buffer_desc.deref_mut().call.as_mut().unwrap();
-                    match system_call {
-                        &mut SystemCall::ChannelTake {
-                            request: ref request,
-                            response: ref mut response,
-                        } => {
-                            *response = Some(value);
-                            rinit_task.set_status(TaskStatus::Active);
-                            rinit_task.switch_to()
+        let mut idle = true;
+
+        for task_cap in cap::task_iter() {
+            let mut task = task_cap.write();
+            let exception = match task.status() {
+                TaskStatus::Active => {
+                    idle = false;
+                    Some(task.switch_to())
+                },
+                TaskStatus::ChannelWait(ref chan) => {
+                    let value = chan.write().take();
+                    if let Some(value) = value {
+                        let buffer = task.upgrade_buffer();
+                        let mut buffer_desc = buffer.as_ref().unwrap().write().write();
+                        let system_call = buffer_desc.deref_mut().call.as_mut().unwrap();
+                        match system_call {
+                            &mut SystemCall::ChannelTake {
+                                request: ref request,
+                                response: ref mut response,
+                            } => {
+                                idle = false;
+                                *response = Some(value);
+                                task.set_status(TaskStatus::Active);
+                                Some(task.switch_to())
+                            }
+                            _ => panic!(),
                         }
-                        _ => panic!(),
+                    } else {
+                        None
                     }
-                } else {
-                    cap::idle()
                 }
-            },
-        };
-        log!("exception: {:?}", exception);
-        match exception {
-            Exception::SystemCall => {
-                let cpool = rinit_task.upgrade_cpool();
-                let buffer = rinit_task.upgrade_buffer();
-                handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
-                                   rinit_task.deref_mut(),
-                                   cpool.as_ref().unwrap().read().deref());
-            },
-            Exception::Keyboard => {
-                keyboard_cap.write().put(unsafe { arch::inportb(0x60) } as u64);
-            },
-            _ => (),
+            };
+            match exception {
+                Some(Exception::SystemCall) => {
+                    let cpool = task.upgrade_cpool();
+                    let buffer = task.upgrade_buffer();
+                    handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
+                                       task.deref_mut(),
+                                       cpool.as_ref().unwrap().read().deref());
+                },
+                Some(Exception::Keyboard) => {
+                    keyboard_cap.write().put(unsafe { arch::inportb(0x60) } as u64);
+                },
+                _ => (),
+            }
+        }
+
+        if idle {
+            let exception = cap::idle();
+            match exception {
+                Exception::Keyboard => {
+                    keyboard_cap.write().put(unsafe { arch::inportb(0x60) } as u64);
+                },
+                _ => (),
+            }
         }
     }
     

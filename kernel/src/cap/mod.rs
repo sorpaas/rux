@@ -5,7 +5,7 @@ mod channel;
 
 pub use self::untyped::{UntypedDescriptor, UntypedCap};
 pub use self::cpool::{CPoolDescriptor, CPoolCap};
-pub use self::task::{TaskDescriptor, TaskCap, TaskStatus, idle};
+pub use self::task::{TaskDescriptor, TaskCap, TaskStatus, idle, task_iter};
 pub use self::channel::{ChannelDescriptor, ChannelCap};
 pub use arch::cap::{TopPageTableCap, PageCap, PAGE_LENGTH};
 
@@ -38,6 +38,8 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
         Some(unsafe { ManagedArc::from_ptr(ptr): RawPageCap }.into())
     } else if type_id == TypeId::of::<TaskBufferPageCap>() {
         Some(unsafe { ManagedArc::from_ptr(ptr): TaskBufferPageCap }.into())
+    } else if type_id == TypeId::of::<ChannelCap>() {
+        Some(unsafe { ManagedArc::from_ptr(ptr): ChannelCap }.into())
     } else {
         arch::cap::upgrade_any(ptr, type_id)
     }
@@ -54,6 +56,8 @@ pub fn drop_any(any: ManagedArcAny) {
         any.into(): RawPageCap;
     } else if any.is::<TaskBufferPageCap>() {
         any.into(): TaskBufferPageCap;
+    } else if any.is::<ChannelCap>() {
+        any.into(): ChannelCap;
     } else {
         arch::cap::drop_any(any);
     }

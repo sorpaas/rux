@@ -1,6 +1,7 @@
 use common::*;
 use core::any::{Any, TypeId};
-use util::{RwLock, align_up};
+use core::iter::{Iterator};
+use util::{RwLock, align_up, Mutex};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
 use arch::{TaskRuntime, Exception};
 
@@ -32,6 +33,7 @@ pub struct TaskDescriptor {
     weak_pool: ManagedWeakPool3Arc,
     runtime: TaskRuntime,
     next: Option<ManagedArcAny>,
+    next_task: Option<TaskCap>,
     status: TaskStatus
 }
 pub type TaskCap = ManagedArc<RwLock<TaskDescriptor>>;
@@ -50,12 +52,15 @@ impl TaskCap {
                     weak_pool: weak_pool,
                     runtime: TaskRuntime::default(),
                     next: next_child,
+                    next_task: None,
                     status: TaskStatus::Active,
                 }))
             });
 
             arc.clone().unwrap().into()
         }) };
+
+        register_task(arc.clone().unwrap());
 
         arc.unwrap()
     }
@@ -107,5 +112,47 @@ impl TaskDescriptor {
             pml4.write().switch_to();
         }
         unsafe { self.runtime.switch_to(true) }
+    }
+}
+
+static FIRST_TASK: Mutex<Option<TaskCap>> = Mutex::new(None);
+
+fn register_task(cap: TaskCap) {
+    let mut first_task = FIRST_TASK.lock();
+    if first_task.is_none() {
+        *first_task = Some(cap);
+    } else {
+        let mut first = first_task.as_mut().unwrap().write();
+        let mut second = cap.write();
+        let third_task = first.next_task.take();
+
+        second.next_task = third_task;
+        first.next_task = Some(cap.clone());
+    }
+}
+
+pub struct TaskIterator {
+    next: Option<TaskCap>,
+}
+
+impl Iterator for TaskIterator {
+    type Item = TaskCap;
+
+    fn next(&mut self) -> Option<TaskCap> {
+        if let Some(current) = self.next.clone() {
+            {
+                let current_task = current.read();
+                self.next = current_task.next_task.clone();
+            }
+            return Some(current);
+        } else {
+            None
+        }
+    }
+}
+
+pub fn task_iter() -> TaskIterator {
+    TaskIterator {
+        next: FIRST_TASK.lock().clone(),
     }
 }

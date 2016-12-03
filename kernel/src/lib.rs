@@ -266,7 +266,7 @@ pub fn kmain(archinfo: InitInfo)
     cpool.read().downgrade_at(&keyboard_cap, 254);
 
     log!("hello, world!");
-    // arch::enable_timer();
+    arch::enable_timer();
     while true {
         let mut idle = true;
 

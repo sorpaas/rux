@@ -55,6 +55,7 @@ clean:
 	@rm -r build
 
 doc-kernel:
+	@rm -rf kernel/target/doc
 	@cargo rustdoc --manifest-path kernel/Cargo.toml -- \
 		--no-defaults \
 		--passes strip-hidden \
@@ -63,5 +64,4 @@ doc-kernel:
 		--passes strip-priv-imports
 
 doc-kernel-deploy: doc-kernel
-	@rm -rf kernel/target/doc
 	@rsync -vraP --delete-after kernel/target/doc/ deploy@that.world:~/~source/docs/rux

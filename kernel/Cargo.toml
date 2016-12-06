@@ -1,5 +1,5 @@
 [package]
-name = "rux"
+name = "kernel"
 version = "0.0.1"
 authors = ["Wei Tang <hi@that.world>"]
 

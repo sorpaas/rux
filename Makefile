@@ -18,7 +18,7 @@ objcopy := $(triple)objcopy
 
 target_spec := $(arch).json
 
-.PHONY: all clean run rinit kernel
+.PHONY: all clean run rinit kernel doc-kernel doc-kernel-deploy
 
 build/rustc-nightly-src.tar.gz:
 	@mkdir -p $(shell dirname $@)
@@ -53,3 +53,15 @@ clean:
 	@make -C kernel arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) clean
 	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) clean
 	@rm -r build
+
+doc-kernel:
+	@cargo rustdoc --manifest-path kernel/Cargo.toml -- \
+		--no-defaults \
+		--passes strip-hidden \
+		--passes collapse-docs \
+		--passes unindent-comments \
+		--passes strip-priv-imports
+
+doc-kernel-deploy: doc-kernel
+	@rm -rf kernel/target/doc
+	@rsync -vraP --delete-after kernel/target/doc/ deploy@that.world:~/~source/docs/rux

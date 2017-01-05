@@ -99,16 +99,18 @@ pub enum Key {
     Nonprintable
 }
 
+static mut IS_PARENT: bool = true;
+
 #[lang="start"]
 #[no_mangle]
 fn start(_argc: isize, _argv: *const *const u8) {
-    system::set_task_buffer(0x90001000);
-    system_print!("rinit program initialized.");
-    let id = system::channel_take(255);
-    if id == 0 {
+    if unsafe { IS_PARENT } {
+        unsafe { IS_PARENT = false; }
+        system::set_task_buffer(0x90001000);
         system_print!("parent rinit started.");
         parent_main();
     } else {
+        system::set_task_buffer(0x90003000);
         system_print!("child rinit started.");
         child_main();
     }
@@ -162,6 +164,13 @@ fn execute_command(s: &str) {
         let source: usize = split.next().unwrap().parse().unwrap();
         let target: usize = split.next().unwrap().parse().unwrap();
         system::retype_cpool(source, target);
+        print!("Operation finished.\n");
+    } else if s.len() >= 15 && &s[0..11] == "retype task" {
+        let st = &s[12..s.len()];
+        let mut split = st.split(' ');
+        let source: usize = split.next().unwrap().parse().unwrap();
+        let target: usize = split.next().unwrap().parse().unwrap();
+        system::retype_task(source, target);
         print!("Operation finished.\n");
     } else {
         print!("Unknown command.\n");

@@ -7,6 +7,12 @@ pub fn retype_cpool(source: usize, target: usize) {
     });
 }
 
+pub fn retype_task(source: usize, target: usize) {
+    system_call(SystemCall::RetypeTask {
+        request: (source, target),
+    });
+}
+
 pub fn channel_take(target: usize) -> u64 {
     let result = system_call(SystemCall::ChannelTake {
         request: target,

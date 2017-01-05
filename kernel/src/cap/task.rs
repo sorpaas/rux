@@ -26,6 +26,7 @@ pub fn idle() -> Exception {
 pub enum TaskStatus {
     Active,
     ChannelWait(ChannelCap),
+    Inactive,
 }
 
 #[derive(Debug)]
@@ -53,7 +54,7 @@ impl TaskCap {
                     runtime: TaskRuntime::default(),
                     next: next_child,
                     next_task: None,
-                    status: TaskStatus::Active,
+                    status: TaskStatus::Inactive,
                 }))
             });
 

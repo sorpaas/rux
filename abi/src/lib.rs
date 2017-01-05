@@ -33,6 +33,9 @@ pub enum SystemCall {
     ChannelPut {
         request: (usize, u64),
     },
+    RetypeTask {
+        request: (usize, usize),
+    },
 }
 
 #[derive(Debug)]

@@ -161,7 +161,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH * rinit_stack_size - 4))
 }
 
-fn handle_system_call(call: &mut SystemCall, task: &mut TaskDescriptor, cpool: &CPoolDescriptor) {
+fn handle_system_call(call: &mut SystemCall, task_cap: TaskCap, cpool: &CPoolDescriptor) {
     match call {
         &mut SystemCall::Print {
             request: ref request
@@ -208,13 +208,23 @@ fn handle_system_call(call: &mut SystemCall, task: &mut TaskDescriptor, cpool: &
                 let result = cpool.downgrade_at(&target, request.1);
             }
         },
+        &mut SystemCall::RetypeTask {
+            request: ref request,
+        } => {
+            let source: Option<UntypedCap> = cpool.upgrade(request.0);
+            if source.is_some() {
+                let source = source.unwrap();
+                let target = TaskCap::retype_from(source.write().deref_mut());
+                let result = cpool.downgrade_at(&target, request.1);
+            }
+        }
         &mut SystemCall::ChannelTake {
             request: ref request,
             response: ref mut response,
         } => {
             let mut chan_option: Option<ChannelCap> = cpool.upgrade(*request);
             if let Some(chan) = chan_option {
-                task.set_status(TaskStatus::ChannelWait(chan))
+                task_cap.write().set_status(TaskStatus::ChannelWait(chan))
             }
         },
         &mut SystemCall::ChannelPut {
@@ -277,6 +287,7 @@ pub fn kmain(archinfo: InitInfo)
         let mut rinit_task = rinit_task_cap.write();
         rinit_task.set_instruction_pointer(rinit_entry);
         rinit_task.set_stack_pointer(rinit_stack);
+        rinit_task.set_status(TaskStatus::Active);
         rinit_task.downgrade_cpool(&cpool);
         rinit_task.downgrade_top_page_table(&rinit_pml4);
         rinit_task.downgrade_buffer(&rinit_buffer_page);
@@ -296,16 +307,17 @@ pub fn kmain(archinfo: InitInfo)
         let mut idle = true;
 
         for task_cap in cap::task_iter() {
-            let mut task = task_cap.write();
-            let exception = match task.status() {
+            let status = task_cap.read().status();
+            let exception = match status {
+                TaskStatus::Inactive => None,
                 TaskStatus::Active => {
                     idle = false;
-                    Some(task.switch_to())
+                    Some(task_cap.write().switch_to())
                 },
                 TaskStatus::ChannelWait(ref chan) => {
                     let value = chan.write().take();
                     if let Some(value) = value {
-                        let buffer = task.upgrade_buffer();
+                        let buffer = task_cap.read().upgrade_buffer();
                         let mut buffer_desc = buffer.as_ref().unwrap().write().write();
                         let system_call = buffer_desc.deref_mut().call.as_mut().unwrap();
                         match system_call {
@@ -315,8 +327,8 @@ pub fn kmain(archinfo: InitInfo)
                             } => {
                                 idle = false;
                                 *response = Some(value);
-                                task.set_status(TaskStatus::Active);
-                                Some(task.switch_to())
+                                task_cap.write().set_status(TaskStatus::Active);
+                                Some(task_cap.write().switch_to())
                             }
                             _ => panic!(),
                         }
@@ -327,10 +339,10 @@ pub fn kmain(archinfo: InitInfo)
             };
             match exception {
                 Some(Exception::SystemCall) => {
-                    let cpool = task.upgrade_cpool();
-                    let buffer = task.upgrade_buffer();
+                    let cpool = task_cap.read().upgrade_cpool();
+                    let buffer = task_cap.read().upgrade_buffer();
                     handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
-                                       task.deref_mut(),
+                                       task_cap,
                                        cpool.as_ref().unwrap().read().deref());
                 },
                 Some(Exception::Keyboard) => {

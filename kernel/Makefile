@@ -17,7 +17,7 @@ objcopy := $(triple)objcopy
 
 kernel := build/$(arch)/kernel.bin
 
-rust_os := target/$(arch)/debug/librux.a
+rust_os := target/$(arch)/debug/libkernel.a
 
 linker_script := src/arch/$(arch)/linker.ld
 

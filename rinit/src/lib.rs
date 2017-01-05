@@ -103,7 +103,19 @@ pub enum Key {
 #[no_mangle]
 fn start(_argc: isize, _argv: *const *const u8) {
     system::set_task_buffer(0x90001000);
-    system_print!("hello, world!");
+    system_print!("rinit program initialized.");
+    let id = system::channel_take(255);
+    if id == 0 {
+        system_print!("parent rinit started.");
+        parent_main();
+    } else {
+        system_print!("child rinit started.");
+        child_main();
+    }
+    loop {};
+}
+
+fn parent_main() {
     print!(">>> ");
     let mut lastkey = Key::Nonprintable;
     let mut command = [0u8; 32];
@@ -132,7 +144,10 @@ fn start(_argc: isize, _argv: *const *const u8) {
             _ => (),
         }
     }
-    loop {};
+}
+
+fn child_main() {
+
 }
 
 fn execute_command(s: &str) {

@@ -350,8 +350,6 @@ pub fn kmain(archinfo: InitInfo)
     let mut util_chan_cap = ChannelCap::retype_from(untyped.write().deref_mut());
     cpool.read().downgrade_at(&util_chan_cap, 255);
 
-    util_chan_cap.write().put(0);
-
     log!("hello, world!");
     arch::enable_timer();
     while true {

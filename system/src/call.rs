@@ -1,23 +1,65 @@
 use abi::{SystemCall, TaskBuffer};
 use spin::{Mutex};
 
-pub fn retype_cpool(source: usize, target: usize) {
+pub fn retype_cpool(addr: usize, source: usize, target: usize) {
     system_call(SystemCall::RetypeCPool {
         request: (source, target),
-    });
+    }, addr);
 }
 
-pub fn retype_task(source: usize, target: usize) {
+pub fn retype_task(addr: usize, source: usize, target: usize) {
     system_call(SystemCall::RetypeTask {
         request: (source, target),
-    });
+    }, addr);
 }
 
-pub fn channel_take(target: usize) -> u64 {
+pub fn task_set_instruction_pointer(addr: usize, target: usize, ptr: u64) {
+    system_call(SystemCall::TaskSetInstructionPointer {
+        request: (target, ptr),
+    }, addr);
+}
+
+pub fn task_set_stack_pointer(addr: usize, target: usize, ptr: u64) {
+    system_call(SystemCall::TaskSetStackPointer {
+        request: (target, ptr),
+    }, addr);
+}
+
+pub fn task_set_cpool(addr: usize, target: usize, cpool: usize) {
+    system_call(SystemCall::TaskSetCPool {
+        request: (target, cpool),
+    }, addr);
+}
+
+pub fn task_set_top_page_table(addr: usize, target: usize, table: usize) {
+    system_call(SystemCall::TaskSetTopPageTable {
+        request: (target, table),
+    }, addr);
+}
+
+pub fn task_set_buffer(addr: usize, target: usize, buffer: usize) {
+    system_call(SystemCall::TaskSetBuffer {
+        request: (target, buffer),
+    }, addr);
+}
+
+pub fn task_set_active(addr: usize, target: usize) {
+    system_call(SystemCall::TaskSetActive {
+        request: target
+    }, addr);
+}
+
+pub fn task_set_inactive(addr: usize, target: usize) {
+    system_call(SystemCall::TaskSetInactive {
+        request: target
+    }, addr);
+}
+
+pub fn channel_take(addr: usize, target: usize) -> u64 {
     let result = system_call(SystemCall::ChannelTake {
         request: target,
         response: None
-    });
+    }, addr);
     match result {
         SystemCall::ChannelTake {
             request: _,
@@ -29,31 +71,25 @@ pub fn channel_take(target: usize) -> u64 {
     };
 }
 
-pub fn channel_put(target: usize, value: u64) {
+pub fn channel_put(addr: usize, target: usize, value: u64) {
     system_call(SystemCall::ChannelPut {
         request: (target, value)
-    });
+    }, addr);
 }
 
-pub fn print(buffer: [u8; 32], size: usize) {
+pub fn print(addr: usize, buffer: [u8; 32], size: usize) {
     let result = system_call(SystemCall::Print {
         request: (buffer, size)
-    });
+    }, addr);
 }
 
-pub fn cpool_list_debug() {
-    system_call(SystemCall::CPoolListDebug);
+pub fn cpool_list_debug(addr: usize) {
+    system_call(SystemCall::CPoolListDebug, addr);
 }
 
-static TASK_BUFFER_ADDR: Mutex<Option<usize>> = Mutex::new(None);
-
-pub fn set_task_buffer(addr: usize) {
-    *TASK_BUFFER_ADDR.lock() = Some(addr);
-}
-
-fn system_call(message: SystemCall) -> SystemCall {
+fn system_call(message: SystemCall, addr: usize) -> SystemCall {
     unsafe {
-        let buffer = unsafe { &mut *(TASK_BUFFER_ADDR.lock().unwrap() as *mut TaskBuffer) };
+        let buffer = unsafe { &mut *(addr as *mut TaskBuffer) };
         buffer.call = Some(message);
         system_call_raw();
         buffer.call.take().unwrap()

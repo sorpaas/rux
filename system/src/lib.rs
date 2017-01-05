@@ -10,27 +10,31 @@ extern crate spin;
 pub mod unwind;
 mod call;
 
-pub use self::call::{set_task_buffer, cpool_list_debug, retype_cpool, retype_task,
-                     channel_put, channel_take};
+pub use self::call::{cpool_list_debug, retype_cpool, retype_task,
+                     channel_put, channel_take, task_set_stack_pointer, task_set_instruction_pointer,
+                     task_set_cpool, task_set_top_page_table, task_set_buffer,
+                     task_set_active, task_set_inactive};
 
 use core::fmt;
 
 pub struct PrintWriter {
     buffer: [u8; 32],
     size: usize,
+    addr: usize,
 }
 
 impl PrintWriter {
-    pub fn new() -> Self {
+    pub fn new(addr: usize) -> Self {
         PrintWriter {
             buffer: [0u8; 32],
             size: 0,
+            addr: addr,
         }
     }
 
     pub fn flush(&mut self) {
         if self.size > 0 {
-            call::print(self.buffer.clone(), self.size);
+            call::print(self.addr, self.buffer.clone(), self.size);
             self.buffer = [0u8; 32];
             self.size = 0;
         }
@@ -59,8 +63,8 @@ impl Drop for PrintWriter {
 
 #[macro_export]
 macro_rules! system_print {
-    ( $($arg:tt)* ) => ({
+    ( $addr:tt, $($arg:tt)* ) => ({
         use core::fmt::Write;
-        let _ = write!(&mut $crate::PrintWriter::new(), $($arg)*);
+        let _ = write!(&mut $crate::PrintWriter::new($addr), $($arg)*);
     })
 }

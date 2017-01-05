@@ -36,6 +36,27 @@ pub enum SystemCall {
     RetypeTask {
         request: (usize, usize),
     },
+    TaskSetInstructionPointer {
+        request: (usize, u64),
+    },
+    TaskSetStackPointer {
+        request: (usize, u64),
+    },
+    TaskSetCPool {
+        request: (usize, usize),
+    },
+    TaskSetTopPageTable {
+        request: (usize, usize),
+    },
+    TaskSetBuffer {
+        request: (usize, usize),
+    },
+    TaskSetActive {
+        request: usize
+    },
+    TaskSetInactive {
+        request: usize
+    },
 }
 
 #[derive(Debug)]

@@ -106,24 +106,26 @@ static mut IS_PARENT: bool = true;
 fn start(_argc: isize, _argv: *const *const u8) {
     if unsafe { IS_PARENT } {
         unsafe { IS_PARENT = false; }
-        system::set_task_buffer(0x90001000);
-        system_print!("parent rinit started.");
         parent_main();
     } else {
-        system::set_task_buffer(0x90003000);
-        system_print!("child rinit started.");
         child_main();
     }
     loop {};
 }
 
 fn parent_main() {
+    let task_buffer = 0x90001000;
+
+    system_print!(task_buffer, "parent rinit started.");
+    print!("Child entry should be at: 0x{:x} ({})\nChild stack pointer should be at: 0x{:x} ({})\n",
+           start as *const () as usize, start as *const () as usize,
+           0x70000000 + (0x1000 * 4 - 4), 0x70000000 + (0x1000 * 4 - 4));
     print!(">>> ");
     let mut lastkey = Key::Nonprintable;
     let mut command = [0u8; 32];
     let mut command_size = 0;
     while true {
-        let key = from_scancode(system::channel_take(254) as usize);
+        let key = from_scancode(system::channel_take(task_buffer, 254) as usize);
         if key == lastkey {
             continue;
         } else {
@@ -139,7 +141,7 @@ fn parent_main() {
             }
             Key::Enter => {
                 print!("\n");
-                execute_command(::core::str::from_utf8(&command[0..command_size]).unwrap());
+                execute_command(task_buffer, ::core::str::from_utf8(&command[0..command_size]).unwrap());
                 command = [0u8; 32];
                 command_size = 0;
             }
@@ -148,29 +150,78 @@ fn parent_main() {
     }
 }
 
-fn child_main() {
-
+fn start_child(task_buffer: usize) {
+    system::retype_task(task_buffer, 2, 249);
+    system::task_set_stack_pointer(task_buffer, 249, 0x70000000 + (0x1000 * 4 - 4));
+    system::task_set_instruction_pointer(task_buffer, 249, start as *const () as u64);
+    system::task_set_cpool(task_buffer, 249, 0);
+    system::task_set_top_page_table(task_buffer, 249, 3);
+    system::task_set_buffer(task_buffer, 249, 250);
+    system::task_set_active(task_buffer, 249);
 }
 
-fn execute_command(s: &str) {
+fn child_main() {
+    let task_buffer = 0x90003000;
+
+    system_print!(task_buffer, "child rinit started.");
+    while true {
+        let value = system::channel_take(task_buffer, 255);
+        system_print!(task_buffer, "Received from master: {}", value);
+    }
+}
+
+fn parse_usize(s: &str, prefix: &str) -> Option<(usize, usize)> {
+    if s.len() >= prefix.len() + 4 && &s[0..prefix.len()] == prefix {
+        let st = &s[(prefix.len()+1)..s.len()];
+        let mut split = st.split(' ');
+        let o1: usize = split.next().unwrap().parse().unwrap();
+        let o2: usize = split.next().unwrap().parse().unwrap();
+        return Some((o1, o2));
+    } else {
+        return None;
+    }
+}
+
+fn execute_command(task_buffer: usize, s: &str) {
     if s == "list" {
         print!("Listing task cpool ...\n");
-        system::cpool_list_debug();
+        system::cpool_list_debug(task_buffer);
+    } else if s == "start child" {
+        start_child(task_buffer);
+        print!("Child started.\n");
     } else if s.len() >= 6 && &s[0..4] == "echo" {
         print!("{}\n", &s[5..s.len()]);
-    } else if s.len() >= 16 && &s[0..12] == "retype cpool" {
-        let st = &s[13..s.len()];
-        let mut split = st.split(' ');
-        let source: usize = split.next().unwrap().parse().unwrap();
-        let target: usize = split.next().unwrap().parse().unwrap();
-        system::retype_cpool(source, target);
+    } else if s.len() >= 6 && &s[0..4] == "send" {
+        let value: u64 = (&s[5..s.len()]).parse().unwrap();
+        system::channel_put(task_buffer, 255, value);
+        print!("Sent to child through channel 255\n");
+    } else if let Some((source, target)) = parse_usize(s, "retype cpool") {
+        system::retype_cpool(task_buffer, source, target);
         print!("Operation finished.\n");
-    } else if s.len() >= 15 && &s[0..11] == "retype task" {
-        let st = &s[12..s.len()];
-        let mut split = st.split(' ');
-        let source: usize = split.next().unwrap().parse().unwrap();
-        let target: usize = split.next().unwrap().parse().unwrap();
-        system::retype_task(source, target);
+    } else if let Some((source, target)) = parse_usize(s, "retype task") {
+        system::retype_task(task_buffer, source, target);
+        print!("Operation finished.\n");
+    } else if let Some((target, ptr)) = parse_usize(s, "set stack") {
+        system::task_set_stack_pointer(task_buffer, target, ptr as u64);
+        print!("Operation finished.\n");
+    } else if let Some((target, ptr)) = parse_usize(s, "set instruction") {
+        system::task_set_instruction_pointer(task_buffer, target, ptr as u64);
+        print!("Operation finished.\n");
+    } else if let Some((target, cpool)) = parse_usize(s, "set cpool") {
+        system::task_set_cpool(task_buffer, target, cpool);
+        print!("Operation finished.\n");
+    } else if let Some((target, table)) = parse_usize(s, "set table") {
+        system::task_set_top_page_table(task_buffer, target, table);
+        print!("Operation finished.\n");
+    } else if let Some((target, buffer)) = parse_usize(s, "set buffer") {
+        system::task_set_buffer(task_buffer, target, buffer);
+        print!("Operation finished.\n");
+    } else if let Some((target, status)) = parse_usize(s, "set active") {
+        if status == 0 {
+            system::task_set_inactive(task_buffer, target);
+        } else {
+            system::task_set_active(task_buffer, target);
+        }
         print!("Operation finished.\n");
     } else {
         print!("Unknown command.\n");

@@ -217,7 +217,58 @@ fn handle_system_call(call: &mut SystemCall, task_cap: TaskCap, cpool: &CPoolDes
                 let target = TaskCap::retype_from(source.write().deref_mut());
                 let result = cpool.downgrade_at(&target, request.1);
             }
-        }
+        },
+        &mut SystemCall::TaskSetInstructionPointer {
+            request: ref request,
+        } => {
+            let target: Option<TaskCap> = cpool.upgrade(request.0);
+            if target.is_some() {
+                let target = target.unwrap();
+                target.write().set_instruction_pointer(VAddr::from(request.1));
+            }
+        },
+        &mut SystemCall::TaskSetStackPointer {
+            request: ref request,
+        } => {
+            let target: Option<TaskCap> = cpool.upgrade(request.0);
+            if target.is_some() {
+                let target = target.unwrap();
+                target.write().set_stack_pointer(VAddr::from(request.1));
+            }
+        },
+        &mut SystemCall::TaskSetCPool {
+            request: ref request,
+        } => {
+            let target_task: TaskCap = cpool.upgrade(request.0).unwrap();
+            let target_cpool: CPoolCap = cpool.upgrade(request.1).unwrap();
+            target_task.read().downgrade_cpool(&target_cpool);
+        },
+        &mut SystemCall::TaskSetTopPageTable {
+            request: ref request,
+        } => {
+            let target_task: TaskCap = cpool.upgrade(request.0).unwrap();
+            let target_table: TopPageTableCap = cpool.upgrade(request.1).unwrap();
+            target_task.read().downgrade_top_page_table(&target_table);
+        },
+        &mut SystemCall::TaskSetBuffer {
+            request: ref request,
+        } => {
+            let target_task: TaskCap = cpool.upgrade(request.0).unwrap();
+            let target_buffer: TaskBufferPageCap = cpool.upgrade(request.1).unwrap();
+            target_task.read().downgrade_buffer(&target_buffer);
+        },
+        &mut SystemCall::TaskSetActive {
+            request: ref request,
+        } => {
+            let target_task: TaskCap = cpool.upgrade(*request).unwrap();
+            target_task.write().set_status(TaskStatus::Active);
+        },
+        &mut SystemCall::TaskSetInactive {
+            request: ref request,
+        } => {
+            let target_task: TaskCap = cpool.upgrade(*request).unwrap();
+            target_task.write().set_status(TaskStatus::Inactive);
+        },
         &mut SystemCall::ChannelTake {
             request: ref request,
             response: ref mut response,

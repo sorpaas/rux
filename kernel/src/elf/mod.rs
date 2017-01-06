@@ -1,5 +1,6 @@
 use core::fmt;
 
+/// Loader for ELF binary.
 mod loader;
 
 pub use self::loader::{ElfBinary};

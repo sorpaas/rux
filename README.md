@@ -29,13 +29,13 @@ GNU's `binutils`. The easiest way to do it is through the `shell.nix`
 file provided in the source code. Install [Nix](http://nixos.org/nix/),
 then go to the source code root and run the following command:
 
-``` {.bash}
+```bash
 nix-shell
 ```
 
 After that, run:
 
-``` {.bash}
+```bash
 make run
 ```
 
@@ -44,19 +44,19 @@ buffer, after the kernel successfully booted, should show a simple
 command-line interface controlled by `rinit` program launched by the
 kernel. Several commands can be used to test things out.
 
-``` {.bash}
+```bash
 echo [message]
 ```
 
 Echo messages and print them back to the VGA buffer.
 
-``` {.bash}
+```bash
 list
 ```
 
 Print the current `CPool` slots into the kernel message buffer.
 
-``` {.bash}
+```bash
 retype cpool [source slot id] [target slot id]
 ```
 
@@ -93,29 +93,29 @@ priviliged program or account is needed.
 
 Current implemented capabilities are:
 
--   Untyped memory capability (UntypedCap)
--   Capability pool capability (CPoolCap)
--   Paging capability
-    -   PML4Cap, PDPTCap, PDCap, PTCap
-    -   RawPageCap, TaskBufferPageCap
-    -   VGA buffer
--   CPU time sharing capability (TaskCap)
--   Inter-process communication capability (ChannelCap)
+- Untyped memory capability (UntypedCap)
+- Capability pool capability (CPoolCap)
+- Paging capability
+  - PML4Cap, PDPTCap, PDCap, PTCap
+  - RawPageCap, TaskBufferPageCap
+  - VGA buffer
+- CPU time sharing capability (TaskCap)
+- Inter-process communication capability (ChannelCap)
 
 #### Example: Initialize a New Task
 
 This example shows how to initialize a new task using the capability
 system.
 
--   Create an empty TaskCap.
--   Create an empty CPoolCap.
--   Initialize paging capabilities (One PML4Cap, Several PDPTCap, PDCap,
-    PTCap and RawPageCap)
--   Assign the stack pointer in TaskCap.
--   Load the program into those RawPageCap.
--   Assign the PML4Cap to TaskCap.
--   Assign the CPoolCap to TaskCap.
--   Switch to the task!
+- Create an empty TaskCap.
+- Create an empty CPoolCap.
+- Initialize paging capabilities (One PML4Cap, Several PDPTCap, PDCap,
+  PTCap and RawPageCap)
+- Assign the stack pointer in TaskCap.
+- Load the program into those RawPageCap.
+- Assign the PML4Cap to TaskCap.
+- Assign the CPoolCap to TaskCap.
+- Switch to the task!
 
 #### Implementation
 

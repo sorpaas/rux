@@ -1,10 +1,12 @@
 use super::{MemoryObject};
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 
+/// Read guard using a memory object.
 pub struct UniqueReadGuard<T> {
     object: MemoryObject<T>
 }
 
+/// Write guard using a memory object.
 pub struct UniqueWriteGuard<T> {
     object: MemoryObject<T>
 }
@@ -12,6 +14,7 @@ pub struct UniqueWriteGuard<T> {
 // Implementation for UniqueReadGuard
 
 impl<T> UniqueReadGuard<T> {
+    /// Create a new read guard from a memory object.
     pub const unsafe fn new(object: MemoryObject<T>) -> Self {
         UniqueReadGuard::<T> {
             object: object,
@@ -32,6 +35,7 @@ impl<T> Deref for UniqueReadGuard<T> {
 // Implementation for UniqueWriteGuard
 
 impl<T> UniqueWriteGuard<T> {
+    /// Create a new write guard using a memory object.
     pub const unsafe fn new(object: MemoryObject<T>) -> Self {
         UniqueWriteGuard::<T> {
             object: object,

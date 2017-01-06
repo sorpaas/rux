@@ -10,12 +10,15 @@ use common::*;
 use spin::{Mutex};
 use util::{MemoryObject};
 
+/// Read/write lock for ManagedArc.
 mod rwlock;
+/// Weak pool storing weak pointers for ManagedArc.
 mod weak_pool;
 
 pub use self::rwlock::{ManagedArcRwLockReadGuard, ManagedArcRwLockWriteGuard};
 pub use self::weak_pool::{ManagedWeakPool1Arc, ManagedWeakPool3Arc, ManagedWeakPool256Arc};
 
+/// A weak node (entry of a weak pool).
 #[derive(Debug)]
 struct ManagedWeakNode {
     ptr: PAddr,
@@ -24,6 +27,7 @@ struct ManagedWeakNode {
     next: Option<ManagedWeakAddr>
 }
 
+/// A weak address.
 #[derive(Copy, Clone, Debug)]
 struct ManagedWeakAddr {
     inner_addr: PAddr,
@@ -31,6 +35,8 @@ struct ManagedWeakAddr {
     offset: usize,
 }
 
+/// Inner of an Arc, containing strong pointers and weak pointers
+/// information. Wrap the actual data.
 struct ManagedArcInner<T> {
     lead: Mutex<usize>,
     // TODO: Implement weak pool lock.
@@ -48,6 +54,7 @@ impl<T> Drop for ManagedArcInner<T> {
     }
 }
 
+/// A managed Arc, pointing to a `ManagedArcInner`.
 pub struct ManagedArc<T> {
     ptr: PAddr,
     _marker: PhantomData<T>,
@@ -82,6 +89,7 @@ impl<T> Clone for ManagedArc<T> {
     }
 }
 
+/// Like `ManagedArc<T>`, but use `TypeId` to represent its type.
 #[derive(Debug)]
 pub struct ManagedArcAny {
     ptr: PAddr,
@@ -89,6 +97,7 @@ pub struct ManagedArcAny {
 }
 
 impl ManagedArcAny {
+    /// Check whether this Arc is of given type.
     pub fn is<T: Any>(&self) -> bool
         where ManagedArc<T>: Any {
         self.type_id == TypeId::of::<T>()
@@ -126,14 +135,17 @@ impl Drop for ManagedArcAny {
 }
 
 impl<T> ManagedArc<T> {
+    /// Get the ManagedArcInner length.
     pub fn inner_length() -> usize {
         mem::size_of::<ManagedArcInner<T>>()
     }
 
+    /// Get the ManagedArcInner alginment.
     pub fn inner_alignment() -> usize {
         mem::align_of::<ManagedArcInner<T>>()
     }
 
+    /// Create a managed Arc from a physical address.
     pub unsafe fn from_ptr(ptr: PAddr) -> Self {
         let arc = ManagedArc { ptr: ptr, _marker: PhantomData };
 
@@ -145,6 +157,7 @@ impl<T> ManagedArc<T> {
         arc
     }
 
+    /// Create a managed Arc using the given data.
     pub unsafe fn new(ptr: PAddr, data: T) -> Self {
         let arc = ManagedArc { ptr: ptr, _marker: PhantomData };
         let inner = arc.inner_object();
@@ -157,10 +170,12 @@ impl<T> ManagedArc<T> {
         arc
     }
 
+    /// Read the inner object, wrapped in a memory object.
     fn inner_object(&self) -> MemoryObject<ManagedArcInner<T>> {
         unsafe { MemoryObject::<ManagedArcInner<T>>::new(self.ptr) }
     }
 
+    /// Get the strong pointers count.
     pub fn lead_count(&self) -> usize {
         let inner = self.inner_object();
         unsafe { *inner.as_ref().unwrap().lead.lock() }

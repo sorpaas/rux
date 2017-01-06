@@ -1,6 +1,10 @@
+/// Untyped capability implementation.
 mod untyped;
+/// Capability pool capability implementation.
 mod cpool;
+/// Task capability implementation.
 mod task;
+/// Channel capability implementation.
 mod channel;
 
 pub use self::untyped::{UntypedDescriptor, UntypedCap};
@@ -15,8 +19,11 @@ use core::any::{TypeId};
 use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny, ManagedArc};
 
 pub use abi::{SetDefault, TaskBuffer};
+/// Raw page struct representing a whole page.
 pub struct RawPage(pub [u8; PAGE_LENGTH]);
+/// Raw page capability. Represents a page with no other information.
 pub type RawPageCap = PageCap<RawPage>;
+/// Task buffer page capability. Represents a page of task buffer.
 pub type TaskBufferPageCap = PageCap<TaskBuffer>;
 
 impl SetDefault for RawPage {
@@ -27,6 +34,16 @@ impl SetDefault for RawPage {
     }
 }
 
+/// Create a managed Arc (capability) from an address of an kernel
+/// object (architecture-specific or general). The `type_id` should be
+/// a [TypeId](https://doc.rust-lang.org/std/any/struct.TypeId.html)
+/// of a capability. If the `type_id` is not recognized, `None` is
+/// returned.
+///
+/// # Safety
+///
+/// `ptr` must be a physical address pointing to a valid kernel object
+/// of type `type_id`.
 pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
     if type_id == TypeId::of::<CPoolCap>() {
         Some(unsafe { ManagedArc::from_ptr(ptr): CPoolCap }.into())
@@ -45,6 +62,9 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
     }
 }
 
+/// Drop an architecture-specific `any` capability. `ManagedArcAny` is
+/// not itself droppable. It must be converted to its real type before
+/// dropping.
 pub fn drop_any(any: ManagedArcAny) {
     if any.is::<CPoolCap>() {
         any.into(): CPoolCap;

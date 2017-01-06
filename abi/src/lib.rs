@@ -2,7 +2,9 @@
 #![feature(asm)]
 #![no_std]
 
+/// A trait that allows setting a struct back to its default value.
 pub trait SetDefault {
+    /// Set this struct back to its default value.
     fn set_default(&mut self);
 }
 
@@ -59,6 +61,7 @@ pub enum SystemCall {
     },
 }
 
+/// Represents a task buffer used for system calls.
 #[derive(Debug)]
 pub struct TaskBuffer {
     pub call: Option<SystemCall>

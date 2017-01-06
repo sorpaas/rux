@@ -39,8 +39,8 @@ pub fn pt_index(addr: VAddr) -> usize {
     ((addr.into(): usize) >> 12) & 0b111111111
 }
 
-/// PML4 Entry bits description.
 bitflags! {
+    /// PML4 Entry bits description.
     pub flags PML4Entry: u64 {
         /// Present; must be 1 to reference a page-directory-pointer table
         const PML4_P       = bit!(0),
@@ -97,8 +97,8 @@ impl PML4Entry {
                 is_instruction_fetching_disabled, PML4_XD);
 }
 
-/// PDPT Entry bits description.
 bitflags! {
+    /// PDPT Entry bits description.
     pub flags PDPTEntry: u64 {
         /// Present; must be 1 to map a 1-GByte page or reference a page directory.
         const PDPT_P       = bit!(0),
@@ -164,8 +164,8 @@ impl PDPTEntry {
                 is_instruction_fetching_disabled, PDPT_XD);
 }
 
-/// PD Entry bits description.
 bitflags! {
+    /// PD Entry bits description.
     pub flags PDEntry: u64 {
         /// Present; must be 1 to map a 2-MByte page or reference a page table.
         const PD_P       = bit!(0),
@@ -238,8 +238,8 @@ impl PDEntry {
                 is_instruction_fetching_disabled, PD_XD);
 }
 
-/// PT Entry bits description.
 bitflags! {
+    /// PT Entry bits description.
     pub flags PTEntry: u64 {
         /// Present; must be 1 to map a 4-KByte page.
         const PT_P       = bit!(0),

@@ -1,9 +1,15 @@
+/// Interrupt descriptor table module.
 mod idt;
+/// Helpers for representing bit fields.
 mod bit_field;
+/// Functions and data-structures to load descriptor tables.
 mod dtables;
+/// Advanced Programmable Interrupt Controller.
 mod apic;
+/// Programmable Interrupt Controller.
 mod pic;
 
+/// Context switching related functionality.
 #[macro_use]
 mod switch;
 
@@ -15,6 +21,7 @@ pub use self::switch::{HandlerFunc, Registers};
 pub use self::apic::{LOCAL_APIC, IO_APIC};
 pub use self::pic::{disable_pic};
 
+/// Interrupt vector type.
 pub type InterruptVector = u64;
 
 pub const TIMER_INTERRUPT_CODE: InterruptVector = 0x40;
@@ -30,6 +37,7 @@ return_to_raw_fn!(system_call_return_to_raw, SYSTEM_CALL_INTERRUPT_CODE);
 return_to_raw_fn!(debug_call_return_to_raw, DEBUG_CALL_INTERRUPT_CODE);
 
 lazy_static! {
+    /// The interrupt descriptor table static.
     pub static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
 
@@ -48,6 +56,8 @@ lazy_static! {
     };
 }
 
+/// Enum that represents exceptions. Abstracted from interrupt
+/// exception codes.
 #[derive(Debug)]
 pub enum Exception {
     SystemCall,
@@ -58,6 +68,8 @@ pub enum Exception {
 }
 
 impl Exception {
+    /// Create a new Exception using an exception code and an optional
+    /// error code.
     fn new(code: u64, error: Option<u64>) -> Exception {
         match code {
             TIMER_INTERRUPT_CODE => Exception::Timer,
@@ -69,6 +81,7 @@ impl Exception {
         }
     }
 
+    /// Send End of Interrupt signal if appropriate.
     pub unsafe fn send_eoi(&self) {
         match self {
             &Exception::Timer => LOCAL_APIC.lock().eoi(),
@@ -78,6 +91,7 @@ impl Exception {
     }
 }
 
+/// Represents a task runtime. Used by the task capability.
 #[derive(Debug)]
 pub struct TaskRuntime {
     instruction_pointer: u64,
@@ -98,6 +112,12 @@ impl Default for TaskRuntime {
 }
 
 impl TaskRuntime {
+    /// Switch to a task using the task runtime.
+    ///
+    /// # Safety
+    ///
+    /// `TaskRuntime` must have all values valid. `mode_change` must
+    /// be set according to the task capability.
     pub unsafe fn switch_to(&mut self, mode_change: bool) -> Exception {
         let code_seg: u64 = if mode_change { 0x28 | 0x3 } else { 0x8 | 0x0 };
         let data_seg: u64 = if mode_change { 0x30 | 0x3 } else { 0x10 | 0x0 };
@@ -118,15 +138,20 @@ impl TaskRuntime {
         return exception;
     }
 
+    /// Set the instruction pointer of the task runtime.
     pub fn set_instruction_pointer(&mut self, instruction_pointer: VAddr) {
         self.instruction_pointer = instruction_pointer.into();
     }
 
+    /// Set the stack pointer of the task runtime.
     pub fn set_stack_pointer(&mut self, stack_pointer: VAddr) {
         self.stack_pointer = stack_pointer.into();
     }
 }
 
+/// Enable interrupt. Not used.
 pub unsafe fn enable_interrupt() { }
+/// Disable interrupt. Not used.
 pub unsafe fn disable_interrupt() { }
+/// Set interrupt handler. Not used.
 pub unsafe fn set_interrupt_handler() { }

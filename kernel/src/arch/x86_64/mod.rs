@@ -1,25 +1,23 @@
-/*
- * Rust BareBones OS
- * - By John Hodge (Mutabah/thePowersGang) 
- *
- * arch/amd64/mod.rs
- * - Top-level file for amd64 architecture
- *
- * == LICENCE ==
- * This code has been put into the public domain, there are no restrictions on
- * its use, and the author takes no liability.
- */
-
-// Debug output channel (uses serial)
+/// Debug output channel (uses serial).
 #[path = "debug.rs"]
 pub mod debug;
 
+/// Paging-related functionality.
 mod paging;
+
+/// Kernel initialization code.
 mod init;
+
+/// Virtual and physical address representation.
 mod addr;
+
+/// Interrupt-related functionality.
 mod interrupt;
+
+/// Segment descriptor and task state segment representation.
 mod segmentation;
 
+/// Architecture-specific capabilities. Re-exported also in `kernel::cap`.
 pub mod cap;
 const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 

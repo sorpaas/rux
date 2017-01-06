@@ -13,42 +13,67 @@ use core::ops::{Deref};
 use arch::addr;
 
 extern {
+    /// `init_pd` exposed by linker.
     static mut init_pd: PD;
+    /// `kernel_stack_guard_page` exposed by linker.
     static kernel_stack_guard_page: u64;
 }
 
 // Below should be used BEFORE switching to new page table structure.
+/// Virtual address as the base for all allocations. Those are used
+/// before switching to the new page structure.
 const INITIAL_ALLOC_START_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xc00000);
+/// Offset for the new PML4 virtual address.
 const INITIAL_ALLOC_PML4_OFFSET: usize = 0x0000;
+/// Offset for the new PDPT virtual address.
 const INITIAL_ALLOC_PDPT_OFFSET: usize = 0x1000;
+/// Offset for the new PD virtual address.
 const INITIAL_ALLOC_PD_OFFSET: usize = 0x2000;
+/// Offset for the new Object Pool PT virtual address.
 const INITIAL_ALLOC_OBJECT_POOL_PT_OFFSET: usize = 0x3000;
+/// Offset for the new kernel PT virtual address.
 const INITIAL_ALLOC_KERNEL_PT_START_OFFSET: usize = 0x4000;
 
 // Below should be used AFTER switching to new page table structure.
-pub const OBJECT_POOL_START_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xe00000);
+/// Object Pool virtual address after switching to new page table.
+pub const OBJECT_POOL_START_VADDR: VAddr = VAddr::new(KERNEL_BASE +
+                                                      0xe00000);
+/// Object Pool size, excluding the recursive Object Pool virtual
+/// address, local APIC page address, and I/O APIC page address.
 pub const OBJECT_POOL_SIZE: usize = 509;
-pub const OBJECT_POOL_PT_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xfff000);
-pub const LOCAL_APIC_PAGE_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xffe000);
+/// Object Pool PT virtual address after switching to new page table.
+pub const OBJECT_POOL_PT_VADDR: VAddr = VAddr::new(KERNEL_BASE +
+                                                   0xfff000);
+/// Local APIC page virtual address after switching to new page table.
+pub const LOCAL_APIC_PAGE_VADDR: VAddr = VAddr::new(KERNEL_BASE +
+                                                    0xffe000);
+/// I/O APIC page virtual address after switching to new page table.
 pub const IO_APIC_PAGE_VADDR: VAddr = VAddr::new(KERNEL_BASE + 0xffd000);
 
-// Variables
+/// Initial PD. Invalid after switching to the new page table.
 static INITIAL_PD: ExternMutex<PD> =
     unsafe { ExternMutex::new(Some(&init_pd as *const _)) };
 
+/// Object Pool PT struct.
 pub static OBJECT_POOL_PT: ExternMutex<[PTEntry; OBJECT_POOL_SIZE]> =
     unsafe { ExternMutex::new(None) };
+/// Kernel PML4 struct.
 pub static KERNEL_PML4: ExternReadonlyObject<PML4> =
     unsafe { ExternReadonlyObject::new() };
+/// Kernel PDPT struct.
 pub static KERNEL_PDPT: ExternReadonlyObject<PDPT> =
     unsafe { ExternReadonlyObject::new() };
+/// Kernel PD struct.
 pub static KERNEL_PD: ExternReadonlyObject<PD> =
     unsafe { ExternReadonlyObject::new() };
 
+/// Guard page virtual address after switching to the new page table.
 fn kernel_stack_guard_page_vaddr() -> VAddr {
     VAddr::from((&kernel_stack_guard_page as *const _) as u64)
 }
 
+/// Allocate the kernel PML4 using the given memory region and
+/// allocation base.
 fn alloc_kernel_pml4(region: &mut MemoryRegion, alloc_base: PAddr) -> Unique<PML4> {
     use arch::paging::PML4Entry;
     
@@ -71,6 +96,8 @@ fn alloc_kernel_pml4(region: &mut MemoryRegion, alloc_base: PAddr) -> Unique<PML
     pml4_unique
 }
 
+/// Allocate the kernel PDPT using the given memory region and
+/// allocation base.
 fn alloc_kernel_pdpt(region: &mut MemoryRegion, pml4: &mut PML4, alloc_base: PAddr) -> Unique<PDPT> {
     use arch::paging::{PDPTEntry, PML4Entry, PML4_P, PML4_RW};
     
@@ -95,6 +122,8 @@ fn alloc_kernel_pdpt(region: &mut MemoryRegion, pml4: &mut PML4, alloc_base: PAd
     pdpt_unique
 }
 
+/// Allocate the kernel PD using the given memory region and
+/// allocation base.
 fn alloc_kernel_pd(region: &mut MemoryRegion, pdpt: &mut PDPT, alloc_base: PAddr) -> Unique<PD> {
     use arch::paging::{PDEntry, PDPTEntry, PDPT_P, PDPT_RW};
     
@@ -119,6 +148,8 @@ fn alloc_kernel_pd(region: &mut MemoryRegion, pdpt: &mut PDPT, alloc_base: PAddr
     pd_unique
 }
 
+/// Allocate the object pool PT. It also maps a reverse ObjectPool PT
+/// access point, and APIC pages (local and I/O).
 fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAddr) -> Unique<PT> {
     use arch::paging::{PTEntry, PDEntry, PD_P, PD_RW, PT_P, PT_RW, PT_PWT, PT_PCD};
     
@@ -164,6 +195,7 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
     pt_unique
 }
 
+/// Allocate one kernel page using `offset_size`.
 fn alloc_kernel_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
     use arch::paging::{PT_P, PT_RW};
     
@@ -175,6 +207,7 @@ fn alloc_kernel_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
     pt[pt_index(vaddr)] = PTEntry::new(paddr, PT_P | PT_RW);
 }
 
+/// Allocate the kernel guard page specified by `offset_size`.
 fn alloc_kernel_guard_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
     use arch::paging::{PT_P, PT_RW};
     
@@ -186,6 +219,7 @@ fn alloc_kernel_guard_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
     pt[pt_index(vaddr)] = PTEntry::empty();
 }
 
+/// Allocate necessary kernel PTs calculated by `block_count`.
 fn alloc_kernel_pts(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAddr) {
     use arch::paging::{PDEntry, PD_P, PD_RW};
     
@@ -218,7 +252,7 @@ fn alloc_kernel_pts(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAddr) {
     }
 }
 
-// This maps 2MB for allocation region
+/// Map the initial 2 MiB for allocation region.
 fn map_alloc_region(alloc_region: &mut MemoryRegion) -> PAddr {
     use arch::paging::{PD_P, PD_RW, PD_PS, PDEntry, flush_all};
     
@@ -237,6 +271,7 @@ fn map_alloc_region(alloc_region: &mut MemoryRegion) -> PAddr {
     map_alloc_start_paddr
 }
 
+/// Main function to initialize paging.
 pub fn init(mut alloc_region: &mut MemoryRegion) {
     use arch::paging::{switch_to};
     

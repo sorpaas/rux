@@ -17,6 +17,7 @@ const ICW4_BUF_SLAVE: u8 = 0x08;
 const ICW4_BUF_MASTER: u8 = 0x0C;
 const ICW4_SFNM: u8 = 0x10;
 
+/// Disable Programmable Interrupt Controller.
 pub unsafe fn disable_pic() {
     // Set ICW1
     outportb(0x20, 0x11);
@@ -39,6 +40,7 @@ pub unsafe fn disable_pic() {
     outportb(0xa1, 0xff);
 }
 
+/// Send End of Interrupt for PIC.
 pub unsafe fn send_pic_eoi(irq: u8) {
     if (irq >= 8) {
         outportb(PIC2_COMMAND, PIC_EOI);
@@ -47,6 +49,7 @@ pub unsafe fn send_pic_eoi(irq: u8) {
     }
 }
 
+/// Enable Programmable Interrupt Controller.
 pub unsafe fn enable_pic(master_offset: u8, slave_offset: u8) {
     let a1 = inportb(PIC1_DATA);
     let a2 = inportb(PIC2_DATA);

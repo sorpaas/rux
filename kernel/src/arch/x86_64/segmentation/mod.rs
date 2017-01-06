@@ -1,16 +1,16 @@
-//! Program x86 segmentation hardware.
+/// Task State Segment Representation.
 mod tss;
 
 use core::fmt;
 
 pub use self::tss::{TaskStateSegment};
 
-/// Specifies which element to load into a segment from
-/// descriptor tables (i.e., is a index to LDT or GDT table
-/// with some additional flags).
 bitflags! {
+    /// Specifies which element to load into a segment from
+    /// descriptor tables (i.e., is a index to LDT or GDT table
+    /// with some additional flags).
     pub flags SegmentSelector: u16 {
-        /// Requestor Privilege Level
+        // Requestor Privilege Level
         const RPL_0 = 0b00,
         const RPL_1 = 0b01,
         const RPL_2 = 0b10,
@@ -24,7 +24,7 @@ bitflags! {
 }
 
 impl SegmentSelector {
-    /// Create a new SegmentSelector
+    /// Create a new SegmentSelector.
     ///
     /// # Arguments
     ///  * `index` index in GDT or LDT array.
@@ -33,13 +33,14 @@ impl SegmentSelector {
         SegmentSelector { bits: index << 3 }
     }
 
+    /// Create the selector from raw.
     pub const fn from_raw(bits: u16) -> SegmentSelector {
         SegmentSelector { bits: bits }
     }
 }
 
-/// Entry for GDT or LDT. Provides size and location of a segment.
 bitflags! {
+    /// Entry for GDT or LDT. Provides size and location of a segment.
     pub flags SegmentDescriptor: u64 {
         /// Descriptor type (0 = system; 1 = code or data).
         const DESC_S    = 1 << (32+12),

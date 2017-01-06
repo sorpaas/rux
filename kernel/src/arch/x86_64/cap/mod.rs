@@ -1,3 +1,4 @@
+/// Paging-related arch-specific capabilities.
 mod paging;
 
 pub use self::paging::{PML4Descriptor, PML4Cap,
@@ -7,12 +8,23 @@ pub use self::paging::{PML4Descriptor, PML4Cap,
                        PageDescriptor, PageCap,
                        PAGE_LENGTH};
 
+/// The top-level page table capability. In `x86_64`, this is PML4.
 pub type TopPageTableCap = PML4Cap;
 
 use common::*;
 use core::any::{TypeId};
 use util::managed_arc::{ManagedArc, ManagedWeakPool256Arc, ManagedArcAny};
 
+/// Create a managed Arc (capability) from an address of an
+/// architecture-specific kernel object. The `type_id` should be a
+/// [TypeId](https://doc.rust-lang.org/std/any/struct.TypeId.html) of
+/// an architecture-specific capability. If the `type_id` is not
+/// recognized, `None` is returned.
+///
+/// # Safety
+///
+/// `ptr` must be a physical address pointing to a valid kernel object
+/// of type `type_id`.
 pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
     if type_id == TypeId::of::<PML4Cap>() {
         Some(unsafe { ManagedArc::from_ptr(ptr): PML4Cap }.into())
@@ -27,6 +39,9 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
     }
 }
 
+/// Drop an architecture-specific `any` capability. `ManagedArcAny` is
+/// not itself droppable. It must be converted to its real type before
+/// dropping. This function is used by `kernel::cap::drop_any`.
 pub fn drop_any(any: ManagedArcAny) {
     if any.is::<PML4Cap>() {
         any.into(): PML4Cap;

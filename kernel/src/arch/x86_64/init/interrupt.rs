@@ -1,5 +1,7 @@
 use arch::interrupt::{self, IDT, IO_APIC, LOCAL_APIC, disable_pic};
 
+/// Initialize interrupt. Disable PIC and then initialize APIC
+/// together with keyboard interrupt on I/O APIC.
 pub fn init() {
     unsafe { disable_pic() };
     IDT.load();

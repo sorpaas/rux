@@ -28,24 +28,35 @@ extern crate lazy_static;
 #[macro_use]
 extern crate bitflags;
 
-/// Macros, need to be loaded before everything else due to how rust parses
+/// A log macro, used together with architecture-specific logging
+/// function that outputs kernel debug messages to I/O ports.
+// This mod should load before everything else
 #[macro_use]
 mod macros;
 
-/// Achitecture-specific modules
+/// Achitecture-specific modules.
 #[cfg(target_arch="x86_64")] #[path="arch/x86_64/mod.rs"]
 pub mod arch;
 
-/// Exception handling (panic)
+/// Exception handling (panic). See also
+/// [Unwinding](https://doc.rust-lang.org/nomicon/unwinding.html).
 pub mod unwind;
 
-/// Logging code
+/// Logging writer for use with the log macro.
 mod logging;
 
+/// Utils for managed Arc, spinning guard, memory objects and others.
 #[macro_use]
 mod util;
+
+/// Memory region, virtual address and physical address
+/// representation.
 mod common;
+
+/// Decoding ELF format, for initializing the user-space rinit program.
 mod elf;
+
+/// Capabilities implementation.
 mod cap;
 
 use core::mem;

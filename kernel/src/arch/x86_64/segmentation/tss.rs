@@ -1,3 +1,5 @@
+/// Represents a Task State Segment. It holds the kernel stack
+/// information used by interrupts.
 #[repr(packed)]
 pub struct TaskStateSegment {
     reserved1: u32,
@@ -20,6 +22,7 @@ pub struct TaskStateSegment {
 }
 
 impl TaskStateSegment {
+    /// Create an empty TSS.
     pub const fn empty() -> TaskStateSegment {
         TaskStateSegment {
             reserved1: 0,

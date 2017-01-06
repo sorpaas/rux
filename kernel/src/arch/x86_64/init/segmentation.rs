@@ -4,10 +4,13 @@ use common::*;
 use core::mem::{size_of};
 
 extern {
+    /// GDT memory address exposed by linker.
     static mut GDT: [SegmentDescriptor; 9];
+    /// Initial stack address exposed by linker.
     static init_stack: u64;
 }
 
+/// Task State Segment static.
 static mut TSS: TaskStateSegment = TaskStateSegment::empty();
 
 /// Load the task state register.
@@ -15,11 +18,13 @@ pub unsafe fn load_tr(sel: SegmentSelector) {
     asm!("ltr $0" :: "r" (sel));
 }
 
+/// Set the current kernel stack. Essential for context switching.
 pub unsafe fn set_kernel_stack(addr: u64) {
     TSS.sp0 = addr;
     TSS.ist1 = addr;
 }
 
+/// Main function to initialize interrupt.
 pub fn init() {
     unsafe {
         use arch::segmentation::{DESC_P, DESC_L, DESC_AVL, DESC_DPL3,

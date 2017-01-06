@@ -77,12 +77,13 @@ macro_rules! addr_common {
     }
 }
 
+/// Represent a physical memory address.
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct PAddr(u64);
 
 addr_common!(PAddr, PAddr);
 
-/// Represent a virtual (linear) memory address
+/// Represent a virtual (linear) memory address.
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VAddr(u64);
 

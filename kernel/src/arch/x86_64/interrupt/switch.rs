@@ -1,5 +1,6 @@
 use arch::init;
 
+/// Interrupt handler function type.
 pub type HandlerFunc = unsafe extern "C" fn();
 
 #[derive(Debug, Clone)]

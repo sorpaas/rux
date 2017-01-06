@@ -12,41 +12,60 @@ use core::marker::{PhantomData};
 use core::any::{Any};
 use cap::{UntypedDescriptor, SetDefault};
 
-pub use self::page::{PAGE_LENGTH};
+/// Page length used in current kernel. This is `BASE_PAGE_LENGTH` in x86_64.
+pub const PAGE_LENGTH: usize = BASE_PAGE_LENGTH;
 
+/// PML4 page table descriptor.
 pub struct PML4Descriptor {
     start_paddr: PAddr,
     next: Option<ManagedArcAny>,
 }
+
+/// PML4 page table capability.
 pub type PML4Cap = ManagedArc<RwLock<PML4Descriptor>>;
 
+
+/// PDPT page table descriptor.
 pub struct PDPTDescriptor {
     mapped_weak_pool: ManagedWeakPool1Arc,
     start_paddr: PAddr,
     next: Option<ManagedArcAny>,
 }
+
+/// PDPT page table capability.
 pub type PDPTCap = ManagedArc<RwLock<PDPTDescriptor>>;
 
+
+/// PD page table descriptor.
 pub struct PDDescriptor {
     mapped_weak_pool: ManagedWeakPool1Arc,
     start_paddr: PAddr,
     next: Option<ManagedArcAny>,
 }
+
+/// PD page table capability.
 pub type PDCap = ManagedArc<RwLock<PDDescriptor>>;
 
+
+/// PT page table descriptor.
 pub struct PTDescriptor {
     mapped_weak_pool: ManagedWeakPool1Arc,
     start_paddr: PAddr,
     next: Option<ManagedArcAny>,
 }
+
+/// PT page table capability.
 pub type PTCap = ManagedArc<RwLock<PTDescriptor>>;
 
+/// Page descriptor.
 pub struct PageDescriptor<T: SetDefault + Any> {
     mapped_weak_pool: ManagedWeakPool1Arc,
     start_paddr: PAddr,
     next: Option<ManagedArcAny>,
     _marker: PhantomData<T>
 }
+
+/// Page capability.
 pub type PageCap<T: SetDefault + Any> = ManagedArc<RwLock<PageDescriptor<T>>>;
 
 macro_rules! paging_cap {

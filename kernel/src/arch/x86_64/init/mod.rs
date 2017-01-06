@@ -1,6 +1,14 @@
+/// [Multiboot](https://www.gnu.org/software/grub/manual/multiboot/multiboot.html)
+/// information parser.
 mod multiboot;
+
+/// Paging initialization code.
 mod paging;
+
+/// Interrupt initialization code.
 mod interrupt;
+
+/// Segmentation initialization code.
 mod segmentation;
 
 pub use self::paging::{KERNEL_PML4, KERNEL_PDPT, KERNEL_PD,
@@ -24,7 +32,9 @@ use core::ops::{Deref};
 use common::{PAddr, VAddr, MemoryRegion};
 
 extern {
+    /// Multiboot signature exposed by linker.
     static multiboot_sig: u32;
+    /// Multiboot pointer exposed by linker.
     static multiboot_ptr: u64;
 }
 
@@ -33,6 +43,8 @@ pub fn multiboot_paddr() -> PAddr {
     PAddr::from(multiboot_ptr)
 }
 
+/// Iterator for `Option<MemoryRegion>`. It returns `None` if the
+/// inner `Option` is none. Otherwise return the value unwrapped.
 pub struct FreeRegionsIterator<'a>(Iter<'a, Option<MemoryRegion>>);
 
 impl<'a> Iterator for FreeRegionsIterator<'a> {
@@ -53,6 +65,9 @@ impl<'a> Iterator for FreeRegionsIterator<'a> {
     }
 }
 
+/// Initialization information to be passed to `kmain`. It contains
+/// free regions and rinit and kernel memory region information. At
+/// most 16 free regions are supported.
 #[derive(Debug)]
 pub struct InitInfo {
     free_regions_size: usize,
@@ -62,18 +77,23 @@ pub struct InitInfo {
 }
 
 impl InitInfo {
+    /// Return a `FreeRegionsIterator` that allows iterating over all
+    /// free regions.
     pub fn free_regions(&self) -> FreeRegionsIterator {
         FreeRegionsIterator(self.free_regions.iter())
     }
 
+    /// The kernel memory region.
     pub fn kernel_region(&self) -> MemoryRegion {
         self.kernel_region
     }
 
+    /// The user-space rinit program memory region.
     pub fn rinit_region(&self) -> MemoryRegion {
         self.rinit_region
     }
 
+    /// Create a new `InitInfo` using a kernel region and a rinit region.
     pub fn new(kernel_region: MemoryRegion, rinit_region: MemoryRegion) -> InitInfo {
         InitInfo { free_regions_size: 0,
                    free_regions: [None; 16],
@@ -81,12 +101,17 @@ impl InitInfo {
                    rinit_region: rinit_region }
     }
 
+    /// Append a new free region to the `InitInfo`.
     pub fn push_free_region(&mut self, region: MemoryRegion) {
         self.free_regions[self.free_regions_size] = Some(region);
         self.free_regions_size += 1;
     }
 }
 
+/// Read the multiboot structure. Construct an `InitInfo` with all
+/// free regions. A memory region that will be used for initial memory
+/// allocation is returned seperately. That region is always the same
+/// as the region of the kernel region.
 fn bootstrap_archinfo() -> (InitInfo, MemoryRegion) {
     let bootinfo = unsafe {
         multiboot::Multiboot::new(multiboot_paddr(), |addr, size| {
@@ -129,7 +154,9 @@ fn bootstrap_archinfo() -> (InitInfo, MemoryRegion) {
     (archinfo, alloc_region.unwrap())
 }
 
-/// Kernel entrypoint
+/// Kernel entrypoint. This function calls `bootstrap_archinfo`, and
+/// then use the information to initialize paging, segmentation,
+/// interrupt, and APIC. It then jumps to `kmain`.
 #[lang="start"]
 #[no_mangle]
 pub fn kinit() {

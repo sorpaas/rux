@@ -14,10 +14,20 @@ use core::ops::{Deref, CoerceUnsized};
 use core::mem;
 use core::fmt;
 
-/// CAUTION: If you are going to wrap MemoryObject in any other
-/// struct, you must make should that it is dropped last. However,
-/// Drop order in Rust is currently undefined.
-
+/// Represent a memory object, that converts a physical address to an
+/// accessible object.
+///
+/// The struct is implemented using `ObjectPool`. When a new memory
+/// object is created, a new entry on the `ObjectPool` PT is created,
+/// thus makes it addressable. The entry is deleted once the memory
+/// object struct is dropped.
+///
+/// # Safety
+///
+/// If you are going to wrap MemoryObject in any other struct, you
+/// must make should that it is dropped last. However, Drop order in
+/// Rust is currently undefined.
+///
 /// `ObjectGuard` requires T must be Sized.
 pub struct MemoryObject<T: ?Sized> {
     paddr: PAddr,
@@ -34,15 +44,21 @@ impl<T: ?Sized> !Send for MemoryObject<T> { }
 impl<T: ?Sized> !Sync for MemoryObject<T> { }
 
 impl<T: ?Sized> MemoryObject<T> {
+    /// Physical address of the memory object.
     pub fn paddr(&self) -> PAddr {
         self.paddr
     }
 
-    /// Safety: PAddr must be a non-zero pointer.
+    /// Create a new memory object.
+    ///
+    /// # Safety
+    ///
+    /// PAddr must be a non-zero pointer.
     pub unsafe fn new(paddr: PAddr) -> Self where T: Sized {
         Self::slice(paddr, 1)
     }
 
+    /// Get a slice from the current memory object.
     pub unsafe fn slice(paddr: PAddr, size: usize) -> Self where T: Sized {
         let aligned = align_down(paddr, BASE_PAGE_LENGTH);
         let before_start = paddr.into(): usize - aligned.into(): usize;

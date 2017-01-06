@@ -1,5 +1,3 @@
-//! Functions and data-structures to load descriptor tables.
-
 /// A struct describing a pointer to a descriptor table (GDT / IDT).
 /// This is in a format suitable for giving to 'lgdt' or 'lidt'.
 #[derive(Debug)]

@@ -69,6 +69,8 @@ use abi::{SystemCall, TaskBuffer};
 use util::{MemoryObject};
 use core::any::{Any, TypeId};
 
+/// Map a stack for the rinit program using the given physical address
+/// and stack size.
 fn map_rinit_stack(rinit_stack_vaddr: VAddr, rinit_stack_size: usize,
                    cpool: &mut CPoolCap, untyped: &mut UntypedCap, rinit_pml4: &mut TopPageTableCap) {
     for i in 0..rinit_stack_size {
@@ -80,6 +82,7 @@ fn map_rinit_stack(rinit_stack_vaddr: VAddr, rinit_stack_size: usize,
     }
 }
 
+/// Map a task buffer for the rinit program.
 fn map_rinit_buffer(rinit_buffer_vaddr: VAddr,
                     cpool: &mut CPoolCap, untyped: &mut UntypedCap, rinit_pml4: &mut TopPageTableCap)
                     -> TaskBufferPageCap {
@@ -91,6 +94,8 @@ fn map_rinit_buffer(rinit_buffer_vaddr: VAddr,
     return rinit_buffer_page;
 }
 
+/// Bootstrap paging for the rinit program. This creates stacks and
+/// task buffers for both a "parent" and a "child".
 fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &mut UntypedCap) -> (TopPageTableCap, TaskBufferPageCap, VAddr, VAddr) {
     use elf::{ElfBinary};
 
@@ -172,6 +177,8 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH * rinit_stack_size - 4))
 }
 
+/// System call handling function. Dispatch based on the type of the
+/// system call.
 fn handle_system_call(call: &mut SystemCall, task_cap: TaskCap, cpool: &CPoolDescriptor) {
     match call {
         &mut SystemCall::Print {
@@ -300,6 +307,8 @@ fn handle_system_call(call: &mut SystemCall, task_cap: TaskCap, cpool: &CPoolDes
     }
 }
 
+/// The kernel main function. It initialize the rinit program, and
+/// then run a loop to switch to all available tasks.
 #[no_mangle]
 pub fn kmain(archinfo: InitInfo)
 {
@@ -426,8 +435,8 @@ pub fn kmain(archinfo: InitInfo)
     loop {}
 }
 
-fn divide_by_zero() {
-    unsafe {
-        asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel")
-    }
-}
+// fn divide_by_zero() {
+//     unsafe {
+//         asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel")
+//     }
+// }

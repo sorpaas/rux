@@ -65,6 +65,84 @@ id]` should be a valid slot index of an Untyped capability. `[target
 slot id]` should be an empty slot for holding the retyped CPool
 capability.
 
+### Example: Talk With a Child Task
+
+The rinit program will start the command line interface when it is the
+first to run. For all subsequent rinit programs, they will wait on a
+channel (using the root CPool of index 255), and print out the value
+to the serial buffer.
+
+When you see the command line in the qemu VGA buffer, the "parent"
+rinit program has been successfully started. We can then create a
+"child" program using the same memory layout (sharing one page table),
+and make them talk.
+
+When the "parent" rinit program is started, you should see something
+like below in the VGA buffer:
+
+```
+Child entry should be at: 0x88b0 (34992)
+Child stack pointer should be at: 0x70003ffc (1879064572)
+```
+
+Those messages are useful if we want to create a "child".
+
+To do this, we first retype a new task from an untyped capability.
+
+```lang=bash
+retype task 2 249
+```
+
+This creates a new task in "inactive" state, which allows us to do
+further settings. We then set its stack pointer and instruction
+pointer to the valid value:
+
+```lang=bash
+set stack 249 1879064572
+set instruction 249 34992
+```
+
+Then we set the task's root CPool and top page table the same as the
+"parent":
+
+```lang=bash
+set cpool 249 0
+set table 249 3
+```
+
+The task buffer is used for system calls, thus we need a new one for
+the child. Fortunately, in the kernel `kmain`, we have already created
+one at index 250, so we can set that as the "child"'s buffer.
+
+```lang=bash
+set buffer 249 250
+```
+
+After that, we can set the state of the task to active. This will
+start the task.
+
+```lang=bash
+set active 249 1
+```
+
+If you are lazy and don't want to create the task from scratch. The
+command below automates the task from retyping tasks from untyped to
+activating the task.
+
+```lang=bash
+start child
+```
+
+After the child has started, we can send numbers to channel (with
+CPool index 255).
+
+```lang=bash
+send 5
+```
+
+You should see `[kernel] Userspace print: Received from master: 5` in
+the serial message buffer.
+
 ## Source Code Structure
 
 The development of Rux happen in the `master` branch in the source code

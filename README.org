@@ -2,6 +2,12 @@
 #+AUTHOR:	Wei Tang
 #+EMAIL:	hi@that.world
 
+Rux is a hobbyist microkernel written in Rust, featuring a
+capability-based system similar to [[https://sel4.systems/][seL4]].
+
+- [[https://source.that.world/diffusion/RUX/][Repository]]
+- [[https://that.world/~docs/rux/kernel/][Documentation]]
+
 * Overview
 Rux's goal is to become a safe general-purpose microkernel. It tries
 to take advantage of Rust's memory model -- ownership and

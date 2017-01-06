@@ -64,4 +64,4 @@ doc-kernel:
 		--passes strip-priv-imports
 
 doc-kernel-deploy: doc-kernel
-	@rsync -vraP --delete-after kernel/target/doc/ deploy@that.world:~/~source/docs/rux
+	@rsync -vraP --delete-after kernel/target/doc/ deploy@that.world:~/~docs/rux

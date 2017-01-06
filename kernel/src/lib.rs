@@ -372,7 +372,7 @@ pub fn kmain(archinfo: InitInfo)
 
     log!("hello, world!");
     arch::enable_timer();
-    while true {
+    loop {
         let mut idle = true;
 
         for task_cap in cap::task_iter() {
@@ -431,8 +431,6 @@ pub fn kmain(archinfo: InitInfo)
             }
         }
     }
-    
-    loop {}
 }
 
 // fn divide_by_zero() {

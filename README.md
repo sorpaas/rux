@@ -29,13 +29,13 @@ GNU's `binutils`. The easiest way to do it is through the `shell.nix`
 file provided in the source code. Install [Nix](http://nixos.org/nix/),
 then go to the source code root and run the following command:
 
-```bash
+```lang=bash
 nix-shell
 ```
 
 After that, run:
 
-```bash
+```lang=bash
 make run
 ```
 
@@ -44,19 +44,19 @@ buffer, after the kernel successfully booted, should show a simple
 command-line interface controlled by `rinit` program launched by the
 kernel. Several commands can be used to test things out.
 
-```bash
+```lang=bash
 echo [message]
 ```
 
 Echo messages and print them back to the VGA buffer.
 
-```bash
+```lang=bash
 list
 ```
 
 Print the current `CPool` slots into the kernel message buffer.
 
-```bash
+```lang=bash
 retype cpool [source slot id] [target slot id]
 ```
 

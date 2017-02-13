@@ -139,11 +139,20 @@ After the child has started, we can send numbers to channel (with
 CPool index 255).
 
 ```lang=bash
-send 5
+send raw 5
 ```
 
 You should see `[kernel] Userspace print: Received from master: 5` in
 the serial message buffer.
+
+You can also send capabilities over the channel.
+
+```lang=bash
+send cap 0
+```
+
+And the top-level capability pool capability (CPoolCap) is copied
+again from parent to child.
 
 ## Source Code Structure
 

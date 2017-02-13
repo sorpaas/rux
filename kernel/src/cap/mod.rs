@@ -30,7 +30,7 @@ mod channel;
 pub use self::untyped::{UntypedDescriptor, UntypedCap};
 pub use self::cpool::{CPoolDescriptor, CPoolCap};
 pub use self::task::{TaskDescriptor, TaskCap, TaskStatus, idle, task_iter};
-pub use self::channel::{ChannelDescriptor, ChannelCap};
+pub use self::channel::{ChannelDescriptor, ChannelCap, ChannelValue};
 
 #[macro_use]
 pub use arch::cap::{TopPageTableCap, PageCap, PAGE_LENGTH};

@@ -1,7 +1,7 @@
 use common::*;
 use core::convert::{AsRef};
 use core::ops::{Deref, DerefMut};
-use cap::{self, UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskDescriptor, TaskStatus, ChannelCap, ChannelDescriptor, PAGE_LENGTH};
+use cap::{self, UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskDescriptor, TaskStatus, ChannelCap, ChannelDescriptor, ChannelValue, PAGE_LENGTH};
 use abi::{SystemCall, TaskBuffer};
 
 /// System call handling function. Dispatch based on the type of the
@@ -128,7 +128,10 @@ pub fn handle(call: &mut SystemCall, task_cap: TaskCap, cpool: CPoolCap) {
         } => {
             let chan_option: Option<ChannelCap> = cpool.lookup_upgrade(request.0);
             if let Some(chan) = chan_option {
-                chan.write().put(request.1);
+                let value = ChannelValue::from_message(request.1.clone(), cpool.clone());
+                if value.is_some() {
+                    chan.write().put(value.unwrap());
+                }
             }
         }
     }

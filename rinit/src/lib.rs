@@ -12,7 +12,7 @@ extern crate spin;
 mod vga_buffer;
 
 use core::ops::{Deref};
-use system::{CAddr};
+use system::{CAddr, ChannelMessage};
 
 /// Decode a code in the PS/2 scan code set 1 (legacy set).
 ///
@@ -126,7 +126,10 @@ fn parent_main() {
     let mut command = [0u8; 32];
     let mut command_size = 0;
     while true {
-        let key = from_scancode(system::channel_take(task_buffer, CAddr::from(254)) as usize);
+        let key = from_scancode(match system::channel_take(task_buffer, CAddr::from(254)) {
+            ChannelMessage::Raw(i) => i,
+            _ => panic!(),
+        } as usize);
         if key == lastkey {
             continue;
         } else {
@@ -167,7 +170,7 @@ fn child_main() {
     system_print!(task_buffer, "child rinit started.");
     while true {
         let value = system::channel_take(task_buffer, CAddr::from(255));
-        system_print!(task_buffer, "Received from master: {}", value);
+        system_print!(task_buffer, "Received from master: {:?}", value);
     }
 }
 
@@ -194,7 +197,7 @@ fn execute_command(task_buffer: usize, s: &str) {
         print!("{}\n", &s[5..s.len()]);
     } else if s.len() >= 6 && &s[0..4] == "send" {
         let value: u64 = (&s[5..s.len()]).parse().unwrap();
-        system::channel_put(task_buffer, CAddr::from(255), value);
+        system::channel_put(task_buffer, CAddr::from(255), ChannelMessage::Raw(value));
         print!("Sent to child through channel 255\n");
     } else if let Some((source, target)) = parse_usize(s, "retype cpool") {
         system::retype_cpool(task_buffer, CAddr::from(source as u8), CAddr::from(target as u8));

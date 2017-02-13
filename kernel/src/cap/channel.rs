@@ -6,6 +6,7 @@ use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
 use abi::ChannelMessage;
 use super::{UntypedDescriptor, CPoolCap};
 
+#[derive(Debug)]
 pub enum ChannelValue {
     Raw(u64),
     Cap(ManagedArcAny),
@@ -39,7 +40,7 @@ impl ChannelValue {
 /// Channel descriptor.
 #[derive(Debug)]
 pub struct ChannelDescriptor {
-    value: Option<u64>,
+    value: Option<ChannelValue>,
     next: Option<ManagedArcAny>,
 }
 /// Channel capability. Reference-counted smart pointer to channel
@@ -71,13 +72,13 @@ impl ChannelCap {
 
 impl ChannelDescriptor {
     /// Put a value to the channel.
-    pub fn put(&mut self, value: u64) {
+    pub fn put(&mut self, value: ChannelValue) {
         self.value = Some(value);
     }
 
     /// Take a value from the channel. If there's no value in the
     /// channel, `None` is returned.
-    pub fn take(&mut self) -> Option<u64> {
+    pub fn take(&mut self) -> Option<ChannelValue> {
         self.value.take()
     }
 }

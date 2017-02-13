@@ -68,7 +68,7 @@ use core::mem;
 use core::slice;
 use common::*;
 use arch::{InitInfo, inportb, outportb, Exception};
-use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskDescriptor, TaskStatus, ChannelCap, ChannelDescriptor, PAGE_LENGTH};
+use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskDescriptor, TaskStatus, ChannelCap, ChannelDescriptor, ChannelValue, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
 use abi::{SystemCall, TaskBuffer};
 use util::{MemoryObject};
@@ -270,7 +270,9 @@ pub fn kmain(archinfo: InitInfo)
                                 response: ref mut response,
                             } => {
                                 idle = false;
-                                *response = Some(value);
+                                *response = Some(ChannelValue::to_message(
+                                    value,
+                                    task_cap.read().upgrade_cpool().unwrap()));
                                 task_cap.write().set_status(TaskStatus::Active);
                                 Some(task_cap.write().switch_to())
                             }
@@ -291,7 +293,7 @@ pub fn kmain(archinfo: InitInfo)
                         cpool_cap);
                 },
                 Some(Exception::Keyboard) => {
-                    keyboard_cap.write().put(unsafe { arch::inportb(0x60) } as u64);
+                    keyboard_cap.write().put(ChannelValue::Raw(unsafe { arch::inportb(0x60) } as u64));
                 },
                 _ => (),
             }
@@ -301,7 +303,7 @@ pub fn kmain(archinfo: InitInfo)
             let exception = cap::idle();
             match exception {
                 Exception::Keyboard => {
-                    keyboard_cap.write().put(unsafe { arch::inportb(0x60) } as u64);
+                    keyboard_cap.write().put(ChannelValue::Raw(unsafe { arch::inportb(0x60) } as u64));
                 },
                 _ => (),
             }

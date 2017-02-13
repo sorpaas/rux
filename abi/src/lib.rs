@@ -34,10 +34,10 @@ pub enum SystemCall {
     },
     ChannelTake {
         request: CAddr,
-        response: Option<u64>,
+        response: Option<ChannelMessage>,
     },
     ChannelPut {
-        request: (CAddr, u64),
+        request: (CAddr, ChannelMessage),
     },
     RetypeTask {
         request: (CAddr, CAddr),
@@ -77,6 +77,7 @@ impl SetDefault for TaskBuffer {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum ChannelMessage {
     Raw(u64),
     Cap(Option<CAddr>),

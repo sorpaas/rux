@@ -1,4 +1,4 @@
-use abi::{SystemCall, TaskBuffer, CAddr};
+use abi::{SystemCall, TaskBuffer, CAddr, ChannelMessage};
 use spin::{Mutex};
 
 pub fn retype_cpool(addr: usize, source: CAddr, target: CAddr) {
@@ -55,7 +55,7 @@ pub fn task_set_inactive(addr: usize, target: CAddr) {
     }, addr);
 }
 
-pub fn channel_take(addr: usize, target: CAddr) -> u64 {
+pub fn channel_take(addr: usize, target: CAddr) -> ChannelMessage {
     let result = system_call(SystemCall::ChannelTake {
         request: target,
         response: None
@@ -71,7 +71,7 @@ pub fn channel_take(addr: usize, target: CAddr) -> u64 {
     };
 }
 
-pub fn channel_put(addr: usize, target: CAddr, value: u64) {
+pub fn channel_put(addr: usize, target: CAddr, value: ChannelMessage) {
     system_call(SystemCall::ChannelPut {
         request: (target, value)
     }, addr);

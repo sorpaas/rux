@@ -195,10 +195,14 @@ fn execute_command(task_buffer: usize, s: &str) {
         print!("Child started.\n");
     } else if s.len() >= 6 && &s[0..4] == "echo" {
         print!("{}\n", &s[5..s.len()]);
-    } else if s.len() >= 6 && &s[0..4] == "send" {
-        let value: u64 = (&s[5..s.len()]).parse().unwrap();
+    } else if s.len() >= 6 && &s[0..8] == "send raw" {
+        let value: u64 = (&s[9..s.len()]).parse().unwrap();
         system::channel_put(task_buffer, CAddr::from(255), ChannelMessage::Raw(value));
-        print!("Sent to child through channel 255\n");
+        print!("Sent raw to child through channel 255\n");
+    } else if s.len() >= 6 && &s[0..8] == "send cap" {
+        let value: u64 = (&s[9..s.len()]).parse().unwrap();
+        system::channel_put(task_buffer, CAddr::from(255), ChannelMessage::Cap(Some(CAddr::from(value as u8))));
+        print!("Sent cap to child through channel 255\n");
     } else if let Some((source, target)) = parse_usize(s, "retype cpool") {
         system::retype_cpool(task_buffer, CAddr::from(source as u8), CAddr::from(target as u8));
         print!("Operation finished.\n");

@@ -36,6 +36,7 @@ mod macros;
 
 /// Achitecture-specific modules.
 #[cfg(target_arch="x86_64")] #[path="arch/x86_64/mod.rs"]
+#[macro_use]
 pub mod arch;
 
 /// Exception handling (panic). See also
@@ -57,6 +58,7 @@ mod common;
 mod elf;
 
 /// Capabilities implementation.
+#[macro_use]
 mod cap;
 
 /// System call handler.

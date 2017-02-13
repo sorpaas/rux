@@ -18,6 +18,7 @@ mod interrupt;
 mod segmentation;
 
 /// Architecture-specific capabilities. Re-exported also in `kernel::cap`.
+#[macro_use]
 pub mod cap;
 const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 

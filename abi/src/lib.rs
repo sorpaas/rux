@@ -76,3 +76,8 @@ impl SetDefault for TaskBuffer {
         self.call = None;
     }
 }
+
+pub enum ChannelMessage {
+    Raw(u64),
+    Cap(Option<CAddr>),
+}

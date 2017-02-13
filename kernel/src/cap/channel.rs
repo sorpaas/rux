@@ -1,9 +1,32 @@
 use common::*;
+use core::convert::From;
 use core::any::{Any, TypeId};
 use util::{RwLock, align_up};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
+use abi::ChannelMessage;
+use super::{UntypedDescriptor, CPoolCap};
 
-use super::{UntypedDescriptor};
+pub enum ChannelValue {
+    Raw(u64),
+    Cap(CPoolCap, CAddr),
+}
+
+impl ChannelValue {
+    pub fn from_message(message: ChannelMessage, cpool: CPoolCap) -> Option<ChannelValue> {
+        match message {
+            ChannelMessage::Raw(value) => Some(ChannelValue::Raw(value)),
+            ChannelMessage::Cap(Some(caddr)) => Some(ChannelValue::Cap(cpool, caddr)),
+            ChannelMessage::Cap(None) => None,
+        }
+    }
+
+    pub fn to_message(value: ChannelValue) -> ChannelMessage {
+        match value {
+            ChannelValue::Raw(value) => ChannelMessage::Raw(value),
+            ChannelValue::Cap(cpool, caddr) => ChannelMessage::Cap(Some(caddr)),
+        }
+    }
+}
 
 /// Channel descriptor.
 #[derive(Debug)]

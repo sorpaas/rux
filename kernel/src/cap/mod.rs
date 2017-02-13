@@ -11,11 +11,14 @@ pub use self::untyped::{UntypedDescriptor, UntypedCap};
 pub use self::cpool::{CPoolDescriptor, CPoolCap};
 pub use self::task::{TaskDescriptor, TaskCap, TaskStatus, idle, task_iter};
 pub use self::channel::{ChannelDescriptor, ChannelCap};
+
+#[macro_use]
 pub use arch::cap::{TopPageTableCap, PageCap, PAGE_LENGTH};
 
 use arch;
 use common::*;
 use core::any::{TypeId};
+use core::mem::drop;
 use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny, ManagedArc};
 
 pub use abi::{SetDefault, TaskBuffer};
@@ -58,7 +61,27 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
     } else if type_id == TypeId::of::<ChannelCap>() {
         Some(unsafe { ManagedArc::from_ptr(ptr): ChannelCap }.into())
     } else {
-        arch::cap::upgrade_any(ptr, type_id)
+        arch::cap::upgrade_arch_any(ptr, type_id)
+    }
+}
+
+macro_rules! doto_any {
+    ($any:expr, $f:tt $(,$param:tt)*) => {
+        if $any.is::<::cap::CPoolCap>() {
+            $f($any.into(): ::cap::CPoolCap, $($param),*)
+        } else if $any.is::<::cap::UntypedCap>() {
+            $f($any.into(): ::cap::UntypedCap, $($param),*)
+        } else if $any.is::<::cap::TaskCap>() {
+            $f($any.into(): ::cap::TaskCap, $($param),*)
+        } else if $any.is::<::cap::RawPageCap>() {
+            $f($any.into(): ::cap::RawPageCap, $($param),*)
+        } else if $any.is::<::cap::TaskBufferPageCap>() {
+            $f($any.into(): ::cap::TaskBufferPageCap, $($param),*)
+        } else if $any.is::<::cap::ChannelCap>() {
+            $f($any.into(): ::cap::ChannelCap, $($param),*)
+        } else {
+            doto_arch_any!($any, $f $(,$param)*)
+        }
     }
 }
 
@@ -66,19 +89,5 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
 /// not itself droppable. It must be converted to its real type before
 /// dropping.
 pub fn drop_any(any: ManagedArcAny) {
-    if any.is::<CPoolCap>() {
-        any.into(): CPoolCap;
-    } else if any.is::<UntypedCap>() {
-        any.into(): UntypedCap;
-    } else if any.is::<TaskCap>() {
-        any.into(): TaskCap;
-    } else if any.is::<RawPageCap>() {
-        any.into(): RawPageCap;
-    } else if any.is::<TaskBufferPageCap>() {
-        any.into(): TaskBufferPageCap;
-    } else if any.is::<ChannelCap>() {
-        any.into(): ChannelCap;
-    } else {
-        arch::cap::drop_any(any);
-    }
+    doto_any!(any, drop)
 }

@@ -25,7 +25,7 @@ use util::managed_arc::{ManagedArc, ManagedWeakPool256Arc, ManagedArcAny};
 ///
 /// `ptr` must be a physical address pointing to a valid kernel object
 /// of type `type_id`.
-pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
+pub unsafe fn upgrade_arch_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
     if type_id == TypeId::of::<PML4Cap>() {
         Some(unsafe { ManagedArc::from_ptr(ptr): PML4Cap }.into())
     } else if type_id == TypeId::of::<PDPTCap>() {
@@ -36,6 +36,22 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
         Some(unsafe { ManagedArc::from_ptr(ptr): PTCap }.into())
     } else {
         None
+    }
+}
+
+macro_rules! doto_arch_any {
+    ($any:expr, $f:tt $(,$param:tt)*) => {
+        if $any.is::<::arch::cap::PML4Cap>() {
+            $f($any.into(): ::arch::cap::PML4Cap, $($param),*)
+        } else if $any.is::<::arch::cap::PDPTCap>() {
+            $f($any.into(): ::arch::cap::PDPTCap, $($param),*)
+        } else if $any.is::<::arch::cap::PDCap>() {
+            $f($any.into(): ::arch::cap::PDCap, $($param),*)
+        } else if $any.is::<::arch::cap::PTCap>() {
+            $f($any.into(): ::arch::cap::PTCap, $($param),*)
+        } else {
+            panic!();
+        }
     }
 }
 

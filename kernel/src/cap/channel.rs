@@ -8,22 +8,30 @@ use super::{UntypedDescriptor, CPoolCap};
 
 pub enum ChannelValue {
     Raw(u64),
-    Cap(CPoolCap, CAddr),
+    Cap(ManagedArcAny),
 }
 
 impl ChannelValue {
-    pub fn from_message(message: ChannelMessage, cpool: CPoolCap) -> Option<ChannelValue> {
+    pub fn from_message(message: ChannelMessage, source_root: CPoolCap) -> Option<ChannelValue> {
         match message {
             ChannelMessage::Raw(value) => Some(ChannelValue::Raw(value)),
-            ChannelMessage::Cap(Some(caddr)) => Some(ChannelValue::Cap(cpool, caddr)),
+            ChannelMessage::Cap(Some(caddr)) => {
+                let obj = source_root.lookup_upgrade_any(caddr);
+                if obj.is_some() {
+                    Some(ChannelValue::Cap(obj.unwrap()))
+                } else {
+                    None
+                }
+            },
             ChannelMessage::Cap(None) => None,
         }
     }
 
-    pub fn to_message(value: ChannelValue) -> ChannelMessage {
+    pub fn to_message(value: ChannelValue, target_root: CPoolCap) -> ChannelMessage {
         match value {
             ChannelValue::Raw(value) => ChannelMessage::Raw(value),
-            ChannelValue::Cap(cpool, caddr) => ChannelMessage::Cap(Some(caddr)),
+            ChannelValue::Cap(arc) => ChannelMessage::Cap(target_root.read().downgrade_any_free(arc)
+                                                          .map(|i| { CAddr::from(i as u8) })),
         }
     }
 }

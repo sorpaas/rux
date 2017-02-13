@@ -146,4 +146,12 @@ impl CPoolCap {
             cpool.downgrade_at(arc, index);
         });
     }
+
+    /// Downgrade a `ManagedArcAny` into the capability pool at a specified capability address.
+    pub fn lookup_downgrade_any_at<T: Any>(&self, arc: ManagedArcAny, caddr: CAddr) {
+        self.lookup(caddr, |data| {
+            let (cpool, index) = data.unwrap();
+            cpool.downgrade_any_at(arc, index);
+        });
+    }
 }

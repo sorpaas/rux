@@ -14,6 +14,7 @@ pub use self::call::{cpool_list_debug, retype_cpool, retype_task,
                      channel_put, channel_take, task_set_stack_pointer, task_set_instruction_pointer,
                      task_set_cpool, task_set_top_page_table, task_set_buffer,
                      task_set_active, task_set_inactive};
+pub use abi::{CAddr};
 
 use core::fmt;
 

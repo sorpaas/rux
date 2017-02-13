@@ -1,61 +1,61 @@
-use abi::{SystemCall, TaskBuffer};
+use abi::{SystemCall, TaskBuffer, CAddr};
 use spin::{Mutex};
 
-pub fn retype_cpool(addr: usize, source: usize, target: usize) {
+pub fn retype_cpool(addr: usize, source: CAddr, target: CAddr) {
     system_call(SystemCall::RetypeCPool {
         request: (source, target),
     }, addr);
 }
 
-pub fn retype_task(addr: usize, source: usize, target: usize) {
+pub fn retype_task(addr: usize, source: CAddr, target: CAddr) {
     system_call(SystemCall::RetypeTask {
         request: (source, target),
     }, addr);
 }
 
-pub fn task_set_instruction_pointer(addr: usize, target: usize, ptr: u64) {
+pub fn task_set_instruction_pointer(addr: usize, target: CAddr, ptr: u64) {
     system_call(SystemCall::TaskSetInstructionPointer {
         request: (target, ptr),
     }, addr);
 }
 
-pub fn task_set_stack_pointer(addr: usize, target: usize, ptr: u64) {
+pub fn task_set_stack_pointer(addr: usize, target: CAddr, ptr: u64) {
     system_call(SystemCall::TaskSetStackPointer {
         request: (target, ptr),
     }, addr);
 }
 
-pub fn task_set_cpool(addr: usize, target: usize, cpool: usize) {
+pub fn task_set_cpool(addr: usize, target: CAddr, cpool: CAddr) {
     system_call(SystemCall::TaskSetCPool {
         request: (target, cpool),
     }, addr);
 }
 
-pub fn task_set_top_page_table(addr: usize, target: usize, table: usize) {
+pub fn task_set_top_page_table(addr: usize, target: CAddr, table: CAddr) {
     system_call(SystemCall::TaskSetTopPageTable {
         request: (target, table),
     }, addr);
 }
 
-pub fn task_set_buffer(addr: usize, target: usize, buffer: usize) {
+pub fn task_set_buffer(addr: usize, target: CAddr, buffer: CAddr) {
     system_call(SystemCall::TaskSetBuffer {
         request: (target, buffer),
     }, addr);
 }
 
-pub fn task_set_active(addr: usize, target: usize) {
+pub fn task_set_active(addr: usize, target: CAddr) {
     system_call(SystemCall::TaskSetActive {
         request: target
     }, addr);
 }
 
-pub fn task_set_inactive(addr: usize, target: usize) {
+pub fn task_set_inactive(addr: usize, target: CAddr) {
     system_call(SystemCall::TaskSetInactive {
         request: target
     }, addr);
 }
 
-pub fn channel_take(addr: usize, target: usize) -> u64 {
+pub fn channel_take(addr: usize, target: CAddr) -> u64 {
     let result = system_call(SystemCall::ChannelTake {
         request: target,
         response: None
@@ -71,7 +71,7 @@ pub fn channel_take(addr: usize, target: usize) -> u64 {
     };
 }
 
-pub fn channel_put(addr: usize, target: usize, value: u64) {
+pub fn channel_put(addr: usize, target: CAddr, value: u64) {
     system_call(SystemCall::ChannelPut {
         request: (target, value)
     }, addr);

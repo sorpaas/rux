@@ -30,38 +30,38 @@ pub enum SystemCall {
         request: ([u8; 32], usize)
     },
     RetypeCPool {
-        request: (usize, usize),
+        request: (CAddr, CAddr),
     },
     ChannelTake {
-        request: usize,
+        request: CAddr,
         response: Option<u64>,
     },
     ChannelPut {
-        request: (usize, u64),
+        request: (CAddr, u64),
     },
     RetypeTask {
-        request: (usize, usize),
+        request: (CAddr, CAddr),
     },
     TaskSetInstructionPointer {
-        request: (usize, u64),
+        request: (CAddr, u64),
     },
     TaskSetStackPointer {
-        request: (usize, u64),
+        request: (CAddr, u64),
     },
     TaskSetCPool {
-        request: (usize, usize),
+        request: (CAddr, CAddr),
     },
     TaskSetTopPageTable {
-        request: (usize, usize),
+        request: (CAddr, CAddr),
     },
     TaskSetBuffer {
-        request: (usize, usize),
+        request: (CAddr, CAddr),
     },
     TaskSetActive {
-        request: usize
+        request: CAddr
     },
     TaskSetInactive {
-        request: usize
+        request: CAddr
     },
 }
 

@@ -1,3 +1,19 @@
+macro_rules! doto_arch_any {
+    ($any:expr, $f:tt $(,$param:expr)*) => {
+        if $any.is::<::arch::cap::PML4Cap>() {
+            $f ($any.into(): ::arch::cap::PML4Cap, $($param),*)
+        } else if $any.is::<::arch::cap::PDPTCap>() {
+            $f ($any.into(): ::arch::cap::PDPTCap, $($param),*)
+        } else if $any.is::<::arch::cap::PDCap>() {
+            $f ($any.into(): ::arch::cap::PDCap, $($param),*)
+        } else if $any.is::<::arch::cap::PTCap>() {
+            $f ($any.into(): ::arch::cap::PTCap, $($param),*)
+        } else {
+            panic!();
+        }
+    }
+}
+
 /// Paging-related arch-specific capabilities.
 mod paging;
 
@@ -36,22 +52,6 @@ pub unsafe fn upgrade_arch_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArc
         Some(unsafe { ManagedArc::from_ptr(ptr): PTCap }.into())
     } else {
         None
-    }
-}
-
-macro_rules! doto_arch_any {
-    ($any:expr, $f:tt $(,$param:tt)*) => {
-        if $any.is::<::arch::cap::PML4Cap>() {
-            $f($any.into(): ::arch::cap::PML4Cap, $($param),*)
-        } else if $any.is::<::arch::cap::PDPTCap>() {
-            $f($any.into(): ::arch::cap::PDPTCap, $($param),*)
-        } else if $any.is::<::arch::cap::PDCap>() {
-            $f($any.into(): ::arch::cap::PDCap, $($param),*)
-        } else if $any.is::<::arch::cap::PTCap>() {
-            $f($any.into(): ::arch::cap::PTCap, $($param),*)
-        } else {
-            panic!();
-        }
     }
 }
 

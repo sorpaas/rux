@@ -1,3 +1,23 @@
+macro_rules! doto_any {
+    ($any:expr, $f:tt $(,$param:expr)*) => {
+        if $any.is::<::cap::CPoolCap>() {
+            $f ($any.into(): ::cap::CPoolCap, $($param),*)
+        } else if $any.is::<::cap::UntypedCap>() {
+            $f ($any.into(): ::cap::UntypedCap, $($param),*)
+        } else if $any.is::<::cap::TaskCap>() {
+            $f ($any.into(): ::cap::TaskCap, $($param),*)
+        } else if $any.is::<::cap::RawPageCap>() {
+            $f ($any.into(): ::cap::RawPageCap, $($param),*)
+        } else if $any.is::<::cap::TaskBufferPageCap>() {
+            $f ($any.into(): ::cap::TaskBufferPageCap, $($param),*)
+        } else if $any.is::<::cap::ChannelCap>() {
+            $f ($any.into(): ::cap::ChannelCap, $($param),*)
+        } else {
+            doto_arch_any!($any, $f $(,$param)*)
+        }
+    }
+}
+
 /// Untyped capability implementation.
 mod untyped;
 /// Capability pool capability implementation.
@@ -62,26 +82,6 @@ pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> 
         Some(unsafe { ManagedArc::from_ptr(ptr): ChannelCap }.into())
     } else {
         arch::cap::upgrade_arch_any(ptr, type_id)
-    }
-}
-
-macro_rules! doto_any {
-    ($any:expr, $f:tt $(,$param:tt)*) => {
-        if $any.is::<::cap::CPoolCap>() {
-            $f($any.into(): ::cap::CPoolCap, $($param),*)
-        } else if $any.is::<::cap::UntypedCap>() {
-            $f($any.into(): ::cap::UntypedCap, $($param),*)
-        } else if $any.is::<::cap::TaskCap>() {
-            $f($any.into(): ::cap::TaskCap, $($param),*)
-        } else if $any.is::<::cap::RawPageCap>() {
-            $f($any.into(): ::cap::RawPageCap, $($param),*)
-        } else if $any.is::<::cap::TaskBufferPageCap>() {
-            $f($any.into(): ::cap::TaskBufferPageCap, $($param),*)
-        } else if $any.is::<::cap::ChannelCap>() {
-            $f($any.into(): ::cap::ChannelCap, $($param),*)
-        } else {
-            doto_arch_any!($any, $f $(,$param)*)
-        }
     }
 }
 

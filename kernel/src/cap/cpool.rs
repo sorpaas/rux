@@ -20,6 +20,16 @@ pub struct CPoolDescriptor {
 /// together so as to be addressable in user-space programs.
 pub type CPoolCap = ManagedArc<RwLock<CPoolDescriptor>>;
 
+fn downgrade_at_owning<T: Any>(arc: ManagedArc<T>, index: usize, desc: &CPoolDescriptor)
+    where ManagedArc<T>: Any {
+    desc.downgrade_at(&arc, index)
+}
+
+fn downgrade_free_owning<T: Any>(arc: ManagedArc<T>, desc: &CPoolDescriptor) -> Option<usize>
+    where ManagedArc<T>: Any {
+    desc.downgrade_free(&arc)
+}
+
 impl CPoolDescriptor {
     /// Create a new pointer to a capability descriptor using the
     /// index. If nothing is in the entry, `None` is returned.
@@ -46,6 +56,18 @@ impl CPoolDescriptor {
     pub fn downgrade_free<T: Any>(&self, arc: &ManagedArc<T>) -> Option<usize>
         where ManagedArc<T>: Any {
         self.weak_pool.read().downgrade_free(arc)
+    }
+
+    /// Downgrade a `ManagedArcAny` into the capability pool (weak
+    /// pool) at a specified index.
+    pub fn downgrade_any_at(&self, arc: ManagedArcAny, index: usize) {
+        doto_any!(arc, downgrade_at_owning, index, self)
+    }
+
+    /// Downgrade a `ManagedArcAny` into the capability pool (weak
+    /// pool) at a free index.
+    pub fn downgrade_any_free(&self, arc: ManagedArcAny) -> Option<usize> {
+        doto_any!(arc, downgrade_free_owning, self)
     }
 
     /// Size of the capability pool.

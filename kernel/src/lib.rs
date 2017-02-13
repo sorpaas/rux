@@ -59,6 +59,9 @@ mod elf;
 /// Capabilities implementation.
 mod cap;
 
+/// System call handler.
+mod system_calls;
+
 use core::mem;
 use core::slice;
 use common::*;
@@ -177,136 +180,6 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     (rinit_pml4, rinit_buffer_page, VAddr::from(rinit_entry), rinit_stack_vaddr + (PAGE_LENGTH * rinit_stack_size - 4))
 }
 
-/// System call handling function. Dispatch based on the type of the
-/// system call.
-fn handle_system_call(call: &mut SystemCall, task_cap: TaskCap, cpool: &CPoolDescriptor) {
-    match call {
-        &mut SystemCall::Print {
-            request: ref request
-        } => {
-            use core::str;
-            let buffer = request.0.clone();
-            let slice = &buffer[0..request.1];
-            let s = str::from_utf8(slice).unwrap();
-            log!("Userspace print: {}", s);
-        },
-        &mut SystemCall::CPoolListDebug => {
-            for i in 0..256 {
-                let arc = cpool.upgrade_any(i);
-                if arc.is_some() {
-                    let arc = arc.unwrap();
-                    if arc.is::<CPoolCap>() {
-                        log!("CPool index {} => {:?}", i, arc.into(): CPoolCap);
-                    } else if arc.is::<UntypedCap>() {
-                        log!("CPool index {} => {:?}", i, arc.into(): UntypedCap);
-                    } else if arc.is::<TaskCap>() {
-                        log!("CPool index {} => {:?}", i, arc.into(): TaskCap);
-                    } else if arc.is::<RawPageCap>() {
-                        log!("CPool index {} => {:?}", i, arc.into(): RawPageCap);
-                    } else if arc.is::<TaskBufferPageCap>() {
-                        log!("CPool index {} => {:?}", i, arc.into(): TaskBufferPageCap);
-                    } else if arc.is::<TopPageTableCap>() {
-                        log!("CPool index {} => {:?}", i, arc.into(): TopPageTableCap);
-                    } else if arc.is::<ChannelCap>() {
-                        log!("CPool index {} => {:?}", i, arc.into(): ChannelCap);
-                    } else {
-                        log!("CPool index {} (arch specific) => {:?}", i, arc);
-                        cap::drop_any(arc);
-                    }
-                }
-            }
-        },
-        &mut SystemCall::RetypeCPool {
-            request: ref request,
-        } => {
-            let source: Option<UntypedCap> = cpool.upgrade(request.0);
-            if source.is_some() {
-                let source = source.unwrap();
-                let target = CPoolCap::retype_from(source.write().deref_mut());
-                let result = cpool.downgrade_at(&target, request.1);
-            }
-        },
-        &mut SystemCall::RetypeTask {
-            request: ref request,
-        } => {
-            let source: Option<UntypedCap> = cpool.upgrade(request.0);
-            if source.is_some() {
-                let source = source.unwrap();
-                let target = TaskCap::retype_from(source.write().deref_mut());
-                let result = cpool.downgrade_at(&target, request.1);
-            }
-        },
-        &mut SystemCall::TaskSetInstructionPointer {
-            request: ref request,
-        } => {
-            let target: Option<TaskCap> = cpool.upgrade(request.0);
-            if target.is_some() {
-                let target = target.unwrap();
-                target.write().set_instruction_pointer(VAddr::from(request.1));
-            }
-        },
-        &mut SystemCall::TaskSetStackPointer {
-            request: ref request,
-        } => {
-            let target: Option<TaskCap> = cpool.upgrade(request.0);
-            if target.is_some() {
-                let target = target.unwrap();
-                target.write().set_stack_pointer(VAddr::from(request.1));
-            }
-        },
-        &mut SystemCall::TaskSetCPool {
-            request: ref request,
-        } => {
-            let target_task: TaskCap = cpool.upgrade(request.0).unwrap();
-            let target_cpool: CPoolCap = cpool.upgrade(request.1).unwrap();
-            target_task.read().downgrade_cpool(&target_cpool);
-        },
-        &mut SystemCall::TaskSetTopPageTable {
-            request: ref request,
-        } => {
-            let target_task: TaskCap = cpool.upgrade(request.0).unwrap();
-            let target_table: TopPageTableCap = cpool.upgrade(request.1).unwrap();
-            target_task.read().downgrade_top_page_table(&target_table);
-        },
-        &mut SystemCall::TaskSetBuffer {
-            request: ref request,
-        } => {
-            let target_task: TaskCap = cpool.upgrade(request.0).unwrap();
-            let target_buffer: TaskBufferPageCap = cpool.upgrade(request.1).unwrap();
-            target_task.read().downgrade_buffer(&target_buffer);
-        },
-        &mut SystemCall::TaskSetActive {
-            request: ref request,
-        } => {
-            let target_task: TaskCap = cpool.upgrade(*request).unwrap();
-            target_task.write().set_status(TaskStatus::Active);
-        },
-        &mut SystemCall::TaskSetInactive {
-            request: ref request,
-        } => {
-            let target_task: TaskCap = cpool.upgrade(*request).unwrap();
-            target_task.write().set_status(TaskStatus::Inactive);
-        },
-        &mut SystemCall::ChannelTake {
-            request: ref request,
-            response: ref mut response,
-        } => {
-            let mut chan_option: Option<ChannelCap> = cpool.upgrade(*request);
-            if let Some(chan) = chan_option {
-                task_cap.write().set_status(TaskStatus::ChannelWait(chan))
-            }
-        },
-        &mut SystemCall::ChannelPut {
-            request: ref request,
-        } => {
-            let chan_option: Option<ChannelCap> = cpool.upgrade(request.0);
-            if let Some(chan) = chan_option {
-                chan.write().put(request.1);
-            }
-        }
-    }
-}
-
 /// The kernel main function. It initialize the rinit program, and
 /// then run a loop to switch to all available tasks.
 #[no_mangle]
@@ -315,7 +188,7 @@ pub fn kmain(archinfo: InitInfo)
     log!("archinfo: {:?}", &archinfo);
     let mut region_iter = archinfo.free_regions();
 
-    let (mut cpool, mut untyped) = {
+    let (mut cpool_cap, mut untyped_cap) = {
         let cpool_target_region = region_iter.next().unwrap();
 
         let untyped = unsafe { UntypedCap::bootstrap(cpool_target_region.start_paddr(),
@@ -340,8 +213,8 @@ pub fn kmain(archinfo: InitInfo)
         (cpool, untyped_target)
     };
 
-    log!("CPool: {:?}", cpool);
-    log!("Untyped: {:?}", untyped);
+    log!("CPool: {:?}", cpool_cap);
+    log!("Untyped: {:?}", untyped_cap);
 
     log!("type_id: {:?}", TypeId::of::<CPoolCap>());
     {
@@ -353,22 +226,22 @@ pub fn kmain(archinfo: InitInfo)
 
     {
         let (rinit_pml4, rinit_buffer_page, rinit_entry, rinit_stack) =
-            bootstrap_rinit_paging(&archinfo, &mut cpool, &mut untyped);
-        let rinit_task_cap = TaskCap::retype_from(untyped.write().deref_mut());
+            bootstrap_rinit_paging(&archinfo, &mut cpool_cap, &mut untyped_cap);
+        let rinit_task_cap = TaskCap::retype_from(untyped_cap.write().deref_mut());
         let mut rinit_task = rinit_task_cap.write();
         rinit_task.set_instruction_pointer(rinit_entry);
         rinit_task.set_stack_pointer(rinit_stack);
         rinit_task.set_status(TaskStatus::Active);
-        rinit_task.downgrade_cpool(&cpool);
+        rinit_task.downgrade_cpool(&cpool_cap);
         rinit_task.downgrade_top_page_table(&rinit_pml4);
         rinit_task.downgrade_buffer(&rinit_buffer_page);
     }
 
-    let mut keyboard_cap = ChannelCap::retype_from(untyped.write().deref_mut());
-    cpool.read().downgrade_at(&keyboard_cap, 254);
+    let mut keyboard_cap = ChannelCap::retype_from(untyped_cap.write().deref_mut());
+    cpool_cap.read().downgrade_at(&keyboard_cap, 254);
 
-    let mut util_chan_cap = ChannelCap::retype_from(untyped.write().deref_mut());
-    cpool.read().downgrade_at(&util_chan_cap, 255);
+    let mut util_chan_cap = ChannelCap::retype_from(untyped_cap.write().deref_mut());
+    cpool_cap.read().downgrade_at(&util_chan_cap, 255);
 
     log!("hello, world!");
     arch::enable_timer();
@@ -408,11 +281,12 @@ pub fn kmain(archinfo: InitInfo)
             };
             match exception {
                 Some(Exception::SystemCall) => {
-                    let cpool = task_cap.read().upgrade_cpool();
+                    let cpool_cap = task_cap.read().upgrade_cpool().unwrap();
                     let buffer = task_cap.read().upgrade_buffer();
-                    handle_system_call(buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
-                                       task_cap,
-                                       cpool.as_ref().unwrap().read().deref());
+                    system_calls::handle(
+                        buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
+                        task_cap,
+                        cpool_cap);
                 },
                 Some(Exception::Keyboard) => {
                     keyboard_cap.write().put(unsafe { arch::inportb(0x60) } as u64);

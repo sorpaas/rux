@@ -2,6 +2,10 @@
 #![feature(asm)]
 #![no_std]
 
+mod caddr;
+
+pub use caddr::CAddr;
+
 /// A trait that allows setting a struct back to its default value.
 pub trait SetDefault {
     /// Set this struct back to its default value.

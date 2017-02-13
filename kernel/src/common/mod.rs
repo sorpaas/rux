@@ -1,4 +1,5 @@
 pub use arch::{VAddr, PAddr};
+pub use abi::{CAddr};
 
 /// Represents a memory region with a start physical address and a
 /// length.

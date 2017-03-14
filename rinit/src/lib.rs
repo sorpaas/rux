@@ -118,16 +118,17 @@ fn start(_argc: isize, _argv: *const *const u8) {
 }
 
 fn parent_main() {
-    unsafe { selfalloc::setup_allocator(CAddr::from(2), CAddr::from(3), 0x1000000000); }
     unsafe { system::set_task_buffer_addr(0x90001000); }
+    system_print!("parent rinit started.");
 
     // Test allocator
+    unsafe { selfalloc::setup_allocator(CAddr::from(2), CAddr::from(3), 0x1000000000); }
     {
         use alloc::boxed::Box;
         let heap_test = Box::new(42);
+        system_print!("testing heap: {:?}", heap_test);
     }
 
-    system_print!("parent rinit started.");
     system_print!("parent stack addr: 0x{:x}.",
                   system::task_buffer_addr() as usize);
     print!("Child entry should be at: 0x{:x} ({})\nChild stack pointer should be at: 0x{:x} ({})\n",

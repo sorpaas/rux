@@ -66,9 +66,10 @@ pub enum SystemCall {
 }
 
 /// Represents a task buffer used for system calls.
-#[derive(Debug)]
 pub struct TaskBuffer {
-    pub call: Option<SystemCall>
+    pub call: Option<SystemCall>,
+    pub payload_length: usize,
+    pub payload_data: [u8; 1024],
 }
 
 impl SetDefault for TaskBuffer {
@@ -81,4 +82,5 @@ impl SetDefault for TaskBuffer {
 pub enum ChannelMessage {
     Raw(u64),
     Cap(Option<CAddr>),
+    Payload,
 }

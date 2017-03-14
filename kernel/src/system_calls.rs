@@ -6,18 +6,20 @@ use abi::{SystemCall, TaskBuffer};
 
 /// System call handling function. Dispatch based on the type of the
 /// system call.
-pub fn handle(call: &mut SystemCall, task_cap: TaskCap, cpool: CPoolCap) {
+pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<SystemCall> {
     match call {
-        &mut SystemCall::Print {
-            request: ref request
+        SystemCall::Print {
+            request: request
         } => {
             use core::str;
             let buffer = request.0.clone();
             let slice = &buffer[0..request.1];
             let s = str::from_utf8(slice).unwrap();
             log!("Userspace print: {}", s);
+
+            None
         },
-        &mut SystemCall::CPoolListDebug => {
+        SystemCall::CPoolListDebug => {
             for i in 0..256 {
                 let arc = cpool.lookup_upgrade_any(CAddr::from(i));
                 if arc.is_some() {
@@ -42,9 +44,11 @@ pub fn handle(call: &mut SystemCall, task_cap: TaskCap, cpool: CPoolCap) {
                     }
                 }
             }
+
+            None
         },
-        &mut SystemCall::RetypeCPool {
-            request: ref request,
+        SystemCall::RetypeCPool {
+            request: request,
         } => {
             let source: Option<UntypedCap> = cpool.lookup_upgrade(request.0);
             if source.is_some() {
@@ -52,9 +56,11 @@ pub fn handle(call: &mut SystemCall, task_cap: TaskCap, cpool: CPoolCap) {
                 let target = CPoolCap::retype_from(source.write().deref_mut());
                 let result = cpool.lookup_downgrade_at(&target, request.1);
             }
+
+            None
         },
-        &mut SystemCall::RetypeTask {
-            request: ref request,
+        SystemCall::RetypeTask {
+            request: request,
         } => {
             let source: Option<UntypedCap> = cpool.lookup_upgrade(request.0);
             if source.is_some() {
@@ -62,77 +68,97 @@ pub fn handle(call: &mut SystemCall, task_cap: TaskCap, cpool: CPoolCap) {
                 let target = TaskCap::retype_from(source.write().deref_mut());
                 let result = cpool.lookup_downgrade_at(&target, request.1);
             }
+
+            None
         },
-        &mut SystemCall::TaskSetInstructionPointer {
-            request: ref request,
+        SystemCall::TaskSetInstructionPointer {
+            request: request,
         } => {
             let target: Option<TaskCap> = cpool.lookup_upgrade(request.0);
             if target.is_some() {
                 let target = target.unwrap();
                 target.write().set_instruction_pointer(VAddr::from(request.1));
             }
+
+            None
         },
-        &mut SystemCall::TaskSetStackPointer {
-            request: ref request,
+        SystemCall::TaskSetStackPointer {
+            request: request,
         } => {
             let target: Option<TaskCap> = cpool.lookup_upgrade(request.0);
             if target.is_some() {
                 let target = target.unwrap();
                 target.write().set_stack_pointer(VAddr::from(request.1));
             }
+
+            None
         },
-        &mut SystemCall::TaskSetCPool {
-            request: ref request,
+        SystemCall::TaskSetCPool {
+            request: request,
         } => {
             let target_task: TaskCap = cpool.lookup_upgrade(request.0).unwrap();
             let target_cpool: CPoolCap = cpool.lookup_upgrade(request.1).unwrap();
             target_task.read().downgrade_cpool(&target_cpool);
+
+            None
         },
-        &mut SystemCall::TaskSetTopPageTable {
-            request: ref request,
+        SystemCall::TaskSetTopPageTable {
+            request: request,
         } => {
             let target_task: TaskCap = cpool.lookup_upgrade(request.0).unwrap();
             let target_table: TopPageTableCap = cpool.lookup_upgrade(request.1).unwrap();
             target_task.read().downgrade_top_page_table(&target_table);
+
+            None
         },
-        &mut SystemCall::TaskSetBuffer {
-            request: ref request,
+        SystemCall::TaskSetBuffer {
+            request: request,
         } => {
             let target_task: TaskCap = cpool.lookup_upgrade(request.0).unwrap();
             let target_buffer: TaskBufferPageCap = cpool.lookup_upgrade(request.1).unwrap();
             target_task.read().downgrade_buffer(&target_buffer);
+
+            None
         },
-        &mut SystemCall::TaskSetActive {
-            request: ref request,
+        SystemCall::TaskSetActive {
+            request: request,
         } => {
-            let target_task: TaskCap = cpool.lookup_upgrade(*request).unwrap();
+            let target_task: TaskCap = cpool.lookup_upgrade(request).unwrap();
             target_task.write().set_status(TaskStatus::Active);
+
+            None
         },
-        &mut SystemCall::TaskSetInactive {
-            request: ref request,
+        SystemCall::TaskSetInactive {
+            request: request,
         } => {
-            let target_task: TaskCap = cpool.lookup_upgrade(*request).unwrap();
+            let target_task: TaskCap = cpool.lookup_upgrade(request).unwrap();
             target_task.write().set_status(TaskStatus::Inactive);
+
+            None
         },
-        &mut SystemCall::ChannelTake {
-            request: ref request,
-            response: ref mut response,
+        SystemCall::ChannelTake {
+            request: request,
+            response: response,
         } => {
-            let mut chan_option: Option<ChannelCap> = cpool.lookup_upgrade(*request);
+            let mut chan_option: Option<ChannelCap> = cpool.lookup_upgrade(request);
             if let Some(chan) = chan_option {
                 task_cap.write().set_status(TaskStatus::ChannelWait(chan))
             }
+
+            None
         },
-        &mut SystemCall::ChannelPut {
-            request: ref request,
+        SystemCall::ChannelPut {
+            request: request,
         } => {
             let chan_option: Option<ChannelCap> = cpool.lookup_upgrade(request.0);
             if let Some(chan) = chan_option {
-                let value = ChannelValue::from_message(request.1.clone(), cpool.clone());
+                let value = ChannelValue::from_message(request.1.clone(), task_cap.clone());
                 if value.is_some() {
                     chan.write().put(value.unwrap());
                 }
             }
+
+            None
         }
     }
 }

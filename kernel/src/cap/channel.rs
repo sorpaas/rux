@@ -4,19 +4,21 @@ use core::any::{Any, TypeId};
 use util::{RwLock, align_up};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
 use abi::ChannelMessage;
-use super::{UntypedDescriptor, CPoolCap};
+use super::{UntypedDescriptor, CPoolCap, TaskCap, TaskBufferPageCap};
 
 #[derive(Debug)]
 pub enum ChannelValue {
     Raw(u64),
     Cap(ManagedArcAny),
+    Payload(TaskBufferPageCap),
 }
 
 impl ChannelValue {
-    pub fn from_message(message: ChannelMessage, source_root: CPoolCap) -> Option<ChannelValue> {
+    pub fn from_message(message: ChannelMessage, source_root: TaskCap) -> Option<ChannelValue> {
         match message {
             ChannelMessage::Raw(value) => Some(ChannelValue::Raw(value)),
             ChannelMessage::Cap(Some(caddr)) => {
+                let source_root = source_root.read().upgrade_cpool().unwrap();
                 let obj = source_root.lookup_upgrade_any(caddr);
                 if obj.is_some() {
                     Some(ChannelValue::Cap(obj.unwrap()))
@@ -25,14 +27,31 @@ impl ChannelValue {
                 }
             },
             ChannelMessage::Cap(None) => None,
+            ChannelMessage::Payload => {
+                let source_root = source_root.read().upgrade_buffer().unwrap();
+                Some(ChannelValue::Payload(source_root))
+            }
         }
     }
 
-    pub fn to_message(value: ChannelValue, target_root: CPoolCap) -> ChannelMessage {
+    pub fn to_message(value: ChannelValue, target_root: TaskCap) -> ChannelMessage {
         match value {
             ChannelValue::Raw(value) => ChannelMessage::Raw(value),
-            ChannelValue::Cap(arc) => ChannelMessage::Cap(target_root.read().downgrade_any_free(arc)
-                                                          .map(|i| { CAddr::from(i as u8) })),
+            ChannelValue::Cap(arc) => {
+                let target_root = target_root.read().upgrade_cpool().unwrap();
+                let target_desc = target_root.read();
+                let index = target_desc.downgrade_any_free(arc);
+                ChannelMessage::Cap(index.map(|i| { CAddr::from(i as u8) }))
+            },
+            ChannelValue::Payload(buffer_cap) => {
+                let source_buffer = buffer_cap.read().read();
+                let mut target_buffer = buffer_cap.write().write();
+                target_buffer.payload_length = source_buffer.payload_length;
+                for i in 0..source_buffer.payload_length {
+                    target_buffer.payload_data[i] = source_buffer.payload_data[i];
+                }
+                ChannelMessage::Payload
+            }
         }
     }
 }

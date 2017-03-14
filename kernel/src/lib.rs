@@ -261,23 +261,34 @@ pub fn kmain(archinfo: InitInfo)
                 TaskStatus::ChannelWait(ref chan) => {
                     let value = chan.write().take();
                     if let Some(value) = value {
-                        let buffer = task_cap.read().upgrade_buffer();
-                        let mut buffer_desc = buffer.as_ref().unwrap().write().write();
-                        let system_call = buffer_desc.deref_mut().call.as_mut().unwrap();
-                        match system_call {
-                            &mut SystemCall::ChannelTake {
-                                request: ref request,
-                                response: ref mut response,
+                        let system_call: SystemCall = {
+                            let buffer_cap = task_cap.read().upgrade_buffer().unwrap();
+                            let buffer_desc = buffer_cap.read();
+                            let buffer = buffer_desc.read();
+                            buffer.call.clone().unwrap()
+                        };
+                        let ret_system_call = match system_call {
+                            SystemCall::ChannelTake {
+                                request: request,
+                                response: response,
                             } => {
-                                idle = false;
-                                *response = Some(ChannelValue::to_message(
-                                    value,
-                                    task_cap.read().upgrade_cpool().unwrap()));
-                                task_cap.write().set_status(TaskStatus::Active);
-                                Some(task_cap.write().switch_to())
+                                Some(SystemCall::ChannelTake {
+                                    request: request,
+                                    response: Some(ChannelValue::to_message(
+                                        value,
+                                        task_cap.clone()))
+                                })
                             }
                             _ => panic!(),
+                        };
+                        if ret_system_call.is_some() {
+                            let buffer_cap = task_cap.read().upgrade_buffer().unwrap();
+                            let mut buffer_desc = buffer_cap.write();
+                            let mut buffer = buffer_desc.write();
+                            buffer.call = ret_system_call;
                         }
+                        task_cap.write().set_status(TaskStatus::Active);
+                        Some(task_cap.write().switch_to())
                     } else {
                         None
                     }
@@ -286,11 +297,22 @@ pub fn kmain(archinfo: InitInfo)
             match exception {
                 Some(Exception::SystemCall) => {
                     let cpool_cap = task_cap.read().upgrade_cpool().unwrap();
-                    let buffer = task_cap.read().upgrade_buffer();
-                    system_calls::handle(
-                        buffer.as_ref().unwrap().write().write().deref_mut().call.as_mut().unwrap(),
-                        task_cap,
-                        cpool_cap);
+                    let system_call: SystemCall = {
+                        let buffer_cap = task_cap.read().upgrade_buffer().unwrap();
+                        let buffer_desc = buffer_cap.read();
+                        let buffer = buffer_desc.read();
+                        buffer.call.clone().unwrap()
+                    };
+                    let ret_system_call = system_calls::handle(
+                        system_call,
+                        task_cap.clone(),
+                        cpool_cap.clone());
+                    if ret_system_call.is_some() {
+                        let buffer_cap = task_cap.read().upgrade_buffer().unwrap();
+                        let mut buffer_desc = buffer_cap.write();
+                        let mut buffer = buffer_desc.write();
+                        buffer.call = ret_system_call;
+                    }
                 },
                 Some(Exception::Keyboard) => {
                     keyboard_cap.write().put(ChannelValue::Raw(unsafe { arch::inportb(0x60) } as u64));

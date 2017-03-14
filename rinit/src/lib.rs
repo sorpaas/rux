@@ -115,9 +115,11 @@ fn start(_argc: isize, _argv: *const *const u8) {
 }
 
 fn parent_main() {
-    let task_buffer = 0x90001000;
+    unsafe { system::set_task_buffer_addr(0x90001000); }
 
-    system_print!(task_buffer, "parent rinit started.");
+    system_print!("parent rinit started.");
+    system_print!("parent stack addr: 0x{:x}.",
+                  system::task_buffer_addr() as usize);
     print!("Child entry should be at: 0x{:x} ({})\nChild stack pointer should be at: 0x{:x} ({})\n",
            start as *const () as usize, start as *const () as usize,
            0x70000000 + (0x1000 * 4 - 4), 0x70000000 + (0x1000 * 4 - 4));
@@ -126,10 +128,7 @@ fn parent_main() {
     let mut command = [0u8; 32];
     let mut command_size = 0;
     while true {
-        let key = from_scancode(match system::channel_take(task_buffer, CAddr::from(254)) {
-            ChannelMessage::Raw(i) => i,
-            _ => panic!(),
-        } as usize);
+        let key = from_scancode(system::channel_take_raw(CAddr::from(254)) as usize);
         if key == lastkey {
             continue;
         } else {
@@ -145,7 +144,7 @@ fn parent_main() {
             }
             Key::Enter => {
                 print!("\n");
-                execute_command(task_buffer, ::core::str::from_utf8(&command[0..command_size]).unwrap());
+                execute_command(::core::str::from_utf8(&command[0..command_size]).unwrap());
                 command = [0u8; 32];
                 command_size = 0;
             }
@@ -154,23 +153,25 @@ fn parent_main() {
     }
 }
 
-fn start_child(task_buffer: usize) {
-    system::retype_task(task_buffer, CAddr::from(2), CAddr::from(249));
-    system::task_set_stack_pointer(task_buffer, CAddr::from(249), 0x70000000 + (0x1000 * 4 - 4));
-    system::task_set_instruction_pointer(task_buffer, CAddr::from(249), start as *const () as u64);
-    system::task_set_cpool(task_buffer, CAddr::from(249), CAddr::from(0));
-    system::task_set_top_page_table(task_buffer, CAddr::from(249), CAddr::from(3));
-    system::task_set_buffer(task_buffer, CAddr::from(249), CAddr::from(250));
-    system::task_set_active(task_buffer, CAddr::from(249));
+fn start_child() {
+    system::retype_task(CAddr::from(2), CAddr::from(249));
+    system::task_set_stack_pointer(CAddr::from(249), 0x70000000 + (0x1000 * 4 - 4));
+    system::task_set_instruction_pointer(CAddr::from(249), start as *const () as u64);
+    system::task_set_cpool(CAddr::from(249), CAddr::from(0));
+    system::task_set_top_page_table(CAddr::from(249), CAddr::from(3));
+    system::task_set_buffer(CAddr::from(249), CAddr::from(250));
+    system::task_set_active(CAddr::from(249));
 }
 
 fn child_main() {
-    let task_buffer = 0x90003000;
+    unsafe { system::set_task_buffer_addr(0x90003000); }
 
-    system_print!(task_buffer, "child rinit started.");
+    system_print!("child rinit started.");
+    system_print!("parent stack addr: 0x{:x}.",
+                  system::task_buffer_addr() as usize);
     while true {
-        let value = system::channel_take(task_buffer, CAddr::from(255));
-        system_print!(task_buffer, "Received from master: {:?}", value);
+        let value: u64 = system::channel_take(CAddr::from(255));
+        system_print!("Received from master: {:?}", value);
     }
 }
 
@@ -186,49 +187,49 @@ fn parse_usize(s: &str, prefix: &str) -> Option<(usize, usize)> {
     }
 }
 
-fn execute_command(task_buffer: usize, s: &str) {
+fn execute_command(s: &str) {
     if s == "list" {
         print!("Listing task cpool ...\n");
-        system::cpool_list_debug(task_buffer);
+        system::cpool_list_debug();
     } else if s == "start child" {
-        start_child(task_buffer);
+        start_child();
         print!("Child started.\n");
     } else if s.len() >= 6 && &s[0..4] == "echo" {
         print!("{}\n", &s[5..s.len()]);
     } else if s.len() >= 6 && &s[0..8] == "send raw" {
         let value: u64 = (&s[9..s.len()]).parse().unwrap();
-        system::channel_put(task_buffer, CAddr::from(255), ChannelMessage::Raw(value));
+        system::channel_put(CAddr::from(255), ChannelMessage::Raw(value));
         print!("Sent raw to child through channel 255\n");
     } else if s.len() >= 6 && &s[0..8] == "send cap" {
         let value: u64 = (&s[9..s.len()]).parse().unwrap();
-        system::channel_put(task_buffer, CAddr::from(255), ChannelMessage::Cap(Some(CAddr::from(value as u8))));
+        system::channel_put(CAddr::from(255), ChannelMessage::Cap(Some(CAddr::from(value as u8))));
         print!("Sent cap to child through channel 255\n");
     } else if let Some((source, target)) = parse_usize(s, "retype cpool") {
-        system::retype_cpool(task_buffer, CAddr::from(source as u8), CAddr::from(target as u8));
+        system::retype_cpool(CAddr::from(source as u8), CAddr::from(target as u8));
         print!("Operation finished.\n");
     } else if let Some((source, target)) = parse_usize(s, "retype task") {
-        system::retype_task(task_buffer, CAddr::from(source as u8), CAddr::from(target as u8));
+        system::retype_task(CAddr::from(source as u8), CAddr::from(target as u8));
         print!("Operation finished.\n");
     } else if let Some((target, ptr)) = parse_usize(s, "set stack") {
-        system::task_set_stack_pointer(task_buffer, CAddr::from(target as u8), ptr as u64);
+        system::task_set_stack_pointer(CAddr::from(target as u8), ptr as u64);
         print!("Operation finished.\n");
     } else if let Some((target, ptr)) = parse_usize(s, "set instruction") {
-        system::task_set_instruction_pointer(task_buffer, CAddr::from(target as u8), ptr as u64);
+        system::task_set_instruction_pointer(CAddr::from(target as u8), ptr as u64);
         print!("Operation finished.\n");
     } else if let Some((target, cpool)) = parse_usize(s, "set cpool") {
-        system::task_set_cpool(task_buffer, CAddr::from(target as u8), CAddr::from(cpool as u8));
+        system::task_set_cpool(CAddr::from(target as u8), CAddr::from(cpool as u8));
         print!("Operation finished.\n");
     } else if let Some((target, table)) = parse_usize(s, "set table") {
-        system::task_set_top_page_table(task_buffer, CAddr::from(target as u8), CAddr::from(table as u8));
+        system::task_set_top_page_table(CAddr::from(target as u8), CAddr::from(table as u8));
         print!("Operation finished.\n");
     } else if let Some((target, buffer)) = parse_usize(s, "set buffer") {
-        system::task_set_buffer(task_buffer, CAddr::from(target as u8), CAddr::from(buffer as u8));
+        system::task_set_buffer(CAddr::from(target as u8), CAddr::from(buffer as u8));
         print!("Operation finished.\n");
     } else if let Some((target, status)) = parse_usize(s, "set active") {
         if status == 0 {
-            system::task_set_inactive(task_buffer, CAddr::from(target as u8));
+            system::task_set_inactive(CAddr::from(target as u8));
         } else {
-            system::task_set_active(task_buffer, CAddr::from(target as u8));
+            system::task_set_active(CAddr::from(target as u8));
         }
         print!("Operation finished.\n");
     } else {

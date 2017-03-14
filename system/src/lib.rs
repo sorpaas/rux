@@ -11,31 +11,58 @@ pub mod unwind;
 mod call;
 
 pub use self::call::{cpool_list_debug, retype_cpool, retype_task,
-                     channel_put, channel_take, task_set_stack_pointer, task_set_instruction_pointer,
+                     channel_put, channel_take,
+                     channel_put_raw, channel_take_raw,
+                     channel_put_cap, channel_take_cap,
+                     task_set_stack_pointer, task_set_instruction_pointer,
                      task_set_cpool, task_set_top_page_table, task_set_buffer,
                      task_set_active, task_set_inactive};
 pub use abi::{CAddr, ChannelMessage};
 
 use core::fmt;
 
+const STACK_LENGTH: usize = 4 * 4096;
+pub fn task_buffer_loc() -> usize {
+    // We create a random value on stack, lookup its address, and go
+    // to the top of the stack possible as the kernel buffer address
+    // storage.
+
+    let mut v: usize = 0xdeadbeaf;
+    let v_addr = &mut v as *mut usize as usize;
+
+    return (v_addr - (v_addr % STACK_LENGTH));
+}
+
+pub fn task_buffer_addr() -> usize {
+    unsafe {
+        let loc = task_buffer_loc() as *mut usize;
+        return *loc;
+    }
+}
+
+pub unsafe fn set_task_buffer_addr(addr: usize) {
+    use core::ptr::write;
+
+    let loc = task_buffer_loc() as *mut usize;
+    write(loc, addr);
+}
+
 pub struct PrintWriter {
     buffer: [u8; 32],
-    size: usize,
-    addr: usize,
+    size: usize
 }
 
 impl PrintWriter {
-    pub fn new(addr: usize) -> Self {
+    pub fn new() -> Self {
         PrintWriter {
             buffer: [0u8; 32],
-            size: 0,
-            addr: addr,
+            size: 0
         }
     }
 
     pub fn flush(&mut self) {
         if self.size > 0 {
-            call::print(self.addr, self.buffer.clone(), self.size);
+            call::print(self.buffer.clone(), self.size);
             self.buffer = [0u8; 32];
             self.size = 0;
         }
@@ -64,8 +91,8 @@ impl Drop for PrintWriter {
 
 #[macro_export]
 macro_rules! system_print {
-    ( $addr:tt, $($arg:tt)* ) => ({
+    ( $($arg:tt)* ) => ({
         use core::fmt::Write;
-        let _ = write!(&mut $crate::PrintWriter::new($addr), $($arg)*);
+        let _ = write!(&mut $crate::PrintWriter::new(), $($arg)*);
     })
 }

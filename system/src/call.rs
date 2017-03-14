@@ -1,65 +1,67 @@
 use abi::{SystemCall, TaskBuffer, CAddr, ChannelMessage};
 use spin::{Mutex};
+use core::any::{TypeId, Any};
+use super::{task_buffer_addr};
 
-pub fn retype_cpool(addr: usize, source: CAddr, target: CAddr) {
+pub fn retype_cpool(source: CAddr, target: CAddr) {
     system_call(SystemCall::RetypeCPool {
         request: (source, target),
-    }, addr);
+    });
 }
 
-pub fn retype_task(addr: usize, source: CAddr, target: CAddr) {
+pub fn retype_task(source: CAddr, target: CAddr) {
     system_call(SystemCall::RetypeTask {
         request: (source, target),
-    }, addr);
+    });
 }
 
-pub fn task_set_instruction_pointer(addr: usize, target: CAddr, ptr: u64) {
+pub fn task_set_instruction_pointer(target: CAddr, ptr: u64) {
     system_call(SystemCall::TaskSetInstructionPointer {
         request: (target, ptr),
-    }, addr);
+    });
 }
 
-pub fn task_set_stack_pointer(addr: usize, target: CAddr, ptr: u64) {
+pub fn task_set_stack_pointer(target: CAddr, ptr: u64) {
     system_call(SystemCall::TaskSetStackPointer {
         request: (target, ptr),
-    }, addr);
+    });
 }
 
-pub fn task_set_cpool(addr: usize, target: CAddr, cpool: CAddr) {
+pub fn task_set_cpool(target: CAddr, cpool: CAddr) {
     system_call(SystemCall::TaskSetCPool {
         request: (target, cpool),
-    }, addr);
+    });
 }
 
-pub fn task_set_top_page_table(addr: usize, target: CAddr, table: CAddr) {
+pub fn task_set_top_page_table(target: CAddr, table: CAddr) {
     system_call(SystemCall::TaskSetTopPageTable {
         request: (target, table),
-    }, addr);
+    });
 }
 
-pub fn task_set_buffer(addr: usize, target: CAddr, buffer: CAddr) {
+pub fn task_set_buffer(target: CAddr, buffer: CAddr) {
     system_call(SystemCall::TaskSetBuffer {
         request: (target, buffer),
-    }, addr);
+    });
 }
 
-pub fn task_set_active(addr: usize, target: CAddr) {
+pub fn task_set_active(target: CAddr) {
     system_call(SystemCall::TaskSetActive {
         request: target
-    }, addr);
+    });
 }
 
-pub fn task_set_inactive(addr: usize, target: CAddr) {
+pub fn task_set_inactive(target: CAddr) {
     system_call(SystemCall::TaskSetInactive {
         request: target
-    }, addr);
+    });
 }
 
-pub fn channel_take(addr: usize, target: CAddr) -> ChannelMessage {
+fn channel_take_nonpayload(target: CAddr) -> ChannelMessage {
     let result = system_call(SystemCall::ChannelTake {
         request: target,
         response: None
-    }, addr);
+    });
     match result {
         SystemCall::ChannelTake {
             request: _,
@@ -71,28 +73,119 @@ pub fn channel_take(addr: usize, target: CAddr) -> ChannelMessage {
     };
 }
 
-pub fn channel_put(addr: usize, target: CAddr, value: ChannelMessage) {
-    system_call(SystemCall::ChannelPut {
-        request: (target, value)
-    }, addr);
+pub fn channel_take_raw(target: CAddr) -> u64 {
+    let result = channel_take_nonpayload(target);
+    match result {
+        ChannelMessage::Raw(v) => return v,
+        _ => panic!(),
+    };
 }
 
-pub fn print(addr: usize, buffer: [u8; 32], size: usize) {
+pub fn channel_take_cap(target: CAddr) -> CAddr {
+    let result = channel_take_nonpayload(target);
+    match result {
+        ChannelMessage::Cap(v) => return v.unwrap(),
+        _ => panic!(),
+    };
+}
+
+pub fn channel_take<T: Any + Clone>(target: CAddr) -> T {
+    let (result, payload) = system_call_take_payload(SystemCall::ChannelTake {
+        request: target,
+        response: None
+    });
+    match result {
+        SystemCall::ChannelTake {
+            request: _,
+            response: Some(ChannelMessage::Payload),
+        } => {
+            return payload;
+        },
+        _ => panic!(),
+    };
+}
+
+pub fn channel_put_raw(target: CAddr, value: u64) {
+    system_call(SystemCall::ChannelPut {
+        request: (target, ChannelMessage::Raw(value))
+    });
+}
+
+pub fn channel_put_cap(target: CAddr, value: CAddr) {
+    system_call(SystemCall::ChannelPut {
+        request: (target, ChannelMessage::Cap(Some(value)))
+    });
+}
+
+pub fn channel_put<T: Any + Clone>(target: CAddr, value: T) {
+    system_call_put_payload(SystemCall::ChannelPut {
+        request: (target, ChannelMessage::Payload)
+    }, value);
+}
+
+pub fn print(buffer: [u8; 32], size: usize) {
     let result = system_call(SystemCall::Print {
         request: (buffer, size)
-    }, addr);
+    });
 }
 
-pub fn cpool_list_debug(addr: usize) {
-    system_call(SystemCall::CPoolListDebug, addr);
+pub fn cpool_list_debug() {
+    system_call(SystemCall::CPoolListDebug);
 }
 
-fn system_call(message: SystemCall, addr: usize) -> SystemCall {
+fn system_call(message: SystemCall) -> SystemCall {
+    let addr = task_buffer_addr();
     unsafe {
         let buffer = unsafe { &mut *(addr as *mut TaskBuffer) };
         buffer.call = Some(message);
         system_call_raw();
         buffer.call.take().unwrap()
+    }
+}
+
+struct Payload<T: Any> {
+    type_id: TypeId,
+    inner: T
+}
+
+fn system_call_put_payload<T: Any>(message: SystemCall, payload: T) -> SystemCall {
+    use core::mem::{size_of};
+    let addr = task_buffer_addr();
+
+    unsafe {
+        let buffer = unsafe { &mut *(addr as *mut TaskBuffer) };
+        buffer.call = Some(message);
+
+        buffer.payload_length = size_of::<T>();
+        let payload = Payload::<T> {
+            type_id: TypeId::of::<T>(),
+            inner: payload,
+        };
+        let payload_addr = &mut buffer.payload_data as *mut _ as *mut Payload<T>;
+        let mut payload_data = &mut *payload_addr;
+        *payload_data = payload;
+
+        system_call_raw();
+        buffer.call.take().unwrap()
+    }
+}
+
+fn system_call_take_payload<T: Any + Clone>(message: SystemCall) -> (SystemCall, T) {
+    use core::mem::{size_of};
+    let addr = task_buffer_addr();
+
+    unsafe {
+        let buffer = unsafe { &mut *(addr as *mut TaskBuffer) };
+        buffer.call = Some(message);
+
+        system_call_raw();
+
+
+        let payload_addr = &mut buffer.payload_data as *mut _ as *mut Payload<T>;
+        let payload_data = &*payload_addr;
+        assert!(payload_data.type_id == TypeId::of::<T>());
+
+        (buffer.call.take().unwrap(), payload_data.inner.clone())
     }
 }
 

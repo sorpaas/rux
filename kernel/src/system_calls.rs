@@ -47,6 +47,39 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
 
             None
         },
+        SystemCall::RetypeRawPageFree {
+            request: request,
+            response: response,
+        } => {
+            let source: Option<UntypedCap> = cpool.lookup_upgrade(request);
+            if source.is_some() {
+                let source = source.unwrap();
+                let target = RawPageCap::retype_from(source.write().deref_mut());
+                let result = cpool.read().downgrade_free(&target);
+
+                Some(SystemCall::RetypeRawPageFree {
+                    request: request,
+                    response: result.map(|x| CAddr::from(x as u8)),
+                })
+            } else {
+                None
+            }
+        },
+        SystemCall::MapRawPageFree {
+            untyped: untyped,
+            request: request,
+        } => {
+            let pt_cap: Option<TopPageTableCap> = cpool.lookup_upgrade(request.0);
+            let page_cap: Option<RawPageCap> = cpool.lookup_upgrade(request.1);
+            let untyped_cap: Option<UntypedCap> = cpool.lookup_upgrade(untyped);
+            if pt_cap.is_some() && page_cap.is_some() && untyped_cap.is_some() {
+                let mut pt_cap = pt_cap.unwrap();
+                let page_cap = page_cap.unwrap();
+                let untyped_cap = untyped_cap.unwrap();
+                pt_cap.map(VAddr::from(request.2), &page_cap, untyped_cap.write().deref_mut(), cpool.write().deref_mut());
+            }
+            None
+        }
         SystemCall::RetypeCPool {
             request: request,
         } => {

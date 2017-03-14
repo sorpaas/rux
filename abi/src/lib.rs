@@ -29,6 +29,14 @@ pub enum SystemCall {
     Print {
         request: ([u8; 32], usize)
     },
+    RetypeRawPageFree {
+        request: CAddr,
+        response: Option<CAddr>,
+    },
+    MapRawPageFree {
+        untyped: CAddr,
+        request: (CAddr, CAddr, usize),
+    },
     RetypeCPool {
         request: (CAddr, CAddr),
     },

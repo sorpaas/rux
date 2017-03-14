@@ -22,6 +22,7 @@ pub use self::call::{cpool_list_debug, retype_cpool, retype_task,
                      channel_put, channel_take,
                      channel_put_raw, channel_take_raw,
                      channel_put_cap, channel_take_cap,
+                     retype_raw_page_free, map_raw_page_free,
                      task_set_stack_pointer, task_set_instruction_pointer,
                      task_set_cpool, task_set_top_page_table, task_set_buffer,
                      task_set_active, task_set_inactive};

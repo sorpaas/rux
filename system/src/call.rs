@@ -3,6 +3,27 @@ use spin::{Mutex};
 use core::any::{TypeId, Any};
 use super::{task_buffer_addr};
 
+pub fn retype_raw_page_free(source: CAddr) -> CAddr {
+    let result = system_call(SystemCall::RetypeRawPageFree {
+        request: source,
+        response: None
+    });
+    match result {
+        SystemCall::RetypeRawPageFree {
+            request: request,
+            response: response,
+        } => { return response.unwrap(); },
+        _ => panic!(),
+    };
+}
+
+pub fn map_raw_page_free(untyped: CAddr, pt: CAddr, page: CAddr, addr: usize) {
+    system_call(SystemCall::MapRawPageFree {
+        untyped: untyped,
+        request: (pt, page, addr),
+    });
+}
+
 pub fn retype_cpool(source: CAddr, target: CAddr) {
     system_call(SystemCall::RetypeCPool {
         request: (source, target),

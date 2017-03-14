@@ -20,8 +20,8 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::CPoolListDebug => {
-            for i in 0..256 {
-                let arc = cpool.lookup_upgrade_any(CAddr::from(i));
+            for i in 0..(256 as usize) {
+                let arc = cpool.lookup_upgrade_any(CAddr::from(i as u8));
                 if arc.is_some() {
                     let arc = arc.unwrap();
                     if arc.is::<CPoolCap>() {

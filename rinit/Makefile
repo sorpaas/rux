@@ -1,5 +1,6 @@
 arch ?= $(error arch not set)
 libcore ?= $(error libcore path not set)
+liballoc ?= $(error liballoc path not set)
 target_spec ?= $(error target spec not set)
 
 ifeq ($(arch),x86_64)
@@ -44,7 +45,7 @@ rinit: cargo $(librinit) $(assembly_object_files) $(linker_script)
 	@$(ld) $(linker_flags) -o $(rinit) $(assembly_object_files) $(librinit)
 
 cargo:
-	@RUSTFLAGS="-L $(shell dirname $(libcore)) $(rust_flags)" $(cargo) rustc --target $(target_spec)
+	@RUSTFLAGS="-L $(shell dirname $(libcore)) -L $(shell dirname $(liballoc)) $(rust_flags)" $(cargo) rustc --target $(target_spec)
 
 clean:
 	@rm -rf build

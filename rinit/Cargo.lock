@@ -2,6 +2,7 @@
 name = "rinit"
 version = "0.1.0"
 dependencies = [
+ "selfalloc 0.1.0",
  "spin 0.4.4",
  "system 0.1.0",
 ]
@@ -14,6 +15,15 @@ version = "0.1.0"
 name = "rlibc"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "selfalloc"
+version = "0.1.0"
+dependencies = [
+ "abi 0.1.0",
+ "spin 0.4.4",
+ "system 0.1.0",
+]
 
 [[package]]
 name = "spin"

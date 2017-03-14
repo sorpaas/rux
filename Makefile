@@ -2,6 +2,7 @@ arch ?= x86_64
 kernel := kernel/build/$(arch)/kernel.bin
 rinit := rinit/build/$(arch)/rinit.bin
 libcore := build/$(arch)/libcore.rlib
+liballoc := build/$(arch)/liballoc.rlib
 
 ifeq ($(arch),x86_64)
     triple ?= x86_64-none-elf-
@@ -27,15 +28,22 @@ build/rustc-nightly-src.tar.gz:
 build/libcore/lib.rs: build/rustc-nightly-src.tar.gz
 	@tar -xmf build/rustc-nightly-src.tar.gz -C build/ rustc-nightly/src/libcore --transform 's~^rustc-nightly/src/~~'
 
+build/liballoc/lib.rs: build/rustc-nightly-src.tar.gz
+	@tar -xmf build/rustc-nightly-src.tar.gz -C build/ rustc-nightly/src/liballoc --transform 's~^rustc-nightly/src/~~'
+
 $(libcore): build/libcore/lib.rs
 	@mkdir -p $(shell dirname $@)
 	@$(rustc) $(rust_flags) --target=$(shell realpath $(target_spec)) --out-dir=build/$(arch) --crate-type=lib $<
 
+$(liballoc): build/liballoc/lib.rs
+	@mkdir -p $(shell dirname $@)
+	@$(rustc) -L $(shell dirname $(libcore)) $(rust_flags) --target=$(shell realpath $(target_spec)) --out-dir=build/$(arch) --crate-type=lib $<
+
 kernel: $(libcore)
 	@make -C kernel arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) kernel
 
-rinit: $(libcore)
-	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) rinit
+rinit: $(libcore) $(liballoc)
+	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) liballoc=$(shell realpath $(liballoc)) target_spec=$(shell realpath $(target_spec)) rinit
 
 run: kernel rinit
 	@qemu-system-$(arch) -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot

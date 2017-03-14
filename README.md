@@ -145,7 +145,12 @@ send raw 5
 You should see `[kernel] Userspace print: Received from master: 5` in
 the serial message buffer.
 
-You can also send capabilities over the channel.
+You can also send capabilities over the channel. Rux uses different
+system calls to send raw values, payloads and capabilities through
+channels. If you wish to send capabilities, modify `let value: u64 =
+system::channel_take(CAddr::from(255));` in `child_main` of
+`rinit/src/lib.rs` to `let value: CAddr =
+system::channel_take_cap(CAddr::from(255));`.
 
 ```lang=bash
 send cap 0

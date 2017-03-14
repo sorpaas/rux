@@ -45,7 +45,8 @@ impl ChannelValue {
             },
             ChannelValue::Payload(buffer_cap) => {
                 let source_buffer = buffer_cap.read().read();
-                let mut target_buffer = buffer_cap.write().write();
+                let mut target_buffer_cap = target_root.read().upgrade_buffer().unwrap();
+                let mut target_buffer = target_buffer_cap.write().write();
                 target_buffer.payload_length = source_buffer.payload_length;
                 for i in 0..source_buffer.payload_length {
                     target_buffer.payload_data[i] = source_buffer.payload_data[i];

@@ -143,11 +143,6 @@ fn system_call(message: SystemCall) -> SystemCall {
     }
 }
 
-struct Payload<T: Any> {
-    type_id: TypeId,
-    inner: T
-}
-
 fn system_call_put_payload<T: Any>(message: SystemCall, payload: T) -> SystemCall {
     use core::mem::{size_of};
     let addr = task_buffer_addr();
@@ -157,11 +152,7 @@ fn system_call_put_payload<T: Any>(message: SystemCall, payload: T) -> SystemCal
         buffer.call = Some(message);
 
         buffer.payload_length = size_of::<T>();
-        let payload = Payload::<T> {
-            type_id: TypeId::of::<T>(),
-            inner: payload,
-        };
-        let payload_addr = &mut buffer.payload_data as *mut _ as *mut Payload<T>;
+        let payload_addr = &mut buffer.payload_data as *mut _ as *mut T;
         let mut payload_data = &mut *payload_addr;
         *payload_data = payload;
 
@@ -180,12 +171,11 @@ fn system_call_take_payload<T: Any + Clone>(message: SystemCall) -> (SystemCall,
 
         system_call_raw();
 
-
-        let payload_addr = &mut buffer.payload_data as *mut _ as *mut Payload<T>;
+        let payload_addr = &mut buffer.payload_data as *mut _ as *mut T;
         let payload_data = &*payload_addr;
-        assert!(payload_data.type_id == TypeId::of::<T>());
+        assert!(buffer.payload_length != 0 && buffer.payload_length == size_of::<T>());
 
-        (buffer.call.take().unwrap(), payload_data.inner.clone())
+        (buffer.call.take().unwrap(), payload_data.clone())
     }
 }
 

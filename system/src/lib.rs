@@ -7,6 +7,14 @@ extern crate rlibc;
 extern crate abi;
 extern crate spin;
 
+#[macro_export]
+macro_rules! system_print {
+    ( $($arg:tt)* ) => ({
+        use core::fmt::Write;
+        let _ = write!(&mut $crate::PrintWriter::new(), $($arg)*);
+    })
+}
+
 pub mod unwind;
 mod call;
 
@@ -87,12 +95,4 @@ impl Drop for PrintWriter {
     fn drop(&mut self) {
         self.flush();
     }
-}
-
-#[macro_export]
-macro_rules! system_print {
-    ( $($arg:tt)* ) => ({
-        use core::fmt::Write;
-        let _ = write!(&mut $crate::PrintWriter::new(), $($arg)*);
-    })
 }

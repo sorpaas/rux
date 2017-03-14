@@ -198,11 +198,11 @@ fn execute_command(s: &str) {
         print!("{}\n", &s[5..s.len()]);
     } else if s.len() >= 6 && &s[0..8] == "send raw" {
         let value: u64 = (&s[9..s.len()]).parse().unwrap();
-        system::channel_put(CAddr::from(255), ChannelMessage::Raw(value));
+        system::channel_put(CAddr::from(255), value);
         print!("Sent raw to child through channel 255\n");
     } else if s.len() >= 6 && &s[0..8] == "send cap" {
         let value: u64 = (&s[9..s.len()]).parse().unwrap();
-        system::channel_put(CAddr::from(255), ChannelMessage::Cap(Some(CAddr::from(value as u8))));
+        system::channel_put_cap(CAddr::from(255), CAddr::from(value as u8));
         print!("Sent cap to child through channel 255\n");
     } else if let Some((source, target)) = parse_usize(s, "retype cpool") {
         system::retype_cpool(CAddr::from(source as u8), CAddr::from(target as u8));

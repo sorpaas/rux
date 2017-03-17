@@ -1,0 +1,17 @@
+[package]
+name = "test-userspace"
+version = "0.1.0"
+authors = ["Wei Tang <hi@that.world>"]
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies.system]
+path = "../../system"
+features = ["kernel_debug"]
+
+[dependencies.spin]
+path = "../../spin"
+
+[dependencies.selfalloc]
+path = "../../selfalloc"

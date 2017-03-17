@@ -8,19 +8,8 @@ use abi::{SystemCall, TaskBuffer};
 /// system call.
 pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<SystemCall> {
     match call {
-        SystemCall::Print {
-            request: request
-        } => {
-            use core::str;
-            let buffer = request.0.clone();
-            let slice = &buffer[0..request.1];
-            let s = str::from_utf8(slice).unwrap();
-            log!("Userspace print: {}", s);
-
-            None
-        },
         #[cfg(feature="kernel_debug")]
-        SystemCall::CPoolListDebug => {
+        SystemCall::DebugCPoolList => {
             for i in 0..(256 as usize) {
                 let arc = cpool.lookup_upgrade_any(CAddr::from(i as u8));
                 if arc.is_some() {
@@ -45,6 +34,28 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
                     }
                 }
             }
+
+            None
+        },
+        #[cfg(feature="kernel_debug")]
+        SystemCall::DebugTestSucceed => {
+            unsafe { ::arch::outportb(0x501, 0x31); }
+            loop {}
+        }
+        #[cfg(feature="kernel_debug")]
+        SystemCall::DebugTestFail => {
+            unsafe { ::arch::outportb(0x501, 0x30); }
+            loop {}
+        }
+
+        SystemCall::Print {
+            request: request
+        } => {
+            use core::str;
+            let buffer = request.0.clone();
+            let slice = &buffer[0..request.1];
+            let s = str::from_utf8(slice).unwrap();
+            log!("Userspace print: {}", s);
 
             None
         },

@@ -1,6 +1,7 @@
 arch ?= x86_64
 kernel := kernel/build/$(arch)/kernel.bin
 rinit := rinit/build/$(arch)/rinit.bin
+test-userspace := tests/userspace/build/$(arch)/test_userspace.bin
 libcore := build/$(arch)/libcore.rlib
 liballoc := build/$(arch)/liballoc.rlib
 
@@ -45,6 +46,9 @@ kernel: $(libcore)
 rinit: $(libcore) $(liballoc)
 	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) liballoc=$(shell realpath $(liballoc)) target_spec=$(shell realpath $(target_spec)) rinit
 
+test-userspace: $(libcore) $(liballoc)
+	@make -C tests/userspace arch=$(arch) libcore=$(shell realpath $(libcore)) liballoc=$(shell realpath $(liballoc)) target_spec=$(shell realpath $(target_spec)) test-userspace
+
 run: kernel rinit
 	@qemu-system-$(arch) -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot
 
@@ -53,6 +57,9 @@ debug: kernel rinit
 
 noreboot: kernel rinit
 	@qemu-system-$(arch) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
+
+test: kernel test-userspace
+	./tests/run.sh qemu-system-$(arch) -d int -no-reboot -device isa-debug-exit -kernel $(kernel) -initrd $(test-userspace) -serial stdio
 
 gdb:
 	@gdb $(kernel) -ex "target remote :1234"

@@ -151,8 +151,20 @@ pub fn print(buffer: [u8; 32], size: usize) {
 }
 
 #[cfg(feature="kernel_debug")]
-pub fn cpool_list_debug() {
-    system_call(SystemCall::CPoolListDebug);
+pub fn debug_cpool_list() {
+    system_call(SystemCall::DebugCPoolList);
+}
+
+#[cfg(feature="kernel_debug")]
+pub fn debug_test_succeed() {
+    system_call(SystemCall::DebugTestSucceed);
+    loop {}
+}
+
+#[cfg(feature="kernel_debug")]
+pub fn debug_test_fail() {
+    system_call(SystemCall::DebugTestFail);
+    loop {}
 }
 
 fn system_call(message: SystemCall) -> SystemCall {

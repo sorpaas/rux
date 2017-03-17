@@ -201,7 +201,7 @@ fn parse_usize(s: &str, prefix: &str) -> Option<(usize, usize)> {
 fn execute_command(s: &str) {
     if s == "list" {
         print!("Listing task cpool ...\n");
-        system::cpool_list_debug();
+        system::debug_cpool_list();
     } else if s == "start child" {
         start_child();
         print!("Child started.\n");

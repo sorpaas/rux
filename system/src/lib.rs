@@ -19,7 +19,7 @@ pub mod unwind;
 mod call;
 
 #[cfg(feature="kernel_debug")]
-pub use self::call::{cpool_list_debug};
+pub use self::call::{debug_cpool_list, debug_test_succeed, debug_test_fail};
 
 pub use self::call::{retype_cpool, retype_task,
                      channel_put, channel_take,

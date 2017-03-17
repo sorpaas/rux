@@ -26,7 +26,11 @@ pub enum CapSendMessage {
 #[derive(Debug, Clone)]
 pub enum SystemCall {
     #[cfg(feature="kernel_debug")]
-    CPoolListDebug,
+    DebugCPoolList,
+    #[cfg(feature="kernel_debug")]
+    DebugTestSucceed,
+    #[cfg(feature="kernel_debug")]
+    DebugTestFail,
     Print {
         request: ([u8; 32], usize)
     },

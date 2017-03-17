@@ -25,5 +25,6 @@ in stdenv.mkDerivation {
     gdb
     rustNightly
     cargoNightly
+    curl
   ];
 }

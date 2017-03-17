@@ -59,7 +59,7 @@ noreboot: kernel rinit
 	@qemu-system-$(arch) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
 
 test: kernel test-userspace
-	./tests/run.sh qemu-system-$(arch) -d int -no-reboot -vga none -device isa-debug-exit -kernel $(kernel) -initrd $(test-userspace) -serial stdio
+	./tests/run.sh qemu-system-$(arch) -d int -no-reboot -vnc :1 -device isa-debug-exit -kernel $(kernel) -initrd $(test-userspace) -serial stdio
 
 gdb:
 	@gdb $(kernel) -ex "target remote :1234"

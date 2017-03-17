@@ -25,3 +25,7 @@ path = "../spin"
 
 [dependencies.rlibc]
 version = "1.0"
+
+[features]
+default = ["kernel_debug"]
+kernel_debug = ["abi/kernel_debug"]

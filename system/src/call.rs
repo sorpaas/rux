@@ -150,6 +150,7 @@ pub fn print(buffer: [u8; 32], size: usize) {
     });
 }
 
+#[cfg(feature="kernel_debug")]
 pub fn cpool_list_debug() {
     system_call(SystemCall::CPoolListDebug);
 }

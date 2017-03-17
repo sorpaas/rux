@@ -18,7 +18,10 @@ macro_rules! system_print {
 pub mod unwind;
 mod call;
 
-pub use self::call::{cpool_list_debug, retype_cpool, retype_task,
+#[cfg(feature="kernel_debug")]
+pub use self::call::{cpool_list_debug};
+
+pub use self::call::{retype_cpool, retype_task,
                      channel_put, channel_take,
                      channel_put_raw, channel_take_raw,
                      channel_put_cap, channel_take_cap,

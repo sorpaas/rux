@@ -8,6 +8,7 @@ crate-type = ["staticlib"]
 
 [dependencies.system]
 path = "../system"
+features = ["kernel_debug"]
 
 [dependencies.spin]
 path = "../spin"

@@ -11,3 +11,7 @@ path = "../abi"
 
 [dependencies.spin]
 path = "../spin"
+
+[features]
+default = []
+kernel_debug = ["abi/kernel_debug"]

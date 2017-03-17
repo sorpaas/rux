@@ -19,6 +19,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
 
             None
         },
+        #[cfg(feature="kernel_debug")]
         SystemCall::CPoolListDebug => {
             for i in 0..(256 as usize) {
                 let arc = cpool.lookup_upgrade_any(CAddr::from(i as u8));

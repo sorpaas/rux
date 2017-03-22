@@ -1,7 +1,6 @@
 use core::ptr::Unique;
 use core::fmt::{self, Write};
 use spin::Mutex;
-use system;
 
 #[cfg(any(target_arch = "x86_64"))]
 pub unsafe fn outportb(port: u16, val: u8)

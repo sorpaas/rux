@@ -171,9 +171,22 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
         }
 
         {
-            use x86::shared::msr;
+            /// Write 64 bits to msr register.
+            unsafe fn wrmsr(msr: u32, value: u64) {
+                let low = value as u32;
+                let high = (value >> 32) as u32;
+                asm!("wrmsr" :: "{ecx}" (msr), "{eax}" (low), "{edx}" (high) : "memory" : "volatile" );
+            }
 
-            let apic_msr = unsafe { msr::rdmsr(0x1B) };
+            /// Read 64 bits msr register.
+            #[allow(unused_mut)]
+            unsafe fn rdmsr(msr: u32) -> u64 {
+                let (high, low): (u32, u32);
+                asm!("rdmsr" : "={eax}" (low), "={edx}" (high) : "{ecx}" (msr) : "memory" : "volatile");
+                ((high as u64) << 32) | (low as u64)
+            }
+
+            let apic_msr = unsafe { rdmsr(0x1B) };
             assert!(apic_msr & (1<<11) == (1<<11));
             let apic_base = PAddr::from((apic_msr >> 12) * 0x1000);
             // Mapping APIC Page

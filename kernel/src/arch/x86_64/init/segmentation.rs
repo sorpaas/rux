@@ -15,7 +15,7 @@ static mut TSS: TaskStateSegment = TaskStateSegment::empty();
 
 /// Load the task state register.
 pub unsafe fn load_tr(sel: SegmentSelector) {
-    asm!("ltr $0" :: "r" (sel));
+    asm!("ltr $0" :: "r" (sel.bits()));
 }
 
 /// Set the current kernel stack. Essential for context switching.

@@ -17,7 +17,6 @@
 #![feature(relaxed_adts)]
 #![no_std]
 
-extern crate x86;
 extern crate spin;
 extern crate rlibc;
 extern crate abi;

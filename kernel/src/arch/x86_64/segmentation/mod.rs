@@ -138,27 +138,27 @@ impl SegmentDescriptor {
 
 /// Reload stack segment register.
 pub unsafe fn load_ss(sel: SegmentSelector) {
-    asm!("movw $0, %ss " :: "r" (sel) : "memory");
+    asm!("movw $0, %ss " :: "r" (sel.bits()) : "memory");
 }
 
 /// Reload data segment register.
 pub unsafe fn load_ds(sel: SegmentSelector) {
-    asm!("movw $0, %ds " :: "r" (sel) : "memory");
+    asm!("movw $0, %ds " :: "r" (sel.bits()) : "memory");
 }
 
 /// Reload es segment register.
 pub unsafe fn load_es(sel: SegmentSelector) {
-    asm!("movw $0, %es " :: "r" (sel) : "memory");
+    asm!("movw $0, %es " :: "r" (sel.bits()) : "memory");
 }
 
 /// Reload fs segment register.
 pub unsafe fn load_fs(sel: SegmentSelector) {
-    asm!("movw $0, %fs " :: "r" (sel) : "memory");
+    asm!("movw $0, %fs " :: "r" (sel.bits()) : "memory");
 }
 
 /// Reload gs segment register.
 pub unsafe fn load_gs(sel: SegmentSelector) {
-    asm!("movw $0, %gs " :: "r" (sel) : "memory");
+    asm!("movw $0, %gs " :: "r" (sel.bits()) : "memory");
 }
 
 /// Reload code segment register.
@@ -168,10 +168,10 @@ pub unsafe fn load_gs(sel: SegmentSelector) {
 /// to reload cs and continue at 1:.
 pub unsafe fn load_cs(sel: SegmentSelector) {
     asm!("pushq $0
-         lea 1f(%rip), %rax
-         pushq %rax
-         lretq
-         1:" :: "r" (sel.bits() as u64) : "rax" "memory");
+          lea 1f(%rip), %rax
+          pushq %rax
+          lretq
+          1:" :: "r" (sel.bits() as u64) : "rax" "memory");
 }
 
 /// Returns the current value of the code segment register.

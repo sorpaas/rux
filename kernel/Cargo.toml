@@ -9,16 +9,12 @@ crate-type = ["staticlib"]
 [dependencies.abi]
 path = "../abi"
 
-[dependencies.x86]
-version = "0.8.0"
-default-features = false
-
 [dependencies.lazy_static]
 version = "0.2.1"
 features = ["spin_no_std"]
 
 [dependencies.bitflags]
-version = "0.7"
+version = "0.8"
 
 [dependencies.spin]
 path = "../spin"

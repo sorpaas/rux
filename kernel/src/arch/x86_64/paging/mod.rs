@@ -31,6 +31,18 @@ const ADDRESS_MASK: u64 = ((1 << MAXPHYADDR) - 1) & !0xfff;
 pub use self::table::*;
 pub use self::with::{MemoryObject};
 
+/// Contains page-table root pointer.
+unsafe fn cr3() -> u64 {
+    let ret: u64;
+    asm!("mov %cr3, $0" : "=r" (ret));
+    ret
+}
+
+/// Switch page-table PML4 pointer.
+unsafe fn cr3_write(val: u64) {
+    asm!("mov $0, %cr3" :: "r" (val) : "memory");
+}
+
 /// Invalidate the given address in the TLB using the `invlpg` instruction.
 ///
 /// # Safety
@@ -48,7 +60,6 @@ pub unsafe fn flush(vaddr: VAddr) {
 /// This function is unsafe as it causes a general protection fault (GP) if the current privilege
 /// level is not 0.
 pub unsafe fn flush_all() {
-    use x86::shared::control_regs::{cr3, cr3_write};
     cr3_write(cr3())
 }
 
@@ -59,7 +70,5 @@ pub unsafe fn flush_all() {
 /// The PML4 page table must have kernel mapped in
 /// `KERNEL_BASE`. `paddr` must point to a valid PML4 page table.
 pub unsafe fn switch_to(paddr: PAddr) {
-    use x86::shared::control_regs::{cr3_write};
-
-    cr3_write(paddr.into(): usize);
+    cr3_write(paddr.into());
 }

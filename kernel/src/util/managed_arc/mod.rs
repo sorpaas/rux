@@ -1,6 +1,6 @@
 use core::any::{Any, TypeId};
 use core::ops::{Index, IndexMut, Deref, DerefMut};
-use core::marker::{PhantomData, Reflect};
+use core::marker::{PhantomData};
 use core::slice::{SliceExt};
 use core::convert::{From, Into};
 use core::fmt;

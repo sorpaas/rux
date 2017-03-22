@@ -74,10 +74,11 @@ liballoc = stdenv.mkDerivation {
 triple = "x86_64-none-elf";
 
 userspace-linker = stdenv.mkDerivation {
-  name = "userspace-linker.ld";
+  name = "userspace-linker";
   phases = [ "buildPhase" ];
   buildPhase = ''
-    cat <<EOT > $out
+    mkdir -p $out
+    cat <<EOT > $out/linker.ld
     ENTRY(start)
     OUTPUT_FORMAT(elf64-x86-64)
     EOT
@@ -100,7 +101,7 @@ in stdenv.mkDerivation {
   ARCH = "x86_64";
   RUST_SRC = "${rust.rust-src}";
   TARGET_SPEC = "${x86_64-target-spec}/x86_64.json";
-  USERSPACE_LINKER = "${userspace-linker}";
+  USERSPACE_LINKER = "${userspace-linker}/linker.ld";
 
   LIBCORE = "${libcore}";
   LIBALLOC = "${liballoc}";

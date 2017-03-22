@@ -27,7 +27,7 @@ gdb:
 clean:
 	@make -C kernel clean
 	@make -C rinit clean
-	@make -C tests/userspace clean
+	@make -C tests/userspace kernel=none test=none clean
 
 doc-kernel:
 	@rm -rf kernel/target/doc

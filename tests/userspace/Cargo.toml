@@ -3,7 +3,8 @@ name = "test-userspace"
 version = "0.1.0"
 authors = ["Wei Tang <hi@that.world>"]
 
-[lib]
+[[example]]
+name = "allocator"
 crate-type = ["staticlib"]
 
 [dependencies.system]

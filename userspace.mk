@@ -5,7 +5,7 @@ linker_flags += -Map build/$(arch)/map.txt
 linker_flags += --gc-sections
 linker_flags += -z max-page-size=0x1000
 
-librinit := target/$(ARCH)/debug/$(name).a
+librinit ?= target/$(ARCH)/debug/$(name).a
 
 assembly_source_files := $(wildcard src/arch/$(ARCH)/*.S)
 assembly_object_files := $(patsubst src/arch/$(ARCH)/%.S, \

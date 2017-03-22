@@ -38,11 +38,12 @@ with pkgs;
 let
 
 x86_64-target-spec = stdenv.mkDerivation {
-  name = "target-spec.json";
+  name = "target-spec";
   src = ./x86_64.json;
   phases = [ "buildPhase" ];
   buildPhase = ''
-    cp $src $out
+    mkdir -p $out
+    cp $src $out/x86_64.json
   '';
 };
 
@@ -54,7 +55,7 @@ libcore = stdenv.mkDerivation {
   phases = [ "buildPhase" ];
   buildPhase = ''
     mkdir -p $out
-    rustc --target=${x86_64-target-spec} --out-dir=$out --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/libcore/lib.rs
+    rustc --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/libcore/lib.rs
   '';
 };
 
@@ -66,7 +67,7 @@ liballoc = stdenv.mkDerivation {
   phases = [ "buildPhase" ];
   buildPhase = ''
     mkdir -p $out
-    rustc -L ${libcore} --target=${x86_64-target-spec} --out-dir=$out --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/liballoc/lib.rs
+    rustc -L ${libcore} --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/liballoc/lib.rs
   '';
 };
 
@@ -98,7 +99,7 @@ in stdenv.mkDerivation {
 
   ARCH = "x86_64";
   RUST_SRC = "${rust.rust-src}";
-  TARGET_SPEC = "${x86_64-target-spec}";
+  TARGET_SPEC = "${x86_64-target-spec}/x86_64.json";
   USERSPACE_LINKER = "${userspace-linker}";
 
   LIBCORE = "${libcore}";

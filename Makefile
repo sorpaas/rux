@@ -1,17 +1,13 @@
-kernel := kernel/build/$(ARCH)/kernel.bin
-rinit := rinit/build/$(ARCH)/rinit.bin
-test-userspace := tests/userspace/build/$(ARCH)/test_userspace.bin
+kernel := kernel/build/$(ARCH)/libkernel.bin
+rinit := rinit/build/$(ARCH)/librinit.bin
 
 .PHONY: all clean run rinit kernel doc-kernel doc-kernel-deploy
 
 kernel:
-	@make -C kernel kernel
+	@make -C kernel build
 
 rinit:
 	@make -C rinit build
-
-test-userspace:
-	@make -C tests/userspace build
 
 run: kernel rinit
 	@qemu-system-$(ARCH) -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot
@@ -22,8 +18,8 @@ debug: kernel rinit
 noreboot: kernel rinit
 	@qemu-system-$(ARCH) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
 
-test: kernel test-userspace
-	./tests/run.sh qemu-system-$(arch) -d int -no-reboot -vnc :1 -device isa-debug-exit -kernel $(kernel) -initrd $(test-userspace) -serial stdio
+test: kernel
+	@make -C tests/userspace kernel=$(shell realpath $(kernel)) test=allocator test
 
 gdb:
 	@gdb $(kernel) -ex "target remote :1234"

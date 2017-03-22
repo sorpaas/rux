@@ -1,9 +1,9 @@
-kernel := build/$(ARCH)/kernel.bin
+kernel := build/$(ARCH)/libkernel.bin
 rust_os := target/$(ARCH)/debug/libkernel.a
 
 linker_script := src/arch/$(ARCH)/linker.ld
 linker_flags := -T $(linker_script)
-linker_flags += -Map build/$(arch)/map.txt
+linker_flags += -Map build/$(ARCH)/map.txt
 linker_flags += --gc-sections
 linker_flags += -z max-page-size=0x1000
 
@@ -27,6 +27,6 @@ cargo:
 	@RUSTFLAGS="-L $(LIBCORE)" cargo rustc --target $(TARGET_SPEC)
 
 # compile assembly files
-build/$(arch)/%.o: src/arch/$(ARCH)/%.S
+build/$(ARCH)/%.o: src/arch/$(ARCH)/%.S
 	@mkdir -p $(shell dirname $@)
 	@$(AS) -o $@ $<

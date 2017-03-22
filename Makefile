@@ -6,10 +6,19 @@ rinit := rinit/build/$(ARCH)/librinit.bin
 kernel:
 	@make -C kernel build
 
+kernel-release:
+	@make -C kernel version=release build
+
 rinit:
 	@make -C rinit build
 
+rinit-release:
+	@make -C rinit version=release build
+
 run: kernel rinit
+	@qemu-system-$(ARCH) -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot
+
+run-release: kernel-release rinit-release
 	@qemu-system-$(ARCH) -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot
 
 debug: kernel rinit

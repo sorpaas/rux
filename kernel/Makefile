@@ -1,5 +1,6 @@
+version ?= debug
 kernel := build/$(ARCH)/libkernel.bin
-rust_os := target/$(ARCH)/debug/libkernel.a
+rust_os := target/$(ARCH)/$(version)/libkernel.a
 
 linker_script := src/arch/$(ARCH)/linker.ld
 linker_flags := -T $(linker_script)
@@ -24,7 +25,11 @@ build: cargo $(rust_os) $(assembly_object_files) $(linker_script)
 	@$(OBJCOPY) $(kernel).elf64 -F elf32-i386 $(kernel)
 
 cargo:
+ifeq ($(version),release)
+	@RUSTFLAGS="-L $(LIBCORE)" cargo rustc --release --target $(TARGET_SPEC)
+else
 	@RUSTFLAGS="-L $(LIBCORE)" cargo rustc --target $(TARGET_SPEC)
+endif
 
 # compile assembly files
 build/$(ARCH)/%.o: src/arch/$(ARCH)/%.S

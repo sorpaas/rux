@@ -1,62 +1,26 @@
-arch ?= x86_64
-kernel := kernel/build/$(arch)/kernel.bin
-rinit := rinit/build/$(arch)/rinit.bin
-test-userspace := tests/userspace/build/$(arch)/test_userspace.bin
-libcore := build/$(arch)/libcore.rlib
-liballoc := build/$(arch)/liballoc.rlib
-
-ifeq ($(arch),x86_64)
-    triple ?= x86_64-none-elf-
-else
-    $(error Unknown architecture $(arch))
-endif
-
-rustc ?= rustc
-cargo ?= cargo
-ld := $(triple)ld
-as := $(triple)as
-objdump := $(triple)objdump
-objcopy := $(triple)objcopy
-
-target_spec := $(arch).json
+kernel := kernel/build/$(ARCH)/kernel.bin
+rinit := rinit/build/$(ARCH)/rinit.bin
+test-userspace := tests/userspace/build/$(ARCH)/test_userspace.bin
 
 .PHONY: all clean run rinit kernel doc-kernel doc-kernel-deploy
 
-build/rustc-nightly-src.tar.gz:
-	@mkdir -p $(shell dirname $@)
-	@curl https://static.rust-lang.org/dist/2016-10-04/rustc-nightly-src.tar.gz -o $@
+kernel:
+	@make -C kernel kernel
 
-build/libcore/lib.rs: build/rustc-nightly-src.tar.gz
-	@tar -xmf build/rustc-nightly-src.tar.gz -C build/ rustc-nightly/src/libcore --transform 's~^rustc-nightly/src/~~'
+rinit:
+	@make -C rinit build
 
-build/liballoc/lib.rs: build/rustc-nightly-src.tar.gz
-	@tar -xmf build/rustc-nightly-src.tar.gz -C build/ rustc-nightly/src/liballoc --transform 's~^rustc-nightly/src/~~'
-
-$(libcore): build/libcore/lib.rs
-	@mkdir -p $(shell dirname $@)
-	@$(rustc) $(rust_flags) --target=$(shell realpath $(target_spec)) --out-dir=build/$(arch) --crate-type=lib $<
-
-$(liballoc): build/liballoc/lib.rs
-	@mkdir -p $(shell dirname $@)
-	@$(rustc) -L $(shell dirname $(libcore)) $(rust_flags) --target=$(shell realpath $(target_spec)) --out-dir=build/$(arch) --crate-type=lib $<
-
-kernel: $(libcore)
-	@make -C kernel arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) kernel
-
-rinit: $(libcore) $(liballoc)
-	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) liballoc=$(shell realpath $(liballoc)) target_spec=$(shell realpath $(target_spec)) rinit
-
-test-userspace: $(libcore) $(liballoc)
-	@make -C tests/userspace arch=$(arch) libcore=$(shell realpath $(libcore)) liballoc=$(shell realpath $(liballoc)) target_spec=$(shell realpath $(target_spec)) test-userspace
+test-userspace:
+	@make -C tests/userspace build
 
 run: kernel rinit
-	@qemu-system-$(arch) -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot
+	@qemu-system-$(ARCH) -kernel $(kernel) -initrd $(rinit) -serial stdio --no-reboot
 
 debug: kernel rinit
-	@qemu-system-$(arch) -d int -no-reboot -s -S -kernel $(kernel) -initrd $(rinit) -serial stdio
+	@qemu-system-$(ARCH) -d int -no-reboot -s -S -kernel $(kernel) -initrd $(rinit) -serial stdio
 
 noreboot: kernel rinit
-	@qemu-system-$(arch) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
+	@qemu-system-$(ARCH) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
 
 test: kernel test-userspace
 	./tests/run.sh qemu-system-$(arch) -d int -no-reboot -vnc :1 -device isa-debug-exit -kernel $(kernel) -initrd $(test-userspace) -serial stdio
@@ -65,9 +29,9 @@ gdb:
 	@gdb $(kernel) -ex "target remote :1234"
 
 clean:
-	@make -C kernel arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) clean
-	@make -C rinit arch=$(arch) libcore=$(shell realpath $(libcore)) target_spec=$(shell realpath $(target_spec)) clean
-	@rm -r build
+	@make -C kernel clean
+	@make -C rinit clean
+	@make -C tests/userspace clean
 
 doc-kernel:
 	@rm -rf kernel/target/doc

@@ -19,7 +19,7 @@ clean:
 	@rm -r build
 	@rm -r target
 
-kernel: cargo $(rust_os) $(assembly_object_files) $(linker_script)
+build: cargo $(rust_os) $(assembly_object_files) $(linker_script)
 	@$(LD) $(linker_flags) -o $(kernel).elf64 $(assembly_object_files) $(rust_os)
 	@$(OBJCOPY) $(kernel).elf64 -F elf32-i386 $(kernel)
 

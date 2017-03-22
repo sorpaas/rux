@@ -129,7 +129,6 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
 
         if p.progtype == PT_LOAD {
             log!("pheader = {}", p);
-            assert!(p.filesz == p.memsz);
 
             let mut next_page_vaddr = VAddr::from(p.vaddr);
             let mut offset = 0x0;

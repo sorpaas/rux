@@ -164,7 +164,7 @@ pub unsafe extern "C" fn store_error_exception_stack(exception_raw: *const Excep
 }
 
 #[inline(always)]
-pub unsafe fn save_usermode_registers() {
+pub unsafe extern "C" fn save_usermode_registers() {
     asm!("push rbp" :::: "volatile", "intel");
 
     asm!("" : "={rax}"(CUR_REGISTERS.rax), "={rbx}"(CUR_REGISTERS.rbx), "={rcx}"(CUR_REGISTERS.rcx),

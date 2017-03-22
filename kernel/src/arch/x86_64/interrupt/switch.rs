@@ -187,7 +187,7 @@ macro_rules! return_to_raw_fn {
             asm!("mov rdi, rsp
                   sub rsp, 8
                   call $0
-                  add rsp, 48"
+                  add rsp, 56"
                  :: "i"(::arch::interrupt::switch::store_exception_stack as unsafe extern "C" fn(*const ::arch::interrupt::switch::ExceptionStackFrame, u64)), "{rsi}"($exception_code)
                  :: "volatile", "intel");
 
@@ -207,7 +207,7 @@ macro_rules! return_error_to_raw_fn {
                   mov rdi, rsp
                   sub rsp, 8
                   call $0
-                  add rsp, 48"
+                  add rsp, 56"
                  :: "i"(::arch::interrupt::switch::store_error_exception_stack as unsafe extern "C" fn(*const ::arch::interrupt::switch::ExceptionStackFrame, u64)), "{rdx}"($exception_code)
                  :: "volatile", "intel");
 

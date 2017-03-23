@@ -1,7 +1,7 @@
 kernel := kernel/build/$(ARCH)/libkernel.bin
 rinit := rinit/build/$(ARCH)/librinit.bin
 
-.PHONY: all clean run rinit kernel doc-kernel doc-kernel-deploy
+.PHONY: all clean run run-release rinit rinit-release kernel kernel-release doc-kernel doc-kernel-deploy
 
 kernel:
 	@make -C kernel build

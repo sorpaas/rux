@@ -1,9 +1,5 @@
 ## Rux, a microkernel written in Rust
 
-[![Build Status](https://jenkins.that.world/buildStatus/icon?job=Rux)](https://jenkins.that.world/job/Rux/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.259356.svg)](https://doi.org/10.5281/zenodo.259356)
-
 Rux is a hobbyist microkernel written in Rust, featuring a
 capability-based system similar to [seL4](https://sel4.systems/).
 

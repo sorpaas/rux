@@ -89,7 +89,7 @@ in stdenv.mkDerivation {
   name = "rux-env";
   buildInputs = [
     gnumake
-    (binutils.override { cross = { config = triple; }; })
+    (binutils.override { targetPlatform = { config = triple; }; })
     qemu
     file
     gdb

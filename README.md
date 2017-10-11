@@ -3,7 +3,7 @@
 Rux is a hobbyist microkernel written in Rust, featuring a
 capability-based system similar to [seL4](https://sel4.systems/).
 
-- [Repository](https://source.that.world/diffusion/RUX/)
+- [Repository](https://source.that.world/source/rux/)
 - [Documentation](https://that.world/~docs/rux/kernel/)
 
 ## Overview
@@ -16,6 +16,20 @@ updating functionalities of the kernel hassle-free.
 Rux uses a design that is similar to seL4. While there won't be formal
 verification in the short term, it tries to address some design issues
 of seL4, for example, capability allocation.
+
+## Contributing
+
+We use [Phabricator](https://source.that.world/source/rux/) to manage
+code reviews and collabration. To submit a patch, install
+[arcanist](https://secure.phabricator.com/book/phabricator/article/arcanist_quick_start/). After
+you finished coding, run `arc diff` and it will guide you to create a
+new patch in Phabricator.
+
+If you don't like arcanist, you can also submit raw diff directly
+through the [web
+interface](https://source.that.world/differential/diff/create/). Refer
+to guide in [this page](https://llvm.org/docs/Phabricator.html) for
+details on how to do this.
 
 ## Quickstart
 

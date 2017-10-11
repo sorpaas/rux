@@ -100,7 +100,7 @@ impl<T: ?Sized> MemoryObject<T> {
             paddr: paddr,
             mapping_start_index: mapping_start_index,
             mapping_size: required_page_size,
-            pointer: NonZero::new(vaddr.into(): usize as *mut T),
+            pointer: NonZero::new_unchecked(vaddr.into(): usize as *const T),
             _marker: PhantomData
         }
     }
@@ -124,12 +124,12 @@ impl<T: ?Sized> Deref for MemoryObject<T> {
 
     #[inline]
     fn deref(&self) -> &*mut T {
-        unsafe { mem::transmute(&*self.pointer) }
+        unsafe { mem::transmute(&self.pointer.get()) }
     }
 }
 
 impl<T: ?Sized> fmt::Pointer for MemoryObject<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Pointer::fmt(&*self.pointer, f)
+        fmt::Pointer::fmt(&self.pointer.get(), f)
     }
 }

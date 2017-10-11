@@ -35,7 +35,7 @@ fn kernel_start_vaddr() -> VAddr {
 }
 
 fn kernel_end_paddr() -> PAddr {
-    PAddr::from((&kernel_end as *const _) as u64 - KERNEL_BASE)
+    unsafe { PAddr::from((&kernel_end as *const _) as u64 - KERNEL_BASE) }
 }
 
 fn kernel_end_vaddr() -> VAddr {

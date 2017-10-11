@@ -5,8 +5,8 @@
     rustOverlay = (pkgs_.fetchFromGitHub {
       owner = "mozilla";
       repo = "nixpkgs-mozilla";
-      rev = "e2a920faec5a9ebd6ff34abf072aacb4e0ed6f70";
-      sha256 = "1lq7zg388y4wrbl165wraji9dmlb8rkjaiam9bq28n3ynsp4b6fz";
+      rev = "6179dd876578ca2931f864627598ede16ba6cdef";
+      sha256 = "1lim10a674621zayz90nhwiynlakxry8fyz1x209g9bdm38zy3av";
     });
   in (nixpkgs {
     overlays = [
@@ -15,7 +15,7 @@
        with super;
        let nightly = lib.rustLib.fromManifest (lib.rustLib.manifest_v2_url {
                        channel = "nightly";
-                       date = "2017-03-21";
+                       date = "2017-10-10";
                      }) {
                        inherit (self) stdenv fetchurl patchelf;
                      };
@@ -55,7 +55,19 @@ libcore = stdenv.mkDerivation {
   phases = [ "buildPhase" ];
   buildPhase = ''
     mkdir -p $out
-    rustc --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/libcore/lib.rs
+    rustc --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-name=core --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/libcore/lib.rs
+  '';
+};
+
+libstd_unicode = stdenv.mkDerivation {
+  name = "libstd_unicode";
+  buildInputs = [
+    rust.rustc
+  ];
+  phases = [ "buildPhase" ];
+  buildPhase = ''
+    mkdir -p $out
+    rustc -L ${libcore} --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-name=std_unicode --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/libstd_unicode/lib.rs
   '';
 };
 
@@ -67,7 +79,7 @@ liballoc = stdenv.mkDerivation {
   phases = [ "buildPhase" ];
   buildPhase = ''
     mkdir -p $out
-    rustc -L ${libcore} --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/liballoc/lib.rs
+    rustc -L ${libcore} -L ${libstd_unicode} --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-name=alloc --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/liballoc/lib.rs
   '';
 };
 
@@ -105,6 +117,7 @@ in stdenv.mkDerivation {
 
   LIBCORE = "${libcore}";
   LIBALLOC = "${liballoc}";
+  LIBSTD_UNICODE = "${libstd_unicode}";
 
   LD = "${triple}-ld";
   AS = "${triple}-as";

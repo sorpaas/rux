@@ -40,7 +40,7 @@ extern {
 
 // Helper functions
 pub fn multiboot_paddr() -> PAddr {
-    PAddr::from(multiboot_ptr)
+    unsafe { PAddr::from(multiboot_ptr) }
 }
 
 /// Iterator for `Option<MemoryRegion>`. It returns `None` if the

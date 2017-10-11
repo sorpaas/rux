@@ -107,7 +107,7 @@ impl Writer {
     }
 
     fn buffer(&mut self) -> &mut Buffer {
-        unsafe { self.buffer.get_mut() }
+        unsafe { self.buffer.as_mut() }
     }
 
     fn new_line(&mut self) {
@@ -155,7 +155,7 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     column_position: 0,
     row_position: 0,
     color_code: ColorCode::new(Color::LightGreen, Color::Black),
-    buffer: unsafe { Unique::new(0x90002000 as *mut _) },
+    buffer: unsafe { Unique::new_unchecked(0x90002000 as *mut _) },
 });
 
 pub fn clear_screen() {

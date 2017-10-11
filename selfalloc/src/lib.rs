@@ -1,11 +1,12 @@
-#![feature(allocator)]
 #![feature(const_fn)]
-
-#![allocator]
+#![feature(global_allocator)]
+#![feature(alloc)]
+#![feature(allocator_api)]
 #![no_std]
 
 extern crate system;
 extern crate spin;
+extern crate alloc;
 extern crate abi;
 
 use spin::{Mutex};
@@ -80,6 +81,24 @@ impl WatermarkAllocator {
 
         self.watermark = alloc_end;
         (self.page_start_addr + alloc_start) as *mut u8
+    }
+}
+
+#[global_allocator]
+static WATER_ALLOCATOR: WaterAlloc = WaterAlloc;
+
+use alloc::heap::Alloc;
+use alloc::allocator::{AllocErr, Layout};
+
+struct WaterAlloc;
+
+unsafe impl<'a> Alloc for &'a WaterAlloc {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+        unimplemented!()
+    }
+
+    unsafe fn dealloc(&mut self, pointer: *mut u8, layout: Layout) {
+        unimplemented!()
     }
 }
 

@@ -1,6 +1,7 @@
 #![feature(lang_items)]
 #![feature(asm)]
 #![feature(const_fn)]
+#![feature(const_unsafe_cell_new)]
 #![feature(unique)]
 #![feature(naked_functions)]
 #![feature(associated_consts)]

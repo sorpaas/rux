@@ -69,7 +69,7 @@ pub static KERNEL_PD: ExternReadonlyObject<PD> =
 
 /// Guard page virtual address after switching to the new page table.
 fn kernel_stack_guard_page_vaddr() -> VAddr {
-    VAddr::from((&kernel_stack_guard_page as *const _) as u64)
+    unsafe { VAddr::from((&kernel_stack_guard_page as *const _) as u64) }
 }
 
 /// Allocate the kernel PML4 using the given memory region and
@@ -82,16 +82,16 @@ fn alloc_kernel_pml4(region: &mut MemoryRegion, alloc_base: PAddr) -> Unique<PML
 
     log!("pml4, paddr: 0x{:x}, vaddr: 0x{:x}", paddr, vaddr);
 
-    let mut pml4_unique = unsafe { Unique::new(vaddr.into(): usize as *mut PML4) };
+    let mut pml4_unique = unsafe { Unique::new_unchecked(vaddr.into(): usize as *mut PML4) };
 
     {
-        let mut pml4 = unsafe { pml4_unique.get_mut() };
+        let mut pml4 = unsafe { pml4_unique.as_mut() };
         *pml4 = [PML4Entry::empty(); 512];
     }
 
     region.move_up(paddr + BASE_PAGE_LENGTH);
 
-    unsafe { KERNEL_PML4.bootstrap(*pml4_unique.deref(), paddr); }
+    unsafe { KERNEL_PML4.bootstrap(pml4_unique.as_ptr(), paddr); }
     
     pml4_unique
 }
@@ -106,10 +106,10 @@ fn alloc_kernel_pdpt(region: &mut MemoryRegion, pml4: &mut PML4, alloc_base: PAd
 
     log!("pdpt, paddr: 0x{:x}, vaddr: 0x{:x}", paddr, vaddr);
 
-    let mut pdpt_unique = unsafe { Unique::new(vaddr.into(): usize as *mut PDPT) };
+    let mut pdpt_unique = unsafe { Unique::new_unchecked(vaddr.into(): usize as *mut PDPT) };
 
     {
-        let mut pdpt = unsafe { pdpt_unique.get_mut() };
+        let mut pdpt = unsafe { pdpt_unique.as_mut() };
         *pdpt = [PDPTEntry::empty(); 512];
     }
 
@@ -117,7 +117,7 @@ fn alloc_kernel_pdpt(region: &mut MemoryRegion, pml4: &mut PML4, alloc_base: PAd
     
     pml4[pml4_index(VAddr::from(KERNEL_BASE))] = PML4Entry::new(paddr, PML4_P | PML4_RW);
 
-    unsafe { KERNEL_PDPT.bootstrap(*pdpt_unique.deref(), paddr) }
+    unsafe { KERNEL_PDPT.bootstrap(pdpt_unique.as_ptr(), paddr) }
 
     pdpt_unique
 }
@@ -132,10 +132,10 @@ fn alloc_kernel_pd(region: &mut MemoryRegion, pdpt: &mut PDPT, alloc_base: PAddr
 
     log!("pd, paddr: 0x{:x}, vaddr: 0x{:x}", paddr, vaddr);
 
-    let mut pd_unique = unsafe { Unique::new(vaddr.into(): usize as *mut PD) };
+    let mut pd_unique = unsafe { Unique::new_unchecked(vaddr.into(): usize as *mut PD) };
 
     {
-        let mut pd = unsafe { pd_unique.get_mut() };
+        let mut pd = unsafe { pd_unique.as_mut() };
         *pd = [PDEntry::empty(); 512];
     }
 
@@ -143,7 +143,7 @@ fn alloc_kernel_pd(region: &mut MemoryRegion, pdpt: &mut PDPT, alloc_base: PAddr
 
     pdpt[pdpt_index(VAddr::from(KERNEL_BASE))] = PDPTEntry::new(paddr, PDPT_P | PDPT_RW);
 
-    unsafe { KERNEL_PD.bootstrap(*pd_unique.deref(), paddr); }
+    unsafe { KERNEL_PD.bootstrap(pd_unique.as_ptr(), paddr); }
 
     pd_unique
 }
@@ -158,10 +158,10 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
 
     log!("object_pool_pt, paddr: 0x{:x}, vaddr: 0x{:x}", paddr, vaddr);
 
-    let mut pt_unique = unsafe { Unique::new(vaddr.into(): usize as *mut PT) };
+    let mut pt_unique = unsafe { Unique::new_unchecked(vaddr.into(): usize as *mut PT) };
 
     {
-        let mut pt = unsafe { pt_unique.get_mut() };
+        let mut pt = unsafe { pt_unique.as_mut() };
         *pt = [PTEntry::empty(); 512];
 
         {
@@ -255,12 +255,12 @@ fn alloc_kernel_pts(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAddr) {
         let offset = pt_entry.get_address().into(): usize -
             alloc_base.into(): usize;
         let mut pt_unique = unsafe {
-            Unique::new((INITIAL_ALLOC_START_VADDR + offset).into(): usize as *mut PT) };
+            Unique::new_unchecked((INITIAL_ALLOC_START_VADDR + offset).into(): usize as *mut PT) };
         
         if i == guard_page_index {
-            alloc_kernel_guard_page(unsafe { pt_unique.get_mut() }, i % 512, alloc_base);
+            alloc_kernel_guard_page(unsafe { pt_unique.as_mut() }, i % 512, alloc_base);
         } else {
-            alloc_kernel_page(unsafe { pt_unique.get_mut() }, i % 512, alloc_base);
+            alloc_kernel_page(unsafe { pt_unique.as_mut() }, i % 512, alloc_base);
         }
     }
 }
@@ -306,16 +306,16 @@ pub fn init(mut alloc_region: &mut MemoryRegion) {
     let mut pml4_unique = alloc_kernel_pml4(&mut alloc_region,
                                             alloc_base_paddr);
     let mut pdpt_unique = alloc_kernel_pdpt(&mut alloc_region,
-                                            unsafe { pml4_unique.get_mut() },
+                                            unsafe { pml4_unique.as_mut() },
                                             alloc_base_paddr);
     let mut pd_unique = alloc_kernel_pd(&mut alloc_region,
-                                        unsafe { pdpt_unique.get_mut() },
+                                        unsafe { pdpt_unique.as_mut() },
                                         alloc_base_paddr);
     let mut object_pool_pt_unique = alloc_object_pool_pt(&mut alloc_region,
-                                                         unsafe { pd_unique.get_mut() },
+                                                         unsafe { pd_unique.as_mut() },
                                                          alloc_base_paddr);
 
-    alloc_kernel_pts(&mut alloc_region, unsafe { pd_unique.get_mut() }, alloc_base_paddr);
+    alloc_kernel_pts(&mut alloc_region, unsafe { pd_unique.as_mut() }, alloc_base_paddr);
     
     unsafe {
         INITIAL_PD.unbootstrap();

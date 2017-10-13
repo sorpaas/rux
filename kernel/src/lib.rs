@@ -117,7 +117,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
 
     let slice_object = unsafe { MemoryObject::<u8>::slice(archinfo.rinit_region().start_paddr(),
                                                           archinfo.rinit_region().length()) };
-    let bin_raw = unsafe { slice::from_raw_parts(*slice_object,
+    let bin_raw = unsafe { slice::from_raw_parts(slice_object.as_ptr(),
                                                  archinfo.rinit_region().length()) };
     let bin = ElfBinary::new("rinit", bin_raw).unwrap();
 

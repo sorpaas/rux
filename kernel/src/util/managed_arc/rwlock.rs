@@ -46,7 +46,7 @@ impl<U> ManagedArc<RwLock<U>> {
     /// Read the value from the ManagedArc. Returns the guard.
     pub fn read(&self) -> ManagedArcRwLockReadGuard<U> {
         let inner_obj = self.inner_object();
-        let inner = unsafe { inner_obj.as_ref().unwrap() };
+        let inner = unsafe { &*inner_obj.as_ptr() };
         ManagedArcRwLockReadGuard {
             lock: inner.data.read(),
             object: inner_obj
@@ -56,7 +56,7 @@ impl<U> ManagedArc<RwLock<U>> {
     /// Write to the ManagedArc. Returns the guard.
     pub fn write(&self) -> ManagedArcRwLockWriteGuard<U> {
         let inner_obj = self.inner_object();
-        let inner = unsafe { inner_obj.as_ref().unwrap() };
+        let inner = unsafe { &*inner_obj.as_ptr() };
         ManagedArcRwLockWriteGuard {
             lock: inner.data.write(),
             object: inner_obj

@@ -32,7 +32,7 @@ pub struct ManagedWeakPoolGuard<T> {
 impl<T> Deref for ManagedWeakPoolGuard<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { &self.object.as_ref().unwrap().data }
+        unsafe { &self.object.as_ref().data }
     }
 }
 
@@ -42,8 +42,8 @@ macro_rules! weak_pool {
             /// Create a managed weak pool in the given physical address.
             pub unsafe fn create(ptr: PAddr) -> Self {
                 let arc = ManagedArc::new(ptr, mem::uninitialized());
-                let inner_obj = arc.inner_object();
-                let inner: &mut ManagedArcInner<$t> = unsafe { inner_obj.as_mut().unwrap() };
+                let mut inner_obj = arc.inner_object();
+                let inner: &mut ManagedArcInner<$t> = unsafe { inner_obj.as_mut() };
 
                 ptr::write(&mut inner.data.1, ptr);
                 for (i, element) in (inner.data: $t).0.iter_mut().enumerate() {
@@ -110,7 +110,7 @@ macro_rules! weak_pool {
                 assert!(weak_node_option.is_none());
 
                 let arc_inner_obj = arc.inner_object();
-                let arc_inner = unsafe { arc_inner_obj.as_ref().unwrap() };
+                let arc_inner = unsafe { arc_inner_obj.as_ref() };
 
                 let mut arc_first_weak = arc_inner.first_weak.lock();
 
@@ -163,19 +163,19 @@ fn set_weak_node<F>(addr: ManagedWeakAddr, f: F) where F: FnOnce(Option<ManagedW
     if addr.inner_type_id == TypeId::of::<ManagedArcInner<ManagedWeakPool1>>() {
         let inner_obj: MemoryObject<ManagedArcInner<ManagedWeakPool1>> =
             unsafe { MemoryObject::new(addr.inner_addr) };
-        let inner = unsafe { inner_obj.as_ref().unwrap() };
+        let inner = unsafe { inner_obj.as_ref() };
         let mut weak_node = inner.data.0[addr.offset].lock();
         *weak_node = f((*weak_node).take());
     } else if addr.inner_type_id == TypeId::of::<ManagedArcInner<ManagedWeakPool256>>() {
         let inner_obj: MemoryObject<ManagedArcInner<ManagedWeakPool256>> =
             unsafe { MemoryObject::new(addr.inner_addr) };
-        let inner = unsafe { inner_obj.as_ref().unwrap() };
+        let inner = unsafe { inner_obj.as_ref() };
         let mut weak_node = inner.data.0[addr.offset].lock();
         *weak_node = f((*weak_node).take());
     } else if addr.inner_type_id == TypeId::of::<ManagedArcInner<ManagedWeakPool3>>() {
         let inner_obj: MemoryObject<ManagedArcInner<ManagedWeakPool3>> =
             unsafe { MemoryObject::new(addr.inner_addr) };
-        let inner = unsafe { inner_obj.as_ref().unwrap() };
+        let inner = unsafe { inner_obj.as_ref() };
         let mut weak_node = inner.data.0[addr.offset].lock();
         *weak_node = f((*weak_node).take());
     } else {

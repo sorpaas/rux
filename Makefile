@@ -27,6 +27,9 @@ debug: kernel rinit
 noreboot: kernel rinit
 	@qemu-system-$(ARCH) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
 
+noreboot-release: kernel-release rinit-release
+	@qemu-system-$(ARCH) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
+
 test: kernel
 	@true
 	# @make -C tests/userspace kernel=$(shell realpath $(kernel)) test=allocator test

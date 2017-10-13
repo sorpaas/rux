@@ -58,6 +58,18 @@ impl<T: ?Sized> MemoryObject<T> {
         Self::slice(paddr, 1)
     }
 
+    pub fn as_ptr(&self) -> *mut T {
+        self.pointer.get() as *mut T
+    }
+
+    pub unsafe fn as_ref(&self) -> &T {
+        &*self.as_ptr()
+    }
+
+    pub unsafe fn as_mut(&mut self) -> &mut T {
+        &mut *self.as_ptr()
+    }
+
     /// Get a slice from the current memory object.
     pub unsafe fn slice(paddr: PAddr, size: usize) -> Self where T: Sized {
         let aligned = align_down(paddr, BASE_PAGE_LENGTH);
@@ -116,15 +128,6 @@ impl<T: ?Sized> Drop for MemoryObject<T> {
             object_pool[self.mapping_start_index + i] = PTEntry::empty();
             unsafe { flush(OBJECT_POOL_START_VADDR + (self.mapping_start_index * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
         }
-    }
-}
-
-impl<T: ?Sized> Deref for MemoryObject<T> {
-    type Target = *mut T;
-
-    #[inline]
-    fn deref(&self) -> &*mut T {
-        unsafe { mem::transmute(&self.pointer.get()) }
     }
 }
 

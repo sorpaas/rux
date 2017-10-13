@@ -28,7 +28,7 @@ unsafe impl<T> Sync for UniqueReadGuard<T> { }
 impl<T> Deref for UniqueReadGuard<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { self.object.as_ref().unwrap() }
+        unsafe { self.object.as_ref() }
     }
 }
 
@@ -49,12 +49,12 @@ unsafe impl<T> Sync for UniqueWriteGuard<T> { }
 impl<T> Deref for UniqueWriteGuard<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { self.object.as_ref().unwrap() }
+        unsafe { self.object.as_ref() }
     }
 }
 
 impl<T> DerefMut for UniqueWriteGuard<T> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { self.object.as_mut().unwrap() }
+        unsafe { self.object.as_mut() }
     }
 }

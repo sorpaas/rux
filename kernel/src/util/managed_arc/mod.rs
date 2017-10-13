@@ -68,8 +68,8 @@ impl<T> fmt::Debug for ManagedArc<T> {
 
 impl<T> Drop for ManagedArc<T> {
     fn drop(&mut self) {
-        let inner_obj = self.inner_object();
-        let inner = unsafe { inner_obj.as_mut().unwrap() };
+        let mut inner_obj = self.inner_object();
+        let inner = unsafe { inner_obj.as_mut() };
         let mut lead = inner.lead.lock();
         *lead -= 1;
     }
@@ -77,8 +77,8 @@ impl<T> Drop for ManagedArc<T> {
 
 impl<T> Clone for ManagedArc<T> {
     fn clone(&self) -> Self {
-        let inner_obj = self.inner_object();
-        let inner = unsafe { inner_obj.as_mut().unwrap() };
+        let mut inner_obj = self.inner_object();
+        let inner = unsafe { inner_obj.as_mut() };
         let mut lead = inner.lead.lock();
         *lead += 1;
 
@@ -150,7 +150,7 @@ impl<T> ManagedArc<T> {
         let arc = ManagedArc { ptr: ptr, _marker: PhantomData };
 
         let inner_obj = arc.inner_object();
-        let inner = unsafe { inner_obj.as_ref().unwrap() };
+        let inner = unsafe { inner_obj.as_ref() };
         let mut lead = inner.lead.lock();
         *lead += 1;
 
@@ -160,8 +160,8 @@ impl<T> ManagedArc<T> {
     /// Create a managed Arc using the given data.
     pub unsafe fn new(ptr: PAddr, data: T) -> Self {
         let arc = ManagedArc { ptr: ptr, _marker: PhantomData };
-        let inner = arc.inner_object();
-        ptr::write(inner.as_mut().unwrap(), ManagedArcInner {
+        let mut inner = arc.inner_object();
+        ptr::write(inner.as_mut(), ManagedArcInner {
             lead: Mutex::new(1),
             first_weak: Mutex::new(None),
             data: data,
@@ -178,6 +178,7 @@ impl<T> ManagedArc<T> {
     /// Get the strong pointers count.
     pub fn lead_count(&self) -> usize {
         let inner = self.inner_object();
-        unsafe { *inner.as_ref().unwrap().lead.lock() }
+        let lead = unsafe { inner.as_ref().lead.lock() };
+        *lead
     }
 }

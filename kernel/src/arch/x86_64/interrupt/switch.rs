@@ -52,8 +52,12 @@ impl Default for Registers {
     }
 }
 
+pub static mut RSP_AFTER_SAVING_REGISTERS: u64 = 0;
+
 macro_rules! save_registers {
     () => {
+        use ::arch::interrupt::switch::RSP_AFTER_SAVING_REGISTERS;
+
         asm!("push rax
               push rbx
               push rcx
@@ -71,11 +75,19 @@ macro_rules! save_registers {
               push r15
               push rsp
         " :::: "intel", "volatile");
+        asm!("" : "={rsp}"(RSP_AFTER_SAVING_REGISTERS)
+             ::: "volatile", "intel");
     }
 }
 
 macro_rules! restore_registers {
     () => {
+        use ::arch::interrupt::switch::RSP_AFTER_SAVING_REGISTERS;
+
+        asm!(""
+             ::
+             "{rsp}"(RSP_AFTER_SAVING_REGISTERS)
+             :: "volatile", "intel");
         asm!("pop rsp
               pop r15
               pop r14
@@ -96,50 +108,79 @@ macro_rules! restore_registers {
     }
 }
 
+macro_rules! load_usermode_registers {
+    () => {
+        use ::arch::interrupt::switch::CUR_REGISTERS;
+
+        asm!(""
+             ::
+             "{rax}"(CUR_REGISTERS.rax), "{rbx}"(CUR_REGISTERS.rbx), "{rcx}"(CUR_REGISTERS.rcx),
+             "{rdx}"(CUR_REGISTERS.rdx), "{rsi}"(CUR_REGISTERS.rsi), "{rdi}"(CUR_REGISTERS.rdi),
+             "{r8}"(CUR_REGISTERS.r8), "{r9}"(CUR_REGISTERS.r9), "{r10}"(CUR_REGISTERS.r10),
+             "{r11}"(CUR_REGISTERS.r11), "{r12}"(CUR_REGISTERS.r12), "{r13}"(CUR_REGISTERS.r13),
+             "{r14}"(CUR_REGISTERS.r14), "{r15}"(CUR_REGISTERS.r15)
+             :: "volatile", "intel");
+
+        asm!(""
+             ::
+             "{rbp}"(CUR_REGISTERS.rbp)
+             :: "volatile", "intel");
+    }
+}
+
+macro_rules! save_usermode_registers {
+    () => {
+        use ::arch::interrupt::switch::CUR_REGISTERS;
+
+        asm!("push rbp" :::: "volatile", "intel");
+
+        asm!("" : "={rax}"(CUR_REGISTERS.rax), "={rbx}"(CUR_REGISTERS.rbx), "={rcx}"(CUR_REGISTERS.rcx),
+             "={rdx}"(CUR_REGISTERS.rdx), "={rsi}"(CUR_REGISTERS.rsi),
+             "={rdi}"(CUR_REGISTERS.rdi), "={r8}"(CUR_REGISTERS.r8), "={r9}"(CUR_REGISTERS.r9),
+             "={r10}"(CUR_REGISTERS.r10), "={r11}"(CUR_REGISTERS.r11), "={r12}"(CUR_REGISTERS.r12),
+             "={r13}"(CUR_REGISTERS.r13), "={r14}"(CUR_REGISTERS.r14), "={r15}"(CUR_REGISTERS.r15)
+             ::: "volatile", "intel");
+
+        asm!("pop r9" : "={r9}"(CUR_REGISTERS.rbp) ::: "volatile", "intel");
+    }
+}
+
 unsafe extern "C" fn set_kernel_stack(addr: u64) {
     init::set_kernel_stack(addr);
 }
 
 pub unsafe fn switch_to_raw(stack_vaddr: u64, code_start: u64, cpu_flags: u64, code_seg: u64, data_seg: u64) {
-    // FIXME: Somehow removing this line would cause the interrupt handler to fail.
-    log!("0x{:x}, 0x{:x}, 0x{:x}, 0x{:x}", stack_vaddr, code_start, code_seg, data_seg);
-
-    asm!("call r15" :: "{rdi}"(stack_vaddr), "{rsi}"(code_start), "{rdx}"(cpu_flags), "{rcx}"(code_seg), "{r8}"(data_seg), "{r15}"(switch_to_raw_naked as unsafe extern "C" fn(u64, u64, u64, u64, u64)) :: "volatile", "intel");
-
-    // WARNING: Everything below this before returning will not work.
+    switch_to_raw_naked(stack_vaddr, code_start, cpu_flags, code_seg, data_seg);
 }
 
-#[no_mangle]
 #[naked]
 pub unsafe extern "C" fn switch_to_raw_naked(stack_vaddr: u64, code_start: u64, cpu_flags: u64, code_seg: u64, data_seg: u64) {
     save_registers!();
 
     asm!("mov rdi, rsp
-          call $0" :: "i"(set_kernel_stack as unsafe extern "C" fn(u64)) : "rdi" : "volatile", "intel");
+          call $0
 
-    asm!("push rax
+          push rax
           push rbx
           push r8
           push rcx
-          push rdx
-          push r9"
-         :: "{rax}"(data_seg), "{rbx}"(stack_vaddr), "{rcx}"(code_seg), "{rdx}"(code_start), "{r8}"(cpu_flags),
-         "{r9}"(CUR_REGISTERS.rbp)
+          push rdx"
+         ::
+         "i"(set_kernel_stack as unsafe extern "C" fn(u64)),
+         "{rax}"(data_seg), "{rbx}"(stack_vaddr), "{rcx}"(code_seg),
+         "{rdx}"(code_start), "{r8}"(cpu_flags)
          :: "volatile", "intel");
 
-    asm!("pop rbp
-          iretq" :: "{rax}"(CUR_REGISTERS.rax), "{rbx}"(CUR_REGISTERS.rbx), "{rcx}"(CUR_REGISTERS.rcx),
-         "{rdx}"(CUR_REGISTERS.rdx), "{rsi}"(CUR_REGISTERS.rsi),
-         "{rdi}"(CUR_REGISTERS.rdi), "{r8}"(CUR_REGISTERS.r8), "{r9}"(CUR_REGISTERS.r9),
-         "{r10}"(CUR_REGISTERS.r10), "{r11}"(CUR_REGISTERS.r11), "{r12}"(CUR_REGISTERS.r12),
-         "{r13}"(CUR_REGISTERS.r13), "{r14}"(CUR_REGISTERS.r14), "{r15}"(CUR_REGISTERS.r15)
-         :: "volatile", "intel");
+    load_usermode_registers!();
+
+    asm!("iretq"
+         :::: "volatile", "intel");
 }
 
 static mut CUR_EXCEPTION_STACK_FRAME: Option<ExceptionStackFrame> = None;
 static mut CUR_EXCEPTION_ERROR_CODE: Option<u64> = None;
 static mut CUR_EXCEPTION_CODE: Option<u64> = None;
-static mut CUR_REGISTERS: Registers = Registers {
+pub static mut CUR_REGISTERS: Registers = Registers {
     rax: 0, rbx: 0, rcx: 0, rdx: 0, rbp: 0, rsi: 0, rdi: 0,
     r8: 0, r9: 0, r10: 0, r11: 0, r12: 0, r13: 0, r14: 0, r15: 0
 };
@@ -166,31 +207,15 @@ pub unsafe extern "C" fn store_error_exception_stack(exception_raw: *const Excep
     CUR_EXCEPTION_CODE = Some(exception_code);
 }
 
-#[inline(always)]
-pub unsafe extern "C" fn save_usermode_registers() {
-    asm!("push rbp" :::: "volatile", "intel");
-
-    asm!("" : "={rax}"(CUR_REGISTERS.rax), "={rbx}"(CUR_REGISTERS.rbx), "={rcx}"(CUR_REGISTERS.rcx),
-         "={rdx}"(CUR_REGISTERS.rdx), "={rsi}"(CUR_REGISTERS.rsi),
-         "={rdi}"(CUR_REGISTERS.rdi), "={r8}"(CUR_REGISTERS.r8), "={r9}"(CUR_REGISTERS.r9),
-         "={r10}"(CUR_REGISTERS.r10), "={r11}"(CUR_REGISTERS.r11), "={r12}"(CUR_REGISTERS.r12),
-         "={r13}"(CUR_REGISTERS.r13), "={r14}"(CUR_REGISTERS.r14), "={r15}"(CUR_REGISTERS.r15)
-         ::: "volatile", "intel");
-
-    asm!("pop r9" : "={r9}"(CUR_REGISTERS.rbp) ::: "volatile", "intel");
-}
-
 macro_rules! return_to_raw_fn {
     ($name: ident, $exception_code: expr) => (
-        #[no_mangle]
         #[naked]
-        unsafe extern "C" fn $name() {
-            ::arch::interrupt::switch::save_usermode_registers();
+        pub unsafe extern "C" fn $name() {
+            save_usermode_registers!();
 
             asm!("mov rdi, rsp
                   sub rsp, 8
-                  call $0
-                  add rsp, 56"
+                  call $0"
                  :: "i"(::arch::interrupt::switch::store_exception_stack as unsafe extern "C" fn(*const ::arch::interrupt::switch::ExceptionStackFrame, u64)), "{rsi}"($exception_code)
                  :: "volatile", "intel");
 
@@ -201,17 +226,15 @@ macro_rules! return_to_raw_fn {
 
 macro_rules! return_error_to_raw_fn {
     ($name: ident, $exception_code: expr) => (
-        #[no_mangle]
         #[naked]
-        unsafe extern "C" fn $name() {
-            ::arch::interrupt::switch::save_usermode_registers();
+        pub unsafe extern "C" fn $name() {
+            save_usermode_registers!();
 
             asm!("pop rsi
                   mov rdi, rsp
                   sub rsp, 8
-                  call $0
-                  add rsp, 56"
-                 :: "i"(::arch::interrupt::switch::store_error_exception_stack as unsafe extern "C" fn(*const ::arch::interrupt::switch::ExceptionStackFrame, u64)), "{rdx}"($exception_code)
+                  call $0"
+                 :: "i"(::arch::interrupt::switch::store_error_exception_stack as unsafe extern "C" fn(*const ::arch::interrupt::switch::ExceptionStackFrame, u64, u64)), "{rdx}"($exception_code)
                  :: "volatile", "intel");
 
             restore_registers!();

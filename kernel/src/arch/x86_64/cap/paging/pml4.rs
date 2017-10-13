@@ -60,6 +60,8 @@ impl PML4Cap {
         use arch::paging::{pml4_index, pdpt_index, pd_index, pt_index,
                            PML4Entry, PDPTEntry, PDEntry, PTEntry};
 
+        log!("PML4 mapping: 0x{:x}", vaddr);
+
         let mut pdpt_cap: PDPTCap = {
             let index = pml4_index(vaddr);
 
@@ -87,8 +89,6 @@ impl PML4Cap {
 
             cpool.upgrade(position)
         }.unwrap();
-
-        log!("pdpt_cap: {:?}", pdpt_cap);
 
         let mut pd_cap: PDCap = {
             let index = pdpt_index(vaddr);
@@ -118,8 +118,6 @@ impl PML4Cap {
             cpool.upgrade(position)
         }.unwrap();
 
-        log!("pd_cap: {:?}", pd_cap);
-
         let mut pt_cap: PTCap = {
             let index = pd_index(vaddr);
 
@@ -147,8 +145,6 @@ impl PML4Cap {
 
             cpool.upgrade(position)
         }.unwrap();
-
-        log!("pt_cap: {:?}", pt_cap);
 
         pt_cap.map_page(pt_index(vaddr), page);
     }

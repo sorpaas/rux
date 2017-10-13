@@ -429,6 +429,7 @@ impl fmt::Display for FileHeader {
 
 /// Represents ELF Program Header flags
 #[derive(Copy, Clone, PartialEq)]
+#[repr(C, packed)]
 pub struct ProgFlag(pub u32);
 
 pub const PF_NONE : ProgFlag = ProgFlag(0);
@@ -467,6 +468,7 @@ impl fmt::Display for ProgFlag {
 
 /// Represents ELF Program Header type
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(C, packed)]
 pub struct ProgType(pub u32);
 
 /// Program header table entry unused
@@ -523,6 +525,7 @@ impl fmt::Display for ProgType {
 /// The program header table is an array of program header structures describing
 /// the various segments for program execution.
 #[derive(Copy, Clone, Debug)]
+#[repr(C, packed)]
 pub struct ProgramHeader {
     /// Program segment type
     pub progtype: ProgType,
@@ -552,6 +555,7 @@ impl fmt::Display for ProgramHeader {
 
 /// Represens ELF Section type
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(C, packed)]
 pub struct SectionType(pub u32);
 
 /// Inactive section with undefined values
@@ -646,6 +650,7 @@ impl fmt::Display for SectionType {
 /// Wrapper type for SectionFlag
 ///
 #[derive(Copy, Clone, PartialEq)]
+#[repr(C, packed)]
 pub struct SectionFlag(pub u64);
 
 /// Empty flags
@@ -685,6 +690,7 @@ impl fmt::Display for SectionFlag {
 
 // An offset to a null terminated string in the section string table
 #[derive(Copy, Clone)]
+#[repr(C, packed)]
 pub struct StrOffset(pub u32);
 
 impl fmt::Debug for StrOffset {
@@ -701,6 +707,7 @@ impl fmt::Display for StrOffset {
 
 /// Encapsulates the contents of an ELF Section Header
 #[derive(Debug)]
+#[repr(C, packed)]
 pub struct SectionHeader {
     /// Section Name
     pub name:      StrOffset,
@@ -733,6 +740,7 @@ impl fmt::Display for SectionHeader {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(C, packed)]
 pub struct SymbolType(pub u8);
 
 /// Unspecified symbol type
@@ -770,6 +778,7 @@ impl fmt::Display for SymbolType {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(C, packed)]
 pub struct SymbolBind(pub u8);
 
 /// Local symbol
@@ -795,6 +804,7 @@ impl fmt::Display for SymbolBind {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(C, packed)]
 pub struct SymbolVis(pub u8);
 
 /// Default symbol visibility
@@ -819,6 +829,7 @@ impl fmt::Display for SymbolVis {
     }
 }
 
+#[repr(C, packed)]
 pub struct Symbol {
     /// Symbol name
     pub name: StrOffset,

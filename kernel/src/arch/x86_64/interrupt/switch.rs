@@ -101,6 +101,9 @@ unsafe extern "C" fn set_kernel_stack(addr: u64) {
 }
 
 pub unsafe fn switch_to_raw(stack_vaddr: u64, code_start: u64, cpu_flags: u64, code_seg: u64, data_seg: u64) {
+    // FIXME: Somehow removing this line would cause the interrupt handler to fail.
+    log!("0x{:x}, 0x{:x}, 0x{:x}, 0x{:x}", stack_vaddr, code_start, code_seg, data_seg);
+
     asm!("call r15" :: "{rdi}"(stack_vaddr), "{rsi}"(code_start), "{rdx}"(cpu_flags), "{rcx}"(code_seg), "{r8}"(data_seg), "{r15}"(switch_to_raw_naked as unsafe extern "C" fn(u64, u64, u64, u64, u64)) :: "volatile", "intel");
 
     // WARNING: Everything below this before returning will not work.

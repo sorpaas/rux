@@ -245,7 +245,7 @@ pub fn kmain(archinfo: InitInfo)
     cpool_cap.read().downgrade_at(&util_chan_cap, 255);
 
     log!("hello, world!");
-    arch::enable_timer();
+    // arch::enable_timer();
     loop {
         let mut idle = true;
 

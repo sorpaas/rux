@@ -213,6 +213,7 @@ fn system_call_take_payload<T: Any + Clone>(message: SystemCall) -> (SystemCall,
     }
 }
 
+#[inline(never)]
 unsafe fn system_call_raw() {
     unsafe {
         asm!("int 80h"

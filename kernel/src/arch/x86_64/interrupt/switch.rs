@@ -32,6 +32,7 @@ pub struct Registers {
     pub rdx: u64,
     pub rsi: u64,
     pub rdi: u64,
+    pub rbp: u64,
     pub r8: u64,
     pub r9: u64,
     pub r10: u64,
@@ -46,7 +47,8 @@ impl Default for Registers {
     fn default() -> Registers {
         Registers {
             rax: 0, rbx: 0, rcx: 0, rdx: 0, rsi: 0, rdi: 0,
-            r8: 0, r9: 0, r10: 0, r11: 0, r12: 0, r13: 0, r14: 0, r15: 0
+            r8: 0, r9: 0, r10: 0, r11: 0, r12: 0, r13: 0, r14: 0, r15: 0,
+            rbp: 0,
         }
     }
 }
@@ -106,6 +108,7 @@ pub unsafe extern "C" fn switch_to_raw_naked(stack_vaddr: u64, code_start: u64, 
        mov r13, [$13]
        mov r14, [$14]
        mov r15, [$15]
+       mov rbp, [$16]
 
        iretq
     "
@@ -127,6 +130,7 @@ pub unsafe extern "C" fn switch_to_raw_naked(stack_vaddr: u64, code_start: u64, 
          "i"(&CUR_REGISTERS.r13),
          "i"(&CUR_REGISTERS.r14),
          "i"(&CUR_REGISTERS.r15),
+         "i"(&CUR_REGISTERS.rbp),
 
          "{r8}"(data_seg),
          "{rdi}"(stack_vaddr),
@@ -142,7 +146,7 @@ static mut CUR_EXCEPTION_ERROR_CODE: Option<u64> = None;
 static mut CUR_EXCEPTION_CODE: Option<u64> = None;
 pub static mut CUR_REGISTERS: Registers = Registers {
     rax: 0, rbx: 0, rcx: 0, rdx: 0, rsi: 0, rdi: 0,
-    r8: 0, r9: 0, r10: 0, r11: 0, r12: 0, r13: 0, r14: 0, r15: 0
+    r8: 0, r9: 0, r10: 0, r11: 0, r12: 0, r13: 0, r14: 0, r15: 0, rbp: 0
 };
 
 pub unsafe fn set_cur_registers(registers: Registers) {
@@ -188,6 +192,7 @@ macro_rules! return_to_raw_fn {
                   mov [$13], r13
                   mov [$14], r14
                   mov [$15], r15
+                  mov [$16], rbp
 
                   mov rdi, rsp
                   sub rsp, 8
@@ -228,6 +233,7 @@ macro_rules! return_to_raw_fn {
                  "i"(&CUR_REGISTERS.r13),
                  "i"(&CUR_REGISTERS.r14),
                  "i"(&CUR_REGISTERS.r15),
+                 "i"(&CUR_REGISTERS.rbp),
 
                  "{rsi}"($exception_code)
                  :: "volatile", "intel");
@@ -256,6 +262,7 @@ macro_rules! return_error_to_raw_fn {
                   mov [$13], r13
                   mov [$14], r14
                   mov [$15], r15
+                  mov [$16], rbp
 
                   pop rsi
                   mov rdi, rsp
@@ -297,6 +304,7 @@ macro_rules! return_error_to_raw_fn {
                  "i"(&CUR_REGISTERS.r13),
                  "i"(&CUR_REGISTERS.r14),
                  "i"(&CUR_REGISTERS.r15),
+                 "i"(&CUR_REGISTERS.rbp),
 
                  "{rdx}"($exception_code)
                  : "rdi" : "volatile", "intel");

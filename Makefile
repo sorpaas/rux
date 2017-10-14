@@ -30,9 +30,8 @@ noreboot: kernel rinit
 noreboot-release: kernel-release rinit-release
 	@qemu-system-$(ARCH) -d int -no-reboot -kernel $(kernel) -initrd $(rinit) -serial stdio
 
-test: kernel
-	@true
-	# @make -C tests/userspace kernel=$(shell realpath $(kernel)) test=allocator test
+test: kernel-release
+	@make -C tests/userspace version=release kernel=$(shell realpath $(kernel)) test=allocator test
 
 gdb:
 	@gdb $(kernel) -ex "target remote :1234"

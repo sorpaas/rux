@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate system;
 extern crate spin;
-// extern crate selfalloc;
-// extern crate alloc;
+extern crate selfalloc;
+extern crate alloc;
 
 #[macro_use]
 mod vga_buffer;
@@ -123,12 +123,12 @@ fn parent_main() {
     system_print!("parent rinit started.");
 
     // Test allocator
-    // unsafe { selfalloc::setup_allocator(CAddr::from(2), CAddr::from(3), 0x1000000000); }
-    // {
-    //     use alloc::boxed::Box;
-    //     let heap_test = Box::new(42);
-    //     system_print!("testing heap: {:?}", heap_test);
-    // }
+    unsafe { selfalloc::setup_allocator(CAddr::from(2), CAddr::from(3), 0x1000000000); }
+    {
+        use alloc::boxed::Box;
+        let heap_test = Box::new(42);
+        system_print!("testing heap: {:?}", heap_test);
+    }
 
     system_print!("parent stack addr: 0x{:x}.",
                   system::task_buffer_addr() as usize);

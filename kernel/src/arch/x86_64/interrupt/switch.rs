@@ -194,6 +194,7 @@ macro_rules! return_to_raw_fn {
                   mov [$15], r15
                   mov [$16], rbp
 
+                  mov rsi, $17
                   mov rdi, rsp
                   sub rsp, 8
                   call $0
@@ -235,7 +236,7 @@ macro_rules! return_to_raw_fn {
                  "i"(&CUR_REGISTERS.r15),
                  "i"(&CUR_REGISTERS.rbp),
 
-                 "{rsi}"($exception_code)
+                 "i"($exception_code)
                  :: "volatile", "intel");
         }
     )
@@ -264,6 +265,7 @@ macro_rules! return_error_to_raw_fn {
                   mov [$15], r15
                   mov [$16], rbp
 
+                  mov rdx, $17
                   pop rsi
                   mov rdi, rsp
                   sub rsp, 8
@@ -306,7 +308,7 @@ macro_rules! return_error_to_raw_fn {
                  "i"(&CUR_REGISTERS.r15),
                  "i"(&CUR_REGISTERS.rbp),
 
-                 "{rdx}"($exception_code)
+                 "i"($exception_code)
                  : "rdi" : "volatile", "intel");
         }
     )

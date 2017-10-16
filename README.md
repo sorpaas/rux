@@ -75,10 +75,9 @@ Print the current `CPool` slots into the kernel message buffer.
 retype cpool [source slot id] [target slot id]
 ```
 
-Retype an Untyped capability into a CPool capability. `[source slot
-id]` should be a valid slot index of an Untyped capability. `[target
-slot id]` should be an empty slot for holding the retyped CPool
-capability.
+Retype an Untyped capability into a CPool capability. `[source slot id]`
+should be a valid slot index of an Untyped capability. `[target slot id]`
+should be an empty slot for holding the retyped CPool capability.
 
 ### Example: Talk With a Child Task
 

@@ -17,10 +17,11 @@ pub fn retype_raw_page_free(source: CAddr) -> CAddr {
     };
 }
 
-pub fn map_raw_page_free(untyped: CAddr, pt: CAddr, page: CAddr, addr: usize) {
+pub fn map_raw_page_free(vaddr: usize, untyped: CAddr, toplevel_table: CAddr, page: CAddr) {
     system_call(SystemCall::MapRawPageFree {
         untyped: untyped,
-        request: (pt, page, addr),
+        toplevel_table: toplevel_table,
+        request: (vaddr, page),
     });
 }
 

@@ -19,8 +19,8 @@ static ALLOCATOR: Mutex<Option<WatermarkAllocator>> = Mutex::new(None);
 
 struct WatermarkAllocator {
     untyped_cap: CAddr,
-    pt_cap: CAddr,
-    page_cap: Option<CAddr>,
+    toplevel_table_cap: CAddr,
+    page_cap: CAddr,
     page_start_addr: usize,
     watermark: usize,
 }
@@ -50,11 +50,14 @@ pub fn align_up(addr: usize, align: usize) -> usize {
 }
 
 impl WatermarkAllocator {
-    const fn new(untyped_cap: CAddr, pt_cap: CAddr, page_start_addr: usize) -> Self {
+    fn new(untyped_cap: CAddr, toplevel_table_cap: CAddr, page_start_addr: usize) -> Self {
+        let page_cap = system::retype_raw_page_free(untyped_cap);
+        system::map_raw_page_free(page_start_addr, untyped_cap, toplevel_table_cap, page_cap.clone());
+
         WatermarkAllocator {
             untyped_cap: untyped_cap,
-            pt_cap: pt_cap,
-            page_cap: None,
+            page_cap: page_cap,
+            toplevel_table_cap: toplevel_table_cap,
             page_start_addr: page_start_addr,
             watermark: 0,
         }
@@ -62,25 +65,20 @@ impl WatermarkAllocator {
 
     pub fn allocate(&mut self, size: usize, align: usize) -> *mut u8 {
         let alloc_start = align_up(self.watermark, align);
-        let alloc_end = alloc_start.saturating_add(size);
+        let ret = (self.page_start_addr + alloc_start) as *mut u8;
 
-        if alloc_end >= PAGE_LENGTH {
-            self.page_cap = None;
+        let mut alloc_end = alloc_start.saturating_add(size);
+
+        while alloc_end >= PAGE_LENGTH {
+            self.page_cap = system::retype_raw_page_free(self.untyped_cap);
             self.page_start_addr += PAGE_LENGTH;
-            self.watermark = 0;
+            system::map_raw_page_free(self.page_start_addr, self.untyped_cap, self.toplevel_table_cap, self.page_cap.clone());
 
-            return self.allocate(size, align);
-        }
-
-        if self.page_cap.is_none() {
-            self.page_cap = Some(system::retype_raw_page_free(self.untyped_cap));
-            system::map_raw_page_free(self.untyped_cap, self.pt_cap, self.page_cap.clone().unwrap(), self.page_start_addr);
-
-            return self.allocate(size, align);
+            alloc_end -= PAGE_LENGTH;
         }
 
         self.watermark = alloc_end;
-        (self.page_start_addr + alloc_start) as *mut u8
+        ret
     }
 }
 

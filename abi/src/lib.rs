@@ -40,7 +40,8 @@ pub enum SystemCall {
     },
     MapRawPageFree {
         untyped: CAddr,
-        request: (CAddr, CAddr, usize),
+        toplevel_table: CAddr,
+        request: (usize, CAddr),
     },
     RetypeCPool {
         request: (CAddr, CAddr),

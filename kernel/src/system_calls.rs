@@ -79,16 +79,21 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
         },
         SystemCall::MapRawPageFree {
             untyped: untyped,
+            toplevel_table: toplevel_table,
             request: request,
         } => {
-            let pt_cap: Option<TopPageTableCap> = cpool.lookup_upgrade(request.0);
+            let vaddr: VAddr = VAddr::from(request.0);
             let page_cap: Option<RawPageCap> = cpool.lookup_upgrade(request.1);
             let untyped_cap: Option<UntypedCap> = cpool.lookup_upgrade(untyped);
-            if pt_cap.is_some() && page_cap.is_some() && untyped_cap.is_some() {
-                let mut pt_cap = pt_cap.unwrap();
-                let page_cap = page_cap.unwrap();
+            let pml4_cap: Option<TopPageTableCap> = cpool.lookup_upgrade(toplevel_table);
+            if page_cap.is_some() && untyped_cap.is_some() && pml4_cap.is_some() {
                 let untyped_cap = untyped_cap.unwrap();
-                pt_cap.map(VAddr::from(request.2), &page_cap, untyped_cap.write().deref_mut(), cpool.write().deref_mut());
+                pml4_cap.unwrap().map(vaddr, &page_cap.unwrap(),
+                                      untyped_cap.write().deref_mut(),
+                                      cpool.write().deref_mut());
+                log!("Map raw page okay.");
+            } else {
+                log!("Map raw page failed.");
             }
             None
         }

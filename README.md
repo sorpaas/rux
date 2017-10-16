@@ -39,9 +39,10 @@ target of `x86_64` should all be able to run this kernel, but do it at
 your own risk.
 
 To run the kernel, first install `Rust`, `qemu`, and cross-compiled
-GNU's `binutils`. The easiest way to do it is through the `shell.nix`
-file provided in the source code. Install [Nix](http://nixos.org/nix/),
-then go to the source code root and run the following command:
+GNU's `binutils`. The easiest way to do it is through the
+`default.nix` file provided in the source code. Install
+[Nix](http://nixos.org/nix/), then go to the source code root and run
+the following command:
 
 ```lang=bash
 nix-shell

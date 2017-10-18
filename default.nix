@@ -22,11 +22,13 @@
            rustc_ = nightly.rustc;
            cargo_ = nightly.cargo;
            rust-src_ = nightly.rust-src;
+           rust_ = nightly.rust;
        in {
         rust = {
           rustc = rustc_;
           cargo = cargo_;
           rust-src = rust-src_;
+          rust = rust_;
         };
       })
     ];
@@ -105,7 +107,7 @@ in stdenv.mkDerivation {
     qemu
     file
     gdb
-    rust.rustc
+    rust.rust
     rust.cargo
     curl
   ];

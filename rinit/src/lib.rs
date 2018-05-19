@@ -4,6 +4,7 @@
 #![feature(const_unique_new)]
 #![feature(unique)]
 #![feature(alloc)]
+#![feature(ptr_internals)]
 #![no_std]
 
 #[macro_use]
@@ -254,4 +255,10 @@ fn divide_by_zero() {
     unsafe {
         asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel")
     }
+}
+
+#[lang = "oom"]
+#[no_mangle]
+pub fn rust_oom() -> ! {
+    panic!("Out of memory");
 }

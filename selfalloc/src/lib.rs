@@ -85,15 +85,16 @@ impl WatermarkAllocator {
 #[global_allocator]
 static WATER_ALLOCATOR: WaterAlloc = WaterAlloc;
 
-use alloc::heap::Alloc;
 use alloc::allocator::{AllocErr, Layout};
+use core::ptr::NonNull;
+use core::alloc::{GlobalAlloc, Opaque};
 
 struct WaterAlloc;
 
-unsafe impl<'a> Alloc for &'a WaterAlloc {
-    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
-        Ok(ALLOCATOR.lock().as_mut().unwrap().allocate(layout.size(), layout.align()))
+unsafe impl<'a> GlobalAlloc for WaterAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut Opaque {
+        ALLOCATOR.lock().as_mut().unwrap().allocate(layout.size(), layout.align()) as _
     }
 
-    unsafe fn dealloc(&mut self, pointer: *mut u8, layout: Layout) { }
+    unsafe fn dealloc(&self, pointer: *mut Opaque, layout: Layout) { }
 }

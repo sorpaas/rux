@@ -1,4 +1,4 @@
-use arch::{inportb, outportb, io_wait};
+use arch::{inportb, outportb};
 
 const PIC1_COMMAND: u16 = 0x20;
 const PIC1_DATA: u16 = 0x21;
@@ -42,7 +42,7 @@ pub unsafe fn disable_pic() {
 
 /// Send End of Interrupt for PIC.
 pub unsafe fn send_pic_eoi(irq: u8) {
-    if (irq >= 8) {
+    if irq >= 8 {
         outportb(PIC2_COMMAND, PIC_EOI);
     } else {
         outportb(PIC1_COMMAND, PIC_EOI);

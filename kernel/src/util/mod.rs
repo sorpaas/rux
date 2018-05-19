@@ -20,10 +20,8 @@ pub use self::guard::{UniqueReadGuard, UniqueWriteGuard};
 pub use self::streamer::{Streamer};
 pub use spin::{Mutex, RwLock};
 
-use common::{PAddr, VAddr};
+use common::PAddr;
 use core::ops::{Deref, DerefMut};
-use core::marker::{PhantomData};
-use core::cell::{UnsafeCell};
 
 /// Align the physical address up using the alignment.
 pub fn align_up(paddr: PAddr, alignment: usize) -> PAddr {

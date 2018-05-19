@@ -13,9 +13,8 @@ mod pic;
 #[macro_use]
 mod switch;
 
-use lazy_static;
 use common::*;
-use self::switch::{last_exception_return_value, switch_to_raw, ExceptionInfo};
+use self::switch::{last_exception_return_value, switch_to_raw};
 
 pub use self::switch::{HandlerFunc, Registers};
 pub use self::apic::{LOCAL_APIC, IO_APIC};

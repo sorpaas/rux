@@ -1,7 +1,5 @@
 use core::any::{Any, TypeId};
-use core::ops::{Index, IndexMut, Deref, DerefMut};
-use core::marker::{PhantomData};
-use core::slice::{SliceExt};
+use core::ops::Deref;
 use core::mem;
 use core::ptr;
 use common::*;

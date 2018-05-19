@@ -1,5 +1,5 @@
 use common::*;
-use core::ops::{Deref, DerefMut};
+use core::ops::Deref;
 use core::cell::{UnsafeCell};
 use core::marker::{PhantomData};
 

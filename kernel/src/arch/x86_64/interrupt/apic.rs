@@ -105,7 +105,7 @@ impl IOAPIC {
     ///
     /// `reg` must be valid.
     unsafe fn write(&mut self, reg: u32, value: u32) {
-        use core::intrinsics::{volatile_load, volatile_store};
+        use core::intrinsics::volatile_store;
         volatile_store((self.address.into(): usize + 0x0 as usize) as *mut u32, reg);
         volatile_store((self.address.into(): usize + 0x10 as usize) as *mut u32, value);
     }
@@ -142,7 +142,7 @@ impl IOAPIC {
         low &= !(1<<11);
         low &= !0x700;
         low &= !0xff;
-        low |= (vector as u32);
+        low |= vector as u32;
         unsafe { self.write(low_index, low) };
     }
 }

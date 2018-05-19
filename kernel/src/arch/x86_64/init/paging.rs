@@ -1,16 +1,13 @@
 use core::ptr::{Unique};
 
 use arch::{kernel_start_paddr, kernel_start_vaddr,
-           kernel_end_paddr, kernel_end_vaddr};
+           kernel_end_paddr};
 use arch::paging::{PTEntry, PML4, PDPT, PD, PT,
                    pml4_index, pdpt_index, pd_index, pt_index,
                    BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH};
 use arch::{KERNEL_BASE};
 use common::{PAddr, VAddr, MemoryRegion};
 use util::{block_count, align_up, ExternReadonlyObject, ExternMutex};
-use core::ops::{Deref};
-
-use arch::addr;
 
 extern {
     /// `init_pd` exposed by linker.

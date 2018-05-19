@@ -1,8 +1,6 @@
 /// Task State Segment Representation.
 mod tss;
 
-use core::fmt;
-
 pub use self::tss::{TaskStateSegment};
 
 bitflags! {

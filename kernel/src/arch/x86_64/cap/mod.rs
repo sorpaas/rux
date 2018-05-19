@@ -29,7 +29,7 @@ pub type TopPageTableCap = PML4Cap;
 
 use common::*;
 use core::any::{TypeId};
-use util::managed_arc::{ManagedArc, ManagedWeakPool256Arc, ManagedArcAny};
+use util::managed_arc::{ManagedArc, ManagedArcAny};
 
 /// Create a managed Arc (capability) from an address of an
 /// architecture-specific kernel object. The `type_id` should be a

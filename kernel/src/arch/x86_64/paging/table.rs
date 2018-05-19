@@ -1,4 +1,3 @@
-use core::fmt;
 use common::{PAddr, VAddr};
 use super::{BASE_PAGE_LENGTH, ADDRESS_MASK};
 

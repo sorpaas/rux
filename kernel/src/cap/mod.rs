@@ -39,7 +39,7 @@ use arch;
 use common::*;
 use core::any::{TypeId};
 use core::mem::drop;
-use util::managed_arc::{ManagedWeakPool256Arc, ManagedArcAny, ManagedArc};
+use util::managed_arc::{ManagedArcAny, ManagedArc};
 
 pub use abi::{SetDefault, TaskBuffer};
 /// Raw page struct representing a whole page.

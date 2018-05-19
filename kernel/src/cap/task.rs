@@ -1,7 +1,6 @@
 use common::*;
-use core::any::{Any, TypeId};
-use core::iter::{Iterator};
-use util::{RwLock, align_up, Mutex};
+use core::iter::Iterator;
+use util::{RwLock, Mutex};
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
 use arch::{TaskRuntime, Exception};
 

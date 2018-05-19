@@ -3,7 +3,7 @@ use core::str;
 use core::slice;
 use core::fmt;
 
-use common::{PAddr, VAddr};
+use common::PAddr;
 
 /// Value found in %eax after multiboot jumps to our entry point.
 pub const SIGNATURE_EAX: u32 = 0x2BADB002;

@@ -3,11 +3,9 @@ use arch::{KERNEL_BASE};
 use arch::init::{KERNEL_PDPT};
 use arch::paging::{BASE_PAGE_LENGTH, PML4, PML4Entry, pml4_index};
 use util::{MemoryObject, UniqueReadGuard, UniqueWriteGuard, RwLock};
-use util::managed_arc::{ManagedWeakPool1Arc};
 use super::{PML4Descriptor, PML4Cap, PDPTCap, PDCap, PTCap, PageCap};
-use cap::{self, UntypedCap, UntypedDescriptor, CPoolDescriptor, CPoolCap, SetDefault};
-use core::ops::{Deref, DerefMut};
-use core::any::{Any};
+use cap::{self, UntypedDescriptor, CPoolDescriptor, SetDefault};
+use core::any::Any;
 
 impl PML4Cap {
     pub fn retype_from(untyped: &mut UntypedDescriptor) -> Self {
@@ -57,8 +55,7 @@ impl PML4Cap {
 
     pub fn map<T: SetDefault + Any>(&mut self, vaddr: VAddr, page: &PageCap<T>,
                                     untyped: &mut UntypedDescriptor, cpool: &mut CPoolDescriptor) {
-        use arch::paging::{pml4_index, pdpt_index, pd_index, pt_index,
-                           PML4Entry, PDPTEntry, PDEntry, PTEntry};
+        use arch::paging::{pml4_index, pdpt_index, pd_index, pt_index};
 
         log!("PML4 mapping: 0x{:x}", vaddr);
 

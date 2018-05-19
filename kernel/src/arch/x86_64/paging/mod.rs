@@ -1,4 +1,3 @@
-use core::fmt;
 use common::{PAddr, VAddr};
 
 #[macro_use]

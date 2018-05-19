@@ -1,8 +1,8 @@
 use common::*;
-use core::convert::{AsRef};
-use core::ops::{Deref, DerefMut};
+use core::convert::AsRef;
+use core::ops::DerefMut;
 use cap::{self, UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskDescriptor, TaskStatus, ChannelCap, ChannelDescriptor, ChannelValue, PAGE_LENGTH};
-use abi::{SystemCall, TaskBuffer};
+use abi::SystemCall;
 
 /// System call handling function. Dispatch based on the type of the
 /// system call.

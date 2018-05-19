@@ -27,9 +27,8 @@ pub unsafe fn set_kernel_stack(addr: u64) {
 /// Main function to initialize interrupt.
 pub fn init() {
     unsafe {
-        use arch::segmentation::{DESC_P, DESC_L, DESC_AVL, DESC_DPL3,
-                                 TYPE_SYS_TSS_AVAILABLE,
-                                 TYPE_C_ER};
+        use arch::segmentation::{DESC_P, DESC_DPL3,
+                                 TYPE_SYS_TSS_AVAILABLE};
         let kernel_stack = &init_stack as *const _ as u64;
         let tss_vaddr = &TSS as *const _ as u64;
 

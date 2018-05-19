@@ -1,10 +1,9 @@
 use common::*;
 use core::convert::From;
-use core::any::{Any, TypeId};
-use util::{RwLock, align_up};
-use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool3Arc};
+use util::RwLock;
+use util::managed_arc::{ManagedArc, ManagedArcAny};
 use abi::ChannelMessage;
-use super::{UntypedDescriptor, CPoolCap, TaskCap, TaskBufferPageCap};
+use super::{UntypedDescriptor, TaskCap, TaskBufferPageCap};
 
 #[derive(Debug)]
 pub enum ChannelValue {

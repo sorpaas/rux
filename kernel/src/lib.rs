@@ -16,6 +16,8 @@
 #![feature(core_slice_ext)]
 #![feature(reflect_marker)]
 #![feature(relaxed_adts)]
+#![feature(core_slice_ext)]
+#![feature(ptr_internals)]
 #![no_std]
 
 extern crate spin;
@@ -64,10 +66,9 @@ mod cap;
 /// System call handler.
 mod system_calls;
 
-use core::mem;
 use core::slice;
 use common::*;
-use arch::{InitInfo, inportb, outportb, Exception};
+use arch::{InitInfo, Exception};
 use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskDescriptor, TaskStatus, ChannelCap, ChannelDescriptor, ChannelValue, PAGE_LENGTH};
 use core::ops::{Deref, DerefMut};
 use abi::{SystemCall, TaskBuffer};

@@ -1,4 +1,8 @@
-[root]
+[[package]]
+name = "abi"
+version = "0.1.0"
+
+[[package]]
 name = "rinit"
 version = "0.1.0"
 dependencies = [
@@ -6,10 +10,6 @@ dependencies = [
  "spin 0.4.4",
  "system 0.1.0",
 ]
-
-[[package]]
-name = "abi"
-version = "0.1.0"
 
 [[package]]
 name = "rlibc"

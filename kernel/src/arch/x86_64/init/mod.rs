@@ -17,19 +17,13 @@ pub use self::paging::{KERNEL_PML4, KERNEL_PDPT, KERNEL_PD,
 pub use self::segmentation::{set_kernel_stack};
 
 use ::{kmain};
-use super::{kernel_end_paddr, kernel_start_paddr, kernel_start_vaddr, kernel_end_vaddr, KERNEL_BASE};
-use super::paging::{BASE_PAGE_LENGTH, LARGE_PAGE_LENGTH,
-                    PD, PT, PML4, PDPT, PTEntry, pd_index, pml4_index, pt_index, pdpt_index};
-use self::multiboot::{Multiboot};
-
-use util::{block_count, align_up};
+use super::{kernel_end_paddr, kernel_start_paddr, kernel_start_vaddr};
 
 use core::mem;
 use core::slice::{self, Iter};
-use core::ptr::{Unique};
-use core::ops::{Deref};
+use core::ptr::Unique;
 
-use common::{PAddr, VAddr, MemoryRegion};
+use common::{PAddr, MemoryRegion};
 
 extern {
     /// Multiboot signature exposed by linker.

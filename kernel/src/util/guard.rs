@@ -1,5 +1,5 @@
-use super::{MemoryObject};
-use core::ops::{Deref, DerefMut, Index, IndexMut};
+use super::MemoryObject;
+use core::ops::{Deref, DerefMut};
 
 /// Read guard using a memory object.
 pub struct UniqueReadGuard<T> {

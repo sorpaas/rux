@@ -1,7 +1,7 @@
 use common::*;
-use core::any::{Any, TypeId};
-use core::ops::{Deref, DerefMut};
-use util::{RwLock, align_up};
+use core::any::Any;
+use core::ops::Deref;
+use util::RwLock;
 use util::managed_arc::{ManagedArc, ManagedArcAny, ManagedWeakPool256Arc};
 
 use super::{UntypedDescriptor};

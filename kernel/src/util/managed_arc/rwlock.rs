@@ -1,12 +1,8 @@
 use core::any::{Any, TypeId};
-use core::ops::{Index, IndexMut, Deref, DerefMut};
-use core::marker::{PhantomData};
-use core::slice::{SliceExt};
-use core::mem;
+use core::ops::{Deref, DerefMut};
 use core::ptr;
 use spin::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use common::*;
-use util::{MemoryObject};
+use util::MemoryObject;
 
 use super::{ManagedArcInner, ManagedArc};
 

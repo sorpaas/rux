@@ -1,14 +1,12 @@
 use core::any::{Any, TypeId};
-use core::ops::{Index, IndexMut, Deref, DerefMut};
-use core::marker::{PhantomData};
-use core::slice::{SliceExt};
+use core::marker::PhantomData;
 use core::convert::{From, Into};
 use core::fmt;
 use core::mem;
 use core::ptr;
 use common::*;
-use spin::{Mutex};
-use util::{MemoryObject};
+use spin::Mutex;
+use util::MemoryObject;
 
 /// Read/write lock for ManagedArc.
 mod rwlock;

@@ -1,17 +1,13 @@
 // TODO Disable interrupt before entering those.
-use spin::{Mutex};
 use core::mem::{size_of};
-use core::slice;
 use util::{align_down, block_count};
-use core::ptr::{Unique};
 use super::{PTEntry, PT_P, PT_RW, flush, BASE_PAGE_LENGTH};
 use arch::init::{OBJECT_POOL_PT, OBJECT_POOL_START_VADDR};
-use common::{PAddr, VAddr};
+use common::PAddr;
 
 use core::nonzero::{NonZero};
 use core::marker::{PhantomData, Unsize};
-use core::ops::{Deref, CoerceUnsized};
-use core::mem;
+use core::ops::CoerceUnsized;
 use core::fmt;
 
 /// Represent a memory object, that converts a physical address to an

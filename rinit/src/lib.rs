@@ -256,9 +256,3 @@ fn divide_by_zero() {
         asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel")
     }
 }
-
-#[lang = "oom"]
-#[no_mangle]
-pub fn rust_oom() -> ! {
-    panic!("Out of memory");
-}

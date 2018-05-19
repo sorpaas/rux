@@ -2,6 +2,7 @@
 #![feature(global_allocator)]
 #![feature(alloc)]
 #![feature(allocator_api)]
+#![feature(lang_items)]
 #![no_std]
 
 extern crate system;
@@ -97,4 +98,10 @@ unsafe impl<'a> GlobalAlloc for WaterAlloc {
     }
 
     unsafe fn dealloc(&self, pointer: *mut Opaque, layout: Layout) { }
+}
+
+#[lang="oom"]
+#[no_mangle]
+pub fn rust_oom() -> ! {
+    panic!("Out of memory");
 }

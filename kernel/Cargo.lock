@@ -1,4 +1,13 @@
-[root]
+[[package]]
+name = "abi"
+version = "0.1.0"
+
+[[package]]
+name = "bitflags"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "kernel"
 version = "0.0.1"
 dependencies = [
@@ -8,15 +17,6 @@ dependencies = [
  "rlibc 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "spin 0.4.4",
 ]
-
-[[package]]
-name = "abi"
-version = "0.1.0"
-
-[[package]]
-name = "bitflags"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "lazy_static"

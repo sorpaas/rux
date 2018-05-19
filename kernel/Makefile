@@ -26,9 +26,9 @@ build: cargo $(rust_os) $(assembly_object_files) $(linker_script)
 
 cargo:
 ifeq ($(version),release)
-	@RUSTFLAGS="-L $(LIBCORE)" cargo rustc --release --target $(TARGET_SPEC)
+	@RUSTFLAGS="-L $(LIBCORE) -L $(LIBCOMPILER_BUILTINS)" cargo rustc --release --target $(TARGET_SPEC)
 else
-	@RUSTFLAGS="-L $(LIBCORE)" cargo rustc --target $(TARGET_SPEC)
+	@RUSTFLAGS="-L $(LIBCORE) -L $(LIBCOMPILER_BUILTINS)" cargo rustc --target $(TARGET_SPEC)
 endif
 
 # compile assembly files

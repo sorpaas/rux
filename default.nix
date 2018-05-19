@@ -5,8 +5,8 @@
     rustOverlay = (pkgs_.fetchFromGitHub {
       owner = "mozilla";
       repo = "nixpkgs-mozilla";
-      rev = "6179dd876578ca2931f864627598ede16ba6cdef";
-      sha256 = "1lim10a674621zayz90nhwiynlakxry8fyz1x209g9bdm38zy3av";
+      rev = "d7ba4e48037c0f944d01d7902fcdc8fa0766df24";
+      sha256 = "033zk1pfnwh0ryrm1yzl9ybgqyhypgdxv1249a8z7cdy1rvb9zz4";
     });
   in (nixpkgs {
     overlays = [
@@ -15,7 +15,7 @@
        with super;
        let nightly = lib.rustLib.fromManifest (lib.rustLib.manifest_v2_url {
                        channel = "nightly";
-                       date = "2017-10-10";
+                       date = "2018-05-17";
                      }) {
                        inherit (self) stdenv fetchurl patchelf;
                      };
@@ -61,15 +61,15 @@ libcore = stdenv.mkDerivation {
   '';
 };
 
-libstd_unicode = stdenv.mkDerivation {
-  name = "libstd_unicode";
+libcompiler_builtins = stdenv.mkDerivation {
+  name = "libcompiler_builtins";
   buildInputs = [
     rust.rustc
   ];
   phases = [ "buildPhase" ];
   buildPhase = ''
     mkdir -p $out
-    rustc -L ${libcore} --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-name=std_unicode --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/libstd_unicode/lib.rs
+    rustc -L ${libcore} --cfg 'feature="compiler-builtins"' --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-name=compiler_builtins --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/libcompiler_builtins/src/lib.rs
   '';
 };
 
@@ -81,7 +81,7 @@ liballoc = stdenv.mkDerivation {
   phases = [ "buildPhase" ];
   buildPhase = ''
     mkdir -p $out
-    rustc -L ${libcore} -L ${libstd_unicode} --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-name=alloc --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/liballoc/lib.rs
+    rustc -L ${libcore} -L ${libcompiler_builtins} --target=${x86_64-target-spec}/x86_64.json --out-dir=$out --crate-name=alloc --crate-type=lib ${rust.rust-src}/lib/rustlib/src/rust/src/liballoc/lib.rs
   '';
 };
 
@@ -103,7 +103,7 @@ in stdenv.mkDerivation {
   name = "rux-env";
   buildInputs = [
     gnumake
-    (binutils.override { targetPlatform = { config = triple; }; })
+    (binutils-unwrapped.override { targetPlatform = { config = triple; isiOS = false; isAarch64 = false; }; })
     qemu
     file
     gdb
@@ -118,8 +118,8 @@ in stdenv.mkDerivation {
   USERSPACE_LINKER = "${userspace-linker}/linker.ld";
 
   LIBCORE = "${libcore}";
+  LIBCOMPILER_BUILTINS = "${libcompiler_builtins}";
   LIBALLOC = "${liballoc}";
-  LIBSTD_UNICODE = "${libstd_unicode}";
 
   LD = "${triple}-ld";
   AS = "${triple}-as";

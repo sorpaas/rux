@@ -113,8 +113,6 @@ fn bootstrap_archinfo() -> (InitInfo, MemoryRegion) {
         })
     }.unwrap();
 
-    log!("bootinfo: {:?}", bootinfo);
-
     let rinit_module = bootinfo.modules().unwrap().next().unwrap();
     log!("rinit module: {:?}", rinit_module);
     

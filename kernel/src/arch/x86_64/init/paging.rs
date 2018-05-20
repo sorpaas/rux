@@ -82,7 +82,7 @@ fn alloc_kernel_pml4(region: &mut MemoryRegion, alloc_base: PAddr) -> Unique<PML
     let mut pml4_unique = unsafe { Unique::new_unchecked(vaddr.into(): usize as *mut PML4) };
 
     {
-        let mut pml4 = unsafe { pml4_unique.as_mut() };
+        let pml4 = unsafe { pml4_unique.as_mut() };
         *pml4 = [PML4Entry::empty(); 512];
     }
 
@@ -106,7 +106,7 @@ fn alloc_kernel_pdpt(region: &mut MemoryRegion, pml4: &mut PML4, alloc_base: PAd
     let mut pdpt_unique = unsafe { Unique::new_unchecked(vaddr.into(): usize as *mut PDPT) };
 
     {
-        let mut pdpt = unsafe { pdpt_unique.as_mut() };
+        let pdpt = unsafe { pdpt_unique.as_mut() };
         *pdpt = [PDPTEntry::empty(); 512];
     }
 
@@ -132,7 +132,7 @@ fn alloc_kernel_pd(region: &mut MemoryRegion, pdpt: &mut PDPT, alloc_base: PAddr
     let mut pd_unique = unsafe { Unique::new_unchecked(vaddr.into(): usize as *mut PD) };
 
     {
-        let mut pd = unsafe { pd_unique.as_mut() };
+        let pd = unsafe { pd_unique.as_mut() };
         *pd = [PDEntry::empty(); 512];
     }
 
@@ -158,7 +158,7 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
     let mut pt_unique = unsafe { Unique::new_unchecked(vaddr.into(): usize as *mut PT) };
 
     {
-        let mut pt = unsafe { pt_unique.as_mut() };
+        let pt = unsafe { pt_unique.as_mut() };
         *pt = [PTEntry::empty(); 512];
 
         {

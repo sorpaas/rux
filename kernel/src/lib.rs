@@ -92,7 +92,7 @@ fn map_rinit_stack(rinit_stack_vaddr: VAddr, rinit_stack_size: usize,
 fn map_rinit_buffer(rinit_buffer_vaddr: VAddr,
                     cpool: &mut CPoolCap, untyped: &mut UntypedCap, rinit_pml4: &mut TopPageTableCap)
                     -> TaskBufferPageCap {
-    let mut rinit_buffer_page = TaskBufferPageCap::retype_from(untyped.write().deref_mut());
+    let rinit_buffer_page = TaskBufferPageCap::retype_from(untyped.write().deref_mut());
     cpool.read().downgrade_free(&rinit_buffer_page);
     rinit_pml4.map(rinit_buffer_vaddr, &rinit_buffer_page,
                    untyped.write().deref_mut(),
@@ -111,7 +111,6 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     let rinit_buffer_vaddr = VAddr::from(0x90001000: usize);
     let rinit_vga_vaddr = VAddr::from(0x90002000: usize);
     let rinit_child_buffer_vaddr = VAddr::from(0x90003000: usize);
-    let mut rinit_entry: u64 = 0x0;
 
     let mut rinit_pml4 = TopPageTableCap::retype_from(untyped.write().deref_mut());
     cpool.read().downgrade_free(&rinit_pml4);
@@ -122,9 +121,9 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
                                                  archinfo.rinit_region().length()) };
     let bin = ElfBinary::new("rinit", bin_raw).unwrap();
 
+    let rinit_entry = bin.file_header().entry;
     log!("fheader = {:?}", bin.file_header());
-    log!("entry = 0x{:x}", bin.file_header().entry);
-    rinit_entry = bin.file_header().entry;
+    log!("entry = 0x{:x}", rinit_entry);
 
     for p in bin.program_headers() {
         use elf::{PT_LOAD};
@@ -173,7 +172,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
     cpool.read().downgrade_at(&rinit_child_buffer_page, 250);
 
     log!("mapping the rinit vga buffer ...");
-    let mut rinit_vga_page = unsafe { RawPageCap::bootstrap(PAddr::from(0xb8000: usize), untyped.write().deref_mut()) };
+    let rinit_vga_page = unsafe { RawPageCap::bootstrap(PAddr::from(0xb8000: usize), untyped.write().deref_mut()) };
     cpool.read().downgrade_free(&rinit_vga_page);
     rinit_pml4.map(rinit_vga_vaddr, &rinit_vga_page,
                    untyped.write().deref_mut(),
@@ -239,10 +238,10 @@ pub fn kmain(archinfo: InitInfo)
         rinit_task.downgrade_buffer(&rinit_buffer_page);
     }
 
-    let mut keyboard_cap = ChannelCap::retype_from(untyped_cap.write().deref_mut());
+    let keyboard_cap = ChannelCap::retype_from(untyped_cap.write().deref_mut());
     cpool_cap.read().downgrade_at(&keyboard_cap, 254);
 
-    let mut util_chan_cap = ChannelCap::retype_from(untyped_cap.write().deref_mut());
+    let util_chan_cap = ChannelCap::retype_from(untyped_cap.write().deref_mut());
     cpool_cap.read().downgrade_at(&util_chan_cap, 255);
 
     log!("hello, world!");
@@ -269,8 +268,7 @@ pub fn kmain(archinfo: InitInfo)
                         };
                         let ret_system_call = match system_call {
                             SystemCall::ChannelTake {
-                                request: request,
-                                response: response,
+                                request, ..
                             } => {
                                 Some(SystemCall::ChannelTake {
                                     request: request,

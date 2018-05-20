@@ -59,7 +59,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::RetypeRawPageFree {
-            request, response,
+            request, ..
         } => {
             let source: Option<UntypedCap> = cpool.lookup_upgrade(request);
             if source.is_some() {

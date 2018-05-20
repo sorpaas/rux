@@ -44,7 +44,7 @@ macro_rules! weak_pool {
                 let inner: &mut ManagedArcInner<$t> = unsafe { inner_obj.as_mut() };
 
                 ptr::write(&mut inner.data.1, ptr);
-                for (i, element) in (inner.data: $t).0.iter_mut().enumerate() {
+                for element in (inner.data: $t).0.iter_mut() {
                     ptr::write(element, Mutex::new(None));
                 }
 
@@ -120,7 +120,7 @@ macro_rules! weak_pool {
                 } else {
                     // ArcInner has weak. Insert the new weak as the first child.
                     let arc_second_weak_addr = arc_first_weak.take().unwrap();
-                    set_weak_node(arc_second_weak_addr, |mut second_weak_node| {
+                    set_weak_node(arc_second_weak_addr, |second_weak_node| {
                         assert!(second_weak_node.is_some());
 
                         second_weak_node.map(|mut second_weak_node| {

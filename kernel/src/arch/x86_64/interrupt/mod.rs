@@ -69,7 +69,7 @@ pub enum Exception {
 impl Exception {
     /// Create a new Exception using an exception code and an optional
     /// error code.
-    fn new(code: u64, error: Option<u64>) -> Exception {
+    fn new(code: u64, _error: Option<u64>) -> Exception {
         match code {
             TIMER_INTERRUPT_CODE => Exception::Timer,
             SPURIOUS_INTERRUPT_CODE => Exception::Spurious,

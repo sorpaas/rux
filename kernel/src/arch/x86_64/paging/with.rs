@@ -99,7 +99,7 @@ impl<T: ?Sized> MemoryObject<T> {
 
         for i in 0..required_page_size {
             object_pool[mapping_start_index + i] = PTEntry::new(aligned + (i * BASE_PAGE_LENGTH), PT_P | PT_RW);
-            unsafe { flush(OBJECT_POOL_START_VADDR + (mapping_start_index * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH); }
+            flush(OBJECT_POOL_START_VADDR + (mapping_start_index * BASE_PAGE_LENGTH) + i * BASE_PAGE_LENGTH);
         }
 
         let vaddr = OBJECT_POOL_START_VADDR + ((mapping_start_index * BASE_PAGE_LENGTH) + before_start);

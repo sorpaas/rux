@@ -55,7 +55,6 @@ pub struct Multiboot<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> {
 ///         +-------------------+
 ///</rawtext>
 ///
-#[derive(Debug)]
 #[repr(C, packed)]
 struct MultibootInfo {
     flags: u32,
@@ -110,12 +109,6 @@ macro_rules! check_flag {
             (self.header.flags & (1 << $bit1)) > 0 || (self.header.flags & (1 << $bit2)) > 0
         }
     );
-}
-
-impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> fmt::Debug for Multiboot<'a, F> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.header.fmt(f)
-    }
 }
 
 /// Multiboot structure.
@@ -326,7 +319,6 @@ pub enum MemoryType {
 /// Multiboot format of the MMAP buffer.
 ///
 /// Note that size is defined to be at -4 bytes in multiboot.
-#[derive(Debug)]
 #[repr(C, packed)]
 pub struct MemoryEntry {
     size: u32,
@@ -446,7 +438,6 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Iterator for ModuleIter<'a, F>
 }
 
 /// Multiboot format for ELF Symbols
-#[derive(Debug)]
 #[repr(C, packed)]
 struct ElfSymbols {
     num: u32,

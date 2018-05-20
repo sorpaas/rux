@@ -206,7 +206,7 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
 }
 
 /// Allocate one kernel page using `offset_size`.
-fn alloc_kernel_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
+fn alloc_kernel_page(pt: &mut PT, offset_size: usize) {
     use arch::paging::{PT_P, PT_RW};
     
     let paddr = kernel_start_paddr() + (offset_size * BASE_PAGE_LENGTH);
@@ -218,8 +218,7 @@ fn alloc_kernel_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
 }
 
 /// Allocate the kernel guard page specified by `offset_size`.
-fn alloc_kernel_guard_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
-    let paddr = kernel_start_paddr() + (offset_size * BASE_PAGE_LENGTH);
+fn alloc_kernel_guard_page(pt: &mut PT, offset_size: usize) {
     let vaddr = kernel_start_vaddr() + (offset_size * BASE_PAGE_LENGTH);
 
     log!("guard page allocated at 0x{:x}", vaddr);
@@ -253,9 +252,9 @@ fn alloc_kernel_pts(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAddr) {
             Unique::new_unchecked((INITIAL_ALLOC_START_VADDR + offset).into(): usize as *mut PT) };
         
         if i == guard_page_index {
-            alloc_kernel_guard_page(unsafe { pt_unique.as_mut() }, i % 512, alloc_base);
+            alloc_kernel_guard_page(unsafe { pt_unique.as_mut() }, i % 512);
         } else {
-            alloc_kernel_page(unsafe { pt_unique.as_mut() }, i % 512, alloc_base);
+            alloc_kernel_page(unsafe { pt_unique.as_mut() }, i % 512);
         }
     }
 }
@@ -306,9 +305,9 @@ pub fn init(mut alloc_region: &mut MemoryRegion) {
     let mut pd_unique = alloc_kernel_pd(&mut alloc_region,
                                         unsafe { pdpt_unique.as_mut() },
                                         alloc_base_paddr);
-    let mut object_pool_pt_unique = alloc_object_pool_pt(&mut alloc_region,
-                                                         unsafe { pd_unique.as_mut() },
-                                                         alloc_base_paddr);
+    let _ = alloc_object_pool_pt(&mut alloc_region,
+                                 unsafe { pd_unique.as_mut() },
+                                 alloc_base_paddr);
 
     alloc_kernel_pts(&mut alloc_region, unsafe { pd_unique.as_mut() }, alloc_base_paddr);
     

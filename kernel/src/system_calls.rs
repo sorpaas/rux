@@ -59,8 +59,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::RetypeRawPageFree {
-            request: request,
-            response: response,
+            request, response,
         } => {
             let source: Option<UntypedCap> = cpool.lookup_upgrade(request);
             if source.is_some() {
@@ -103,7 +102,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             if source.is_some() {
                 let source = source.unwrap();
                 let target = CPoolCap::retype_from(source.write().deref_mut());
-                let result = cpool.lookup_downgrade_at(&target, request.1);
+                let _ = cpool.lookup_downgrade_at(&target, request.1);
             }
 
             None
@@ -115,7 +114,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             if source.is_some() {
                 let source = source.unwrap();
                 let target = TaskCap::retype_from(source.write().deref_mut());
-                let result = cpool.lookup_downgrade_at(&target, request.1);
+                let _ = cpool.lookup_downgrade_at(&target, request.1);
             }
 
             None
@@ -186,8 +185,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::ChannelTake {
-            request: request,
-            response: response,
+            request, ..
         } => {
             let mut chan_option: Option<ChannelCap> = cpool.lookup_upgrade(request);
             if let Some(chan) = chan_option {

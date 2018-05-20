@@ -51,8 +51,8 @@ pub unsafe fn send_pic_eoi(irq: u8) {
 
 /// Enable Programmable Interrupt Controller.
 pub unsafe fn enable_pic(master_offset: u8, slave_offset: u8) {
-    let a1 = inportb(PIC1_DATA);
-    let a2 = inportb(PIC2_DATA);
+    let _ = inportb(PIC1_DATA);
+    let _ = inportb(PIC2_DATA);
 
     outportb(PIC1_COMMAND, ICW1_INIT + ICW1_ICW4);
     outportb(PIC2_COMMAND, ICW1_INIT + ICW1_ICW4);

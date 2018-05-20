@@ -56,7 +56,7 @@ impl<'a> EntryOptions<'a> {
     /// Set previlege level of this entry.
     pub fn set_privilege_level(self, dpl: u16) -> Self {
         let mut options = self.0.options;
-        self.0.options.set_range(13..15, dpl);
+        options.set_range(13..15, dpl);
         self.0.options = options;
         self
     }
@@ -64,7 +64,7 @@ impl<'a> EntryOptions<'a> {
     /// Set stack index to use in TSS for this interrupt entry.
     pub fn set_stack_index(self, index: u16) -> Self {
         let mut options = self.0.options;
-        self.0.options.set_range(0..3, index);
+        options.set_range(0..3, index);
         self.0.options = options;
         self
     }

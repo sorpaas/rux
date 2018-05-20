@@ -32,7 +32,6 @@ pub use self::cpool::{CPoolDescriptor, CPoolCap};
 pub use self::task::{TaskDescriptor, TaskCap, TaskStatus, idle, task_iter};
 pub use self::channel::{ChannelDescriptor, ChannelCap, ChannelValue};
 
-#[macro_use]
 pub use arch::cap::{TopPageTableCap, PageCap, PAGE_LENGTH};
 
 use arch;
@@ -69,17 +68,17 @@ impl SetDefault for RawPage {
 /// of type `type_id`.
 pub unsafe fn upgrade_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
     if type_id == TypeId::of::<CPoolCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): CPoolCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): CPoolCap }.into())
     } else if type_id == TypeId::of::<UntypedCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): UntypedCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): UntypedCap }.into())
     } else if type_id == TypeId::of::<TaskCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): TaskCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): TaskCap }.into())
     } else if type_id == TypeId::of::<RawPageCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): RawPageCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): RawPageCap }.into())
     } else if type_id == TypeId::of::<TaskBufferPageCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): TaskBufferPageCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): TaskBufferPageCap }.into())
     } else if type_id == TypeId::of::<ChannelCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): ChannelCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): ChannelCap }.into())
     } else {
         arch::cap::upgrade_arch_any(ptr, type_id)
     }

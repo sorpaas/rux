@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// Task State Segment Representation.
 mod tss;
 

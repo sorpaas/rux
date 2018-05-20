@@ -26,6 +26,7 @@ use common::{PAddr, MemoryRegion};
 
 extern {
     /// Multiboot signature exposed by linker.
+    #[allow(dead_code)]
     static multiboot_sig: u32;
     /// Multiboot pointer exposed by linker.
     static multiboot_ptr: u64;
@@ -150,6 +151,7 @@ fn bootstrap_archinfo() -> (InitInfo, MemoryRegion) {
 /// interrupt, and APIC. It then jumps to `kmain`.
 #[lang="start"]
 #[no_mangle]
+#[allow(private_no_mangle_fns)]
 pub fn kinit() {
     let (mut archinfo, mut alloc_region) = bootstrap_archinfo();
 

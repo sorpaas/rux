@@ -1,12 +1,10 @@
-#![feature(const_fn)]
-#![no_std]
-
 use core::mem::size_of;
 
 /// Represent a bit field.
 #[derive(Debug, Clone, Copy)]
 pub struct BitField<T: Number>(T);
 
+#[allow(dead_code)]
 impl<T> BitField<T>
     where T: Number
 {

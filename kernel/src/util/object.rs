@@ -30,6 +30,7 @@ impl<T> ExternReadonlyObject<T> {
     }
 
     /// Unbootstrap the pointer. Erase the address stored.
+    #[allow(dead_code)]
     pub unsafe fn unbootstrap(&self) {
         *self.pointer.get() = None;
         *self.paddr.get() = None;

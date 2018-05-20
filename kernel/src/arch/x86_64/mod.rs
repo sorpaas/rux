@@ -38,6 +38,7 @@ fn kernel_end_paddr() -> PAddr {
     unsafe { PAddr::from((&kernel_end as *const _) as u64 - KERNEL_BASE) }
 }
 
+#[allow(dead_code)]
 fn kernel_end_vaddr() -> VAddr {
     unsafe { kernel_paddr_to_vaddr(kernel_end_paddr()) }
 }

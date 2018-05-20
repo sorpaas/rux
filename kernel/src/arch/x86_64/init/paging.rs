@@ -29,6 +29,7 @@ const INITIAL_ALLOC_PD_OFFSET: usize = 0x2000;
 /// Offset for the new Object Pool PT virtual address.
 const INITIAL_ALLOC_OBJECT_POOL_PT_OFFSET: usize = 0x3000;
 /// Offset for the new kernel PT virtual address.
+#[allow(dead_code)]
 const INITIAL_ALLOC_KERNEL_PT_START_OFFSET: usize = 0x4000;
 
 // Below should be used AFTER switching to new page table structure.
@@ -169,6 +170,7 @@ fn alloc_object_pool_pt(region: &mut MemoryRegion, pd: &mut PD, alloc_base: PAdd
 
         {
             /// Write 64 bits to msr register.
+            #[allow(dead_code)]
             unsafe fn wrmsr(msr: u32, value: u64) {
                 let low = value as u32;
                 let high = (value >> 32) as u32;

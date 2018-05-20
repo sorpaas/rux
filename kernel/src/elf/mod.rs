@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use core::fmt;
 
 /// Loader for ELF binary.
@@ -844,7 +846,7 @@ pub struct Symbol {
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Symbol: [{}] @ {:#x} size {:#x} in section {}",
-               self.name, self.value, self.size, self.section_index)
+               {self.name}, {self.value}, {self.size}, {self.section_index})
     }
 }
 

@@ -18,6 +18,7 @@ pub const PAGE_LENGTH: usize = BASE_PAGE_LENGTH;
 /// PML4 page table descriptor.
 pub struct PML4Descriptor {
     start_paddr: PAddr,
+    #[allow(dead_code)]
     next: Option<ManagedArcAny>,
 }
 
@@ -29,6 +30,7 @@ pub type PML4Cap = ManagedArc<RwLock<PML4Descriptor>>;
 pub struct PDPTDescriptor {
     mapped_weak_pool: ManagedWeakPool1Arc,
     start_paddr: PAddr,
+    #[allow(dead_code)]
     next: Option<ManagedArcAny>,
 }
 
@@ -40,6 +42,7 @@ pub type PDPTCap = ManagedArc<RwLock<PDPTDescriptor>>;
 pub struct PDDescriptor {
     mapped_weak_pool: ManagedWeakPool1Arc,
     start_paddr: PAddr,
+    #[allow(dead_code)]
     next: Option<ManagedArcAny>,
 }
 
@@ -51,6 +54,7 @@ pub type PDCap = ManagedArc<RwLock<PDDescriptor>>;
 pub struct PTDescriptor {
     mapped_weak_pool: ManagedWeakPool1Arc,
     start_paddr: PAddr,
+    #[allow(dead_code)]
     next: Option<ManagedArcAny>,
 }
 
@@ -61,6 +65,7 @@ pub type PTCap = ManagedArc<RwLock<PTDescriptor>>;
 pub struct PageDescriptor<T: SetDefault + Any> {
     mapped_weak_pool: ManagedWeakPool1Arc,
     start_paddr: PAddr,
+    #[allow(dead_code)]
     next: Option<ManagedArcAny>,
     _marker: PhantomData<T>
 }

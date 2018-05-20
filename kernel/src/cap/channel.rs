@@ -75,12 +75,12 @@ impl ChannelCap {
         let mut arc: Option<Self> = None;
 
         unsafe { untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
-            arc = Some(unsafe {
+            arc = Some(
                 Self::new(paddr, RwLock::new(ChannelDescriptor {
                     value: None,
                     next: next_child,
                 }))
-            });
+            );
 
             arc.clone().unwrap().into()
         }) };

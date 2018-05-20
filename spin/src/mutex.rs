@@ -164,7 +164,7 @@ impl<T> Mutex<T>
         // We know statically that there are no outstanding references to
         // `self` so there's no need to lock.
         let Mutex { data, .. } = self;
-        unsafe { data.into_inner() }
+        data.into_inner()
     }
 }
 
@@ -242,10 +242,12 @@ impl<T> ExternMutex<T>
         }
     }
 
+    /// Bootstrap a value given a pointer.
     pub unsafe fn bootstrap(&self, ptr: *const T) {
         *self.pointer.get() = Some(ptr);
     }
 
+    /// Mark a bootstrapped value as invalid.
     pub unsafe fn unbootstrap(&self) {
         *self.pointer.get() = None;
     }
@@ -262,6 +264,7 @@ impl<T> ExternMutex<T>
         }
     }
 
+    /// Lock to obtain a Mutex guard.
     pub fn lock(&self) -> MutexGuard<T>
     {
         self.obtain_lock();
@@ -273,6 +276,7 @@ impl<T> ExternMutex<T>
         }
     }
 
+    /// Try to lock the value. Return None if locking is unsuccessful.
     pub fn try_lock(&self) -> Option<MutexGuard<T>>
     {
         if self.lock.compare_and_swap(false, true, Ordering::Acquire) != false

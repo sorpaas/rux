@@ -57,7 +57,7 @@ impl TaskCap {
                              ManagedWeakPool3Arc::inner_alignment())) };
 
         unsafe { untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
-            arc = Some(unsafe {
+            arc = Some(
                 Self::new(paddr, RwLock::new(TaskDescriptor {
                     weak_pool: weak_pool,
                     runtime: TaskRuntime::default(),
@@ -65,7 +65,7 @@ impl TaskCap {
                     next_task: None,
                     status: TaskStatus::Inactive,
                 }))
-            });
+            );
 
             arc.clone().unwrap().into()
         }) };

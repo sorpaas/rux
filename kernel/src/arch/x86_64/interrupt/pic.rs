@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use arch::{inportb, outportb};
 
 const PIC1_COMMAND: u16 = 0x20;

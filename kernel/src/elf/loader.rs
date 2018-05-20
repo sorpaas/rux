@@ -24,6 +24,7 @@ unsafe fn slice_pod<T>(region: &[u8], offset: usize, count: usize) -> &[T] {
     slice::from_raw_parts(region[offset..].as_ptr() as *const T, count)
 }
 
+#[allow(dead_code)]
 impl<'s> ElfBinary<'s> {
     /// Create a new ElfBinary.
     /// Makes sure that the provided region has valid ELF magic byte sequence
@@ -130,12 +131,12 @@ impl<'s> ElfBinary<'s> {
     fn can_load(&self) -> bool {
         use super::{ELFCLASS64, EV_CURRENT, ELFDATA2LSB, ELFOSABI_SYSV, ELFOSABI_LINUX, ET_EXEC, ET_DYN, EM_X86_64};
         
-        let correct_class = self.header.ident.class == ELFCLASS64;
-        let correct_elfversion = self.header.ident.version == EV_CURRENT;
-        let correct_data = self.header.ident.data == ELFDATA2LSB;
-        let correct_osabi = self.header.ident.osabi == ELFOSABI_SYSV || self.header.ident.osabi == ELFOSABI_LINUX;
-        let correct_type = self.header.elftype == ET_EXEC || self.header.elftype == ET_DYN;
-        let correct_machine = self.header.machine == EM_X86_64;
+        let correct_class = {self.header.ident.class} == ELFCLASS64;
+        let correct_elfversion = {self.header.ident.version} == EV_CURRENT;
+        let correct_data = {self.header.ident.data} == ELFDATA2LSB;
+        let correct_osabi = {self.header.ident.osabi} == ELFOSABI_SYSV || {self.header.ident.osabi} == ELFOSABI_LINUX;
+        let correct_type = {self.header.elftype} == ET_EXEC || {self.header.elftype} == ET_DYN;
+        let correct_machine = {self.header.machine} == EM_X86_64;
 
         correct_class && correct_data && correct_elfversion && correct_machine && correct_osabi && correct_type
     }

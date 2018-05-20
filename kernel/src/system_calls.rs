@@ -48,7 +48,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
         }
 
         SystemCall::Print {
-            request: request
+            request
         } => {
             use core::str;
             let buffer = request.0.clone();
@@ -76,9 +76,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             }
         },
         SystemCall::MapRawPageFree {
-            untyped: untyped,
-            toplevel_table: toplevel_table,
-            request: request,
+            untyped, toplevel_table, request,
         } => {
             let vaddr: VAddr = VAddr::from(request.0);
             let page_cap: Option<RawPageCap> = cpool.lookup_upgrade(request.1);
@@ -96,7 +94,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         }
         SystemCall::RetypeCPool {
-            request: request,
+            request,
         } => {
             let source: Option<UntypedCap> = cpool.lookup_upgrade(request.0);
             if source.is_some() {
@@ -108,7 +106,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::RetypeTask {
-            request: request,
+            request,
         } => {
             let source: Option<UntypedCap> = cpool.lookup_upgrade(request.0);
             if source.is_some() {
@@ -120,7 +118,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::TaskSetInstructionPointer {
-            request: request,
+            request,
         } => {
             let target: Option<TaskCap> = cpool.lookup_upgrade(request.0);
             if target.is_some() {
@@ -131,7 +129,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::TaskSetStackPointer {
-            request: request,
+            request,
         } => {
             let target: Option<TaskCap> = cpool.lookup_upgrade(request.0);
             if target.is_some() {
@@ -142,7 +140,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::TaskSetCPool {
-            request: request,
+            request,
         } => {
             let target_task: TaskCap = cpool.lookup_upgrade(request.0).unwrap();
             let target_cpool: CPoolCap = cpool.lookup_upgrade(request.1).unwrap();
@@ -151,7 +149,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::TaskSetTopPageTable {
-            request: request,
+            request,
         } => {
             let target_task: TaskCap = cpool.lookup_upgrade(request.0).unwrap();
             let target_table: TopPageTableCap = cpool.lookup_upgrade(request.1).unwrap();
@@ -160,7 +158,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::TaskSetBuffer {
-            request: request,
+            request,
         } => {
             let target_task: TaskCap = cpool.lookup_upgrade(request.0).unwrap();
             let target_buffer: TaskBufferPageCap = cpool.lookup_upgrade(request.1).unwrap();
@@ -169,7 +167,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::TaskSetActive {
-            request: request,
+            request,
         } => {
             let target_task: TaskCap = cpool.lookup_upgrade(request).unwrap();
             target_task.write().set_status(TaskStatus::Active);
@@ -177,7 +175,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::TaskSetInactive {
-            request: request,
+            request,
         } => {
             let target_task: TaskCap = cpool.lookup_upgrade(request).unwrap();
             target_task.write().set_status(TaskStatus::Inactive);
@@ -195,7 +193,7 @@ pub fn handle(call: SystemCall, task_cap: TaskCap, cpool: CPoolCap) -> Option<Sy
             None
         },
         SystemCall::ChannelPut {
-            request: request,
+            request,
         } => {
             let chan_option: Option<ChannelCap> = cpool.lookup_upgrade(request.0);
             if let Some(chan) = chan_option {

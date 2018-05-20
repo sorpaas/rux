@@ -9,11 +9,13 @@ pub struct DescriptorTablePointer {
 }
 
 /// Load GDT table.
+#[allow(dead_code)]
 pub unsafe fn lgdt(gdt: &DescriptorTablePointer) {
     asm!("lgdt ($0)" :: "r" (gdt) : "memory");
 }
 
 /// Load LDT table.
+#[allow(dead_code)]
 pub unsafe fn lldt(ldt: &DescriptorTablePointer) {
     asm!("lldt ($0)" :: "r" (ldt) : "memory");
 }

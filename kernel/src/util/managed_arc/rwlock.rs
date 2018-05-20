@@ -7,6 +7,7 @@ use super::{ManagedArcInner, ManagedArc};
 /// A read guard for ManagedArc.
 pub struct ManagedArcRwLockReadGuard<'a, T: 'a> {
     lock: RwLockReadGuard<'a, T>,
+    #[allow(dead_code)]
     object: MemoryObject<ManagedArcInner<RwLock<T>>>,
 }
 
@@ -20,6 +21,7 @@ impl<'a, T: 'a> Deref for ManagedArcRwLockReadGuard<'a, T> {
 /// A write guard for ManagedArc.
 pub struct ManagedArcRwLockWriteGuard<'a, T: 'a> {
     lock: RwLockWriteGuard<'a, T>,
+    #[allow(dead_code)]
     object: MemoryObject<ManagedArcInner<RwLock<T>>>,
 }
 

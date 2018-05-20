@@ -87,12 +87,12 @@ impl CPoolCap {
                              ManagedWeakPool256Arc::inner_alignment())) };
 
         unsafe { untyped.derive(Self::inner_length(), Self::inner_alignment(), |paddr, next_child| {
-            arc = Some(unsafe {
+            arc = Some(
                 Self::new(paddr, RwLock::new(CPoolDescriptor {
                     weak_pool: weak_pool,
                     next: next_child,
                 }))
-            });
+            );
 
             arc.clone().unwrap().into()
         }) };

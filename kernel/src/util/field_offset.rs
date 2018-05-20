@@ -12,6 +12,7 @@ pub struct FieldOffset<T, U>(
     PhantomData<for<'a> Fn(&'a T) -> &'a U>
 );
 
+#[allow(dead_code)]
 impl<T, U> FieldOffset<T, U> {
     /// Construct a field offset via a lambda which returns a reference
     /// to the field in question.

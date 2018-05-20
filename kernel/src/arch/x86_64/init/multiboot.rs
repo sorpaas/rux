@@ -5,6 +5,7 @@ use core::slice;
 use common::PAddr;
 
 /// Value found in %eax after multiboot jumps to our entry point.
+#[allow(dead_code)]
 pub const SIGNATURE_EAX: u32 = 0x2BADB002;
 
 /// Multiboot struct clients mainly interact with
@@ -111,6 +112,7 @@ macro_rules! check_flag {
 }
 
 /// Multiboot structure.
+#[allow(dead_code)]
 impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Multiboot<'a, F> {
 
     /// Initializes the multiboot structure.
@@ -290,8 +292,8 @@ pub struct BootDevice {
     pub partition3: u8
 }
 
+#[allow(dead_code)]
 impl BootDevice {
-
     /// Is partition1 a valid partition?
     pub fn partition1_is_valid(&self) -> bool {
         self.partition1 != 0xff

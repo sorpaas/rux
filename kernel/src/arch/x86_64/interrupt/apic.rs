@@ -25,6 +25,7 @@ pub static IO_APIC: Mutex<IOAPIC> = Mutex::new(IOAPIC {
     address: IO_APIC_PAGE_VADDR
 });
 
+#[allow(dead_code)]
 impl LocalAPIC {
     /// Read a value from the local APIC.
     ///
@@ -87,6 +88,7 @@ impl LocalAPIC {
     }
 }
 
+#[allow(dead_code)]
 impl IOAPIC {
     /// Read a value from the I/O APIC.
     ///

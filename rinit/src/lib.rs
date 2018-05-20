@@ -16,8 +16,7 @@ extern crate alloc;
 #[macro_use]
 mod vga_buffer;
 
-use core::ops::{Deref};
-use system::{CAddr, ChannelMessage};
+use system::CAddr;
 
 /// Decode a code in the PS/2 scan code set 1 (legacy set).
 ///
@@ -109,6 +108,7 @@ static mut IS_PARENT: bool = true;
 
 #[lang="start"]
 #[no_mangle]
+#[allow(private_no_mangle_fns)]
 fn start(_argc: isize, _argv: *const *const u8) {
     if unsafe { IS_PARENT } {
         unsafe { IS_PARENT = false; }
@@ -140,7 +140,7 @@ fn parent_main() {
     let mut lastkey = Key::Nonprintable;
     let mut command = [0u8; 32];
     let mut command_size = 0;
-    while true {
+    loop {
         let key = from_scancode(system::channel_take_raw(CAddr::from(254)) as usize);
         if key == lastkey {
             continue;
@@ -182,7 +182,7 @@ fn child_main() {
     system_print!("child rinit started.");
     system_print!("parent stack addr: 0x{:x}.",
                   system::task_buffer_addr() as usize);
-    while true {
+    loop {
         let value: u64 = system::channel_take(CAddr::from(255));
         system_print!("Received from master: {:?}", value);
     }
@@ -251,6 +251,7 @@ fn execute_command(s: &str) {
     print!(">>> ");
 }
 
+#[allow(dead_code)]
 fn divide_by_zero() {
     unsafe {
         asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel")

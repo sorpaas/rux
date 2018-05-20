@@ -1,14 +1,15 @@
 use core::ptr::Unique;
-use core::fmt::{self, Write};
 use spin::Mutex;
 
 #[cfg(any(target_arch = "x86_64"))]
+#[allow(dead_code)]
 pub unsafe fn outportb(port: u16, val: u8)
 {
     asm!("outb %al, %dx" : : "{dx}"(port), "{al}"(val));
 }
 
 #[cfg(any(target_arch = "x86_64"))]
+#[allow(dead_code)]
 pub unsafe fn inportb(port: u16) -> u8
 {
     let ret: u8;
@@ -79,6 +80,7 @@ pub struct Writer {
     buffer: Unique<Buffer>,
 }
 
+#[allow(dead_code)]
 impl Writer {
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
@@ -158,10 +160,12 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     buffer: unsafe { Unique::new_unchecked(0x90002000 as *mut _) },
 });
 
+#[allow(dead_code)]
 pub fn clear_screen() {
     WRITER.lock().clear_screen();
 }
 
+#[allow(unused_macros)]
 macro_rules! print {
     ($($arg:tt)*) => ({
             use core::fmt::Write;
@@ -169,6 +173,7 @@ macro_rules! print {
     });
 }
 
+#[allow(unused_macros)]
 macro_rules! println {
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));

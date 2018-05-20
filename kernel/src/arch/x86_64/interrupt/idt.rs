@@ -23,8 +23,9 @@ pub struct EntryOptions<'a>(&'a mut Entry);
 impl<'a> EntryOptions<'a> {
     /// Minimal settings of the entry.
     fn minimal(entry: &'a mut Entry) -> Self {
-        entry.options = BitField::new(0);
-        entry.options.set_range(9..12, 0b111); // 'must-be-one' bits
+        let mut options = BitField::new(0);
+        options.set_range(9..12, 0b111); // 'must-be-one' bits
+        entry.options = options;
         EntryOptions(entry)
     }
 
@@ -38,25 +39,33 @@ impl<'a> EntryOptions<'a> {
 
     /// Set the entry to be present.
     pub fn set_present(self, present: bool) -> Self {
-        self.0.options.set_bit(15, present);
+        let mut options = self.0.options;
+        options.set_bit(15, present);
+        self.0.options = options;
         self
     }
 
     /// Disable interrupts when using this entry.
     pub fn disable_interrupts(self, disable: bool) -> Self {
-        self.0.options.set_bit(8, !disable);
+        let mut options = self.0.options;
+        options.set_bit(8, !disable);
+        self.0.options = options;
         self
     }
 
     /// Set previlege level of this entry.
     pub fn set_privilege_level(self, dpl: u16) -> Self {
+        let mut options = self.0.options;
         self.0.options.set_range(13..15, dpl);
+        self.0.options = options;
         self
     }
 
     /// Set stack index to use in TSS for this interrupt entry.
     pub fn set_stack_index(self, index: u16) -> Self {
+        let mut options = self.0.options;
         self.0.options.set_range(0..3, index);
+        self.0.options = options;
         self
     }
 }

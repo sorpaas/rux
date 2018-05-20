@@ -5,7 +5,7 @@ pub extern "C" fn rust_begin_unwind(args: ::core::fmt::Arguments, file: &str, li
 {
     // 'args' will print to the formatted string passed to panic!
     use core::fmt::Write;
-    let _ = write!(&mut ::PrintWriter::new(), "file='{}', line={} :: {}", file, line, args);
+    system_print!("file='{}', line={} :: {}", file, line, args);
     loop {}
 }
 

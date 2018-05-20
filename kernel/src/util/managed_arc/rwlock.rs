@@ -1,6 +1,4 @@
-use core::any::{Any, TypeId};
 use core::ops::{Deref, DerefMut};
-use core::ptr;
 use spin::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use util::MemoryObject;
 

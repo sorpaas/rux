@@ -219,8 +219,6 @@ fn alloc_kernel_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
 
 /// Allocate the kernel guard page specified by `offset_size`.
 fn alloc_kernel_guard_page(pt: &mut PT, offset_size: usize, alloc_base: PAddr) {
-    use arch::paging::{PT_P, PT_RW};
-    
     let paddr = kernel_start_paddr() + (offset_size * BASE_PAGE_LENGTH);
     let vaddr = kernel_start_vaddr() + (offset_size * BASE_PAGE_LENGTH);
 

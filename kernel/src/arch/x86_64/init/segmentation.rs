@@ -1,7 +1,5 @@
-use arch::{KERNEL_BASE};
 use arch::segmentation::{SegmentDescriptor, SegmentSelector, TaskStateSegment};
-use common::*;
-use core::mem::{size_of};
+use core::mem::size_of;
 
 extern {
     /// GDT memory address exposed by linker.

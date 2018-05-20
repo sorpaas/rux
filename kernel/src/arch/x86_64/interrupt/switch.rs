@@ -242,6 +242,7 @@ macro_rules! return_to_raw_fn {
     )
 }
 
+#[allow(unused_macros)]
 macro_rules! return_error_to_raw_fn {
     ($name: ident, $exception_code: expr) => (
         #[naked]

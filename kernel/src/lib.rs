@@ -69,11 +69,11 @@ mod system_calls;
 use core::slice;
 use common::*;
 use arch::{InitInfo, Exception};
-use cap::{UntypedCap, CPoolCap, CPoolDescriptor, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskDescriptor, TaskStatus, ChannelCap, ChannelDescriptor, ChannelValue, PAGE_LENGTH};
-use core::ops::{Deref, DerefMut};
-use abi::{SystemCall, TaskBuffer};
-use util::{MemoryObject};
-use core::any::{Any, TypeId};
+use cap::{UntypedCap, CPoolCap, RawPageCap, TaskBufferPageCap, TopPageTableCap, TaskCap, TaskStatus, ChannelCap, ChannelValue, PAGE_LENGTH};
+use core::ops::DerefMut;
+use abi::SystemCall;
+use util::MemoryObject;
+use core::any::TypeId;
 
 /// Map a stack for the rinit program using the given physical address
 /// and stack size.

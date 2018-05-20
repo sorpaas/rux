@@ -422,8 +422,8 @@ pub struct FileHeader {
 impl fmt::Display for FileHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FileHeader: [{}] is {} for {} in version {} starts at {:x}",
-               self.ident, self.elftype, self.machine,
-               self.version, self.entry)
+               {self.ident}, {self.elftype}, {self.machine},
+               {self.version}, {self.entry})
     }
 }
 
@@ -442,7 +442,7 @@ pub const PF_R : ProgFlag = ProgFlag(4);
 
 impl fmt::Debug for ProgFlag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:#x}", self.0)
+        write!(f, "{:#x}", {self.0})
     }
 }
 
@@ -496,7 +496,7 @@ pub const PT_GNU_RELRO : ProgType = ProgType(0x6474e552);
 
 impl fmt::Debug for ProgType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:#x}", self.0)
+        write!(f, "{:#x}", {self.0})
     }
 }
 
@@ -548,8 +548,8 @@ pub struct ProgramHeader {
 impl fmt::Display for ProgramHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Program Header: Type: {} Offset: {:#010x} VirtAddr: {:#010x} PhysAddr: {:#010x} FileSize: {:#06x} MemSize: {:#06x} Flags: {} Align: {:#x}",
-            self.progtype, self.offset, self.vaddr, self.paddr, self.filesz,
-            self.memsz, self.flags, self.align)
+               {self.progtype}, {self.offset}, {self.vaddr}, {self.paddr}, {self.filesz},
+               {self.memsz}, {self.flags}, {self.align})
     }
 }
 
@@ -609,7 +609,7 @@ pub const SHT_GNU_VERSYM : SectionType = SectionType(0x6fffffff);
 
 impl fmt::Debug for SectionType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:#x}", self.0)
+        write!(f, "{:#x}", {self.0})
     }
 }
 
@@ -678,13 +678,13 @@ pub const SHF_TLS : SectionFlag = SectionFlag(1024);
 
 impl fmt::Debug for SectionFlag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:#x}", self.0)
+        write!(f, "{:#x}", {self.0})
     }
 }
 
 impl fmt::Display for SectionFlag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:#x}", self.0)
+        write!(f, "{:#x}", {self.0})
     }
 }
 
@@ -695,18 +695,17 @@ pub struct StrOffset(pub u32);
 
 impl fmt::Debug for StrOffset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:#x}", self.0)
+        write!(f, "{:#x}", {self.0})
     }
 }
 
 impl fmt::Display for StrOffset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:#x}", self.0)
+        write!(f, "{:#x}", {self.0})
     }
 }
 
 /// Encapsulates the contents of an ELF Section Header
-#[derive(Debug)]
 #[repr(C, packed)]
 pub struct SectionHeader {
     /// Section Name
@@ -734,8 +733,8 @@ pub struct SectionHeader {
 impl fmt::Display for SectionHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Section Header: Name: {} Type: {} Flags: {} Addr: {:#010x} Offset: {:#06x} Size: {:#06x} Link: {} Info: {:#x} AddrAlign: {} EntSize: {}",
-            self.name, self.shtype, self.flags, self.addr, self.offset,
-            self.size, self.link, self.info, self.addralign, self.entsize)
+               {self.name}, {self.shtype}, {self.flags}, {self.addr}, {self.offset},
+               {self.size}, {self.link}, {self.info}, {self.addralign}, {self.entsize})
     }
 }
 

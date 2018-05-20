@@ -1,7 +1,6 @@
 use core::mem::{size_of, transmute};
 use core::str;
 use core::slice;
-use core::fmt;
 
 use common::PAddr;
 
@@ -374,7 +373,6 @@ impl<'a, F: Fn(PAddr, usize) -> Option<&'a [u8]>> Iterator for MemoryMapIter<'a,
 }
 
 /// Multiboot format to information about module
-#[derive(Debug)]
 #[repr(C, packed)]
 struct MBModule {
     /// Start address of module in memory.

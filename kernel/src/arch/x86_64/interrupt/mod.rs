@@ -132,7 +132,7 @@ impl TaskRuntime {
         self.stack_pointer = exception_info.stack_pointer;
 
         let exception = Exception::new(exception_info.exception_code, exception_info.error_code);
-        unsafe { exception.send_eoi(); }
+        exception.send_eoi();
 
         return exception;
     }

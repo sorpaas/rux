@@ -11,52 +11,52 @@ pub struct Idt([Entry; 256]);
 pub struct Entry {
     pointer_low: u16,
     gdt_selector: SegmentSelector,
-    options: EntryOptions,
+    options: BitField<u16>,
     pointer_middle: u16,
     pointer_high: u32,
     reserved: u32,
 }
 
 /// Options in an entry of IDT.
-#[derive(Debug, Clone, Copy)]
-pub struct EntryOptions(BitField<u16>);
+pub struct EntryOptions<'a>(&'a mut Entry);
 
-impl EntryOptions {
+impl<'a> EntryOptions<'a> {
     /// Minimal settings of the entry.
-    fn minimal() -> Self {
-        let mut options = BitField::new(0);
-        options.set_range(9..12, 0b111); // 'must-be-one' bits
-        EntryOptions(options)
+    fn minimal(entry: &'a mut Entry) -> Self {
+        entry.options = BitField::new(0);
+        entry.options.set_range(9..12, 0b111); // 'must-be-one' bits
+        EntryOptions(entry)
     }
 
     /// Create a new entry with default settings.
-    fn new() -> Self {
-        let mut options = Self::minimal();
-        options.set_present(true).disable_interrupts(true).set_stack_index(0x1);
-        options
+    fn new(entry: &'a mut Entry) -> Self {
+        Self::minimal(entry)
+            .set_present(true)
+            .disable_interrupts(true)
+            .set_stack_index(0x1)
     }
 
     /// Set the entry to be present.
-    pub fn set_present(&mut self, present: bool) -> &mut Self {
-        self.0.set_bit(15, present);
+    pub fn set_present(self, present: bool) -> Self {
+        self.0.options.set_bit(15, present);
         self
     }
 
     /// Disable interrupts when using this entry.
-    pub fn disable_interrupts(&mut self, disable: bool) -> &mut Self {
-        self.0.set_bit(8, !disable);
+    pub fn disable_interrupts(self, disable: bool) -> Self {
+        self.0.options.set_bit(8, !disable);
         self
     }
 
     /// Set previlege level of this entry.
-    pub fn set_privilege_level(&mut self, dpl: u16) -> &mut Self {
-        self.0.set_range(13..15, dpl);
+    pub fn set_privilege_level(self, dpl: u16) -> Self {
+        self.0.options.set_range(13..15, dpl);
         self
     }
 
     /// Set stack index to use in TSS for this interrupt entry.
-    pub fn set_stack_index(&mut self, index: u16) -> &mut Self {
-        self.0.set_range(0..3, index);
+    pub fn set_stack_index(self, index: u16) -> Self {
+        self.0.options.set_range(0..3, index);
         self
     }
 }
@@ -69,10 +69,10 @@ impl Idt {
 
     /// Set an interrupt vector using a handler.
     pub fn set_handler(&mut self, entry: InterruptVector, handler: HandlerFunc)
-        -> &mut EntryOptions
+        -> EntryOptions
     {
         self.0[entry as usize] = Entry::new(segmentation::cs(), handler);
-        &mut self.0[entry as usize].options
+        EntryOptions(&mut self.0[entry as usize])
     }
 
     /// Load this IDT.
@@ -93,25 +93,29 @@ impl Entry {
     /// Create a new entry using the handler and GDT selector.
     fn new(gdt_selector: SegmentSelector, handler: HandlerFunc) -> Self {
         let pointer = handler as u64;
-        Entry {
+        let mut entry = Entry {
             gdt_selector: gdt_selector,
             pointer_low: pointer as u16,
             pointer_middle: (pointer >> 16) as u16,
             pointer_high: (pointer >> 32) as u32,
-            options: EntryOptions::new(),
+            options: BitField::new(0),
             reserved: 0,
-        }
+        };
+        EntryOptions::new(&mut entry);
+        entry
     }
 
     /// Create a missing entry.
     fn missing() -> Self {
-        Entry {
+        let mut entry = Entry {
             gdt_selector: SegmentSelector::new(0),
             pointer_low: 0,
             pointer_middle: 0,
             pointer_high: 0,
-            options: EntryOptions::minimal(),
+            options: BitField::new(0),
             reserved: 0,
-        }
+        };
+        EntryOptions::minimal(&mut entry);
+        entry
     }
 }

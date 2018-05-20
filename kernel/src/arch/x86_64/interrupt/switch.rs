@@ -158,14 +158,14 @@ pub unsafe fn cur_registers() -> Registers {
 }
 
 pub unsafe extern "C" fn store_exception_stack(exception_raw: *const ExceptionStackFrame, exception_code: u64) {
-    let exception = unsafe {&*exception_raw};
+    let exception = &*exception_raw;
     CUR_EXCEPTION_STACK_FRAME = Some(exception.clone());
     CUR_EXCEPTION_ERROR_CODE = None;
     CUR_EXCEPTION_CODE = Some(exception_code);
 }
 
 pub unsafe extern "C" fn store_error_exception_stack(exception_raw: *const ExceptionStackFrame, error_code: u64, exception_code: u64) {
-    let exception = unsafe {&*exception_raw};
+    let exception = &*exception_raw;
     CUR_EXCEPTION_STACK_FRAME = Some(exception.clone());
     CUR_EXCEPTION_ERROR_CODE = Some(error_code);
     CUR_EXCEPTION_CODE = Some(exception_code);

@@ -41,7 +41,7 @@ macro_rules! weak_pool {
             pub unsafe fn create(ptr: PAddr) -> Self {
                 let arc = ManagedArc::new(ptr, mem::uninitialized());
                 let mut inner_obj = arc.inner_object();
-                let inner: &mut ManagedArcInner<$t> = unsafe { inner_obj.as_mut() };
+                let inner: &mut ManagedArcInner<$t> = inner_obj.as_mut();
 
                 ptr::write(&mut inner.data.1, ptr);
                 for element in (inner.data: $t).0.iter_mut() {

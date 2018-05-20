@@ -29,9 +29,9 @@ impl PML4Cap {
                 desc.write()[pml4_index(VAddr::from(KERNEL_BASE))] =
                     PML4Entry::new(KERNEL_PDPT.paddr(), PML4_P | PML4_RW);
 
-                arc = Some(unsafe {
+                arc = Some(
                     Self::new(paddr, RwLock::new(desc))
-                });
+                );
 
                 arc.clone().unwrap().into()
             });

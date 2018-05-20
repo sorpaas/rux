@@ -43,13 +43,13 @@ use util::managed_arc::{ManagedArc, ManagedArcAny};
 /// of type `type_id`.
 pub unsafe fn upgrade_arch_any(ptr: PAddr, type_id: TypeId) -> Option<ManagedArcAny> {
     if type_id == TypeId::of::<PML4Cap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): PML4Cap }.into())
+        Some({ ManagedArc::from_ptr(ptr): PML4Cap }.into())
     } else if type_id == TypeId::of::<PDPTCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): PDPTCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): PDPTCap }.into())
     } else if type_id == TypeId::of::<PDCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): PDCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): PDCap }.into())
     } else if type_id == TypeId::of::<PTCap>() {
-        Some(unsafe { ManagedArc::from_ptr(ptr): PTCap }.into())
+        Some({ ManagedArc::from_ptr(ptr): PTCap }.into())
     } else {
         None
     }

@@ -92,9 +92,9 @@ macro_rules! paging_cap {
                             *item = $entry::empty();
                         }
 
-                        arc = Some(unsafe {
+                        arc = Some(
                             Self::new(paddr, RwLock::new(desc))
-                        });
+                        );
 
                         arc.clone().unwrap().into()
                     });
@@ -163,9 +163,9 @@ impl PTCap {
                     *item = PTEntry::empty();
                 }
 
-                arc = Some(unsafe {
+                arc = Some(
                     Self::new(paddr, RwLock::new(desc))
-                });
+                );
 
                 arc.clone().unwrap().into()
             });

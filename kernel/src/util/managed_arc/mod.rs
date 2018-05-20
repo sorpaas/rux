@@ -148,7 +148,7 @@ impl<T> ManagedArc<T> {
         let arc = ManagedArc { ptr: ptr, _marker: PhantomData };
 
         let inner_obj = arc.inner_object();
-        let inner = unsafe { inner_obj.as_ref() };
+        let inner = inner_obj.as_ref();
         let mut lead = inner.lead.lock();
         *lead += 1;
 

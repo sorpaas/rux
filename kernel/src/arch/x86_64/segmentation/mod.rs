@@ -9,6 +9,7 @@ bitflags! {
     /// Specifies which element to load into a segment from
     /// descriptor tables (i.e., is a index to LDT or GDT table
     /// with some additional flags).
+    #[repr(C)]
     pub flags SegmentSelector: u16 {
         // Requestor Privilege Level
         const RPL_0 = 0b00,
@@ -41,6 +42,7 @@ impl SegmentSelector {
 
 bitflags! {
     /// Entry for GDT or LDT. Provides size and location of a segment.
+    #[repr(C)]
     pub flags SegmentDescriptor: u64 {
         /// Descriptor type (0 = system; 1 = code or data).
         const DESC_S    = 1 << (32+12),

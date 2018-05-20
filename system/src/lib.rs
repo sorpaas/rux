@@ -42,7 +42,7 @@ pub fn task_buffer_loc() -> usize {
     let mut v: usize = 0xdeadbeaf;
     let v_addr = &mut v as *mut usize as usize;
 
-    return (v_addr - (v_addr % STACK_LENGTH));
+    v_addr - (v_addr % STACK_LENGTH)
 }
 
 pub fn task_buffer_addr() -> usize {

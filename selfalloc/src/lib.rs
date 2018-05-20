@@ -10,9 +10,8 @@ extern crate spin;
 extern crate alloc;
 extern crate abi;
 
-use spin::{Mutex};
-use abi::{CAddr};
-use core::ops::{Deref, DerefMut};
+use spin::Mutex;
+use abi::CAddr;
 
 const PAGE_LENGTH: usize = 4096;
 
@@ -86,8 +85,7 @@ impl WatermarkAllocator {
 #[global_allocator]
 static WATER_ALLOCATOR: WaterAlloc = WaterAlloc;
 
-use alloc::allocator::{AllocErr, Layout};
-use core::ptr::NonNull;
+use alloc::allocator::Layout;
 use core::alloc::{GlobalAlloc, Opaque};
 
 struct WaterAlloc;
@@ -97,7 +95,7 @@ unsafe impl<'a> GlobalAlloc for WaterAlloc {
         ALLOCATOR.lock().as_mut().unwrap().allocate(layout.size(), layout.align()) as _
     }
 
-    unsafe fn dealloc(&self, pointer: *mut Opaque, layout: Layout) { }
+    unsafe fn dealloc(&self, _pointer: *mut Opaque, _layout: Layout) { }
 }
 
 #[lang="oom"]

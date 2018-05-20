@@ -1,7 +1,6 @@
 use abi::{SystemCall, TaskBuffer, CAddr, ChannelMessage};
-use spin::{Mutex};
-use core::any::{TypeId, Any};
-use super::{task_buffer_addr};
+use core::any::Any;
+use super::task_buffer_addr;
 
 pub fn retype_raw_page_free(source: CAddr) -> CAddr {
     let result = system_call(SystemCall::RetypeRawPageFree {
@@ -10,8 +9,7 @@ pub fn retype_raw_page_free(source: CAddr) -> CAddr {
     });
     match result {
         SystemCall::RetypeRawPageFree {
-            request: request,
-            response: response,
+            response, ..
         } => { return response.unwrap(); },
         _ => panic!(),
     };
@@ -86,8 +84,7 @@ fn channel_take_nonpayload(target: CAddr) -> ChannelMessage {
     });
     match result {
         SystemCall::ChannelTake {
-            request: _,
-            response: response,
+            response, ..
         } => {
             return response.unwrap()
         },
@@ -146,7 +143,7 @@ pub fn channel_put<T: Any + Clone>(target: CAddr, value: T) {
 }
 
 pub fn print(buffer: [u8; 32], size: usize) {
-    let result = system_call(SystemCall::Print {
+    let _ = system_call(SystemCall::Print {
         request: (buffer, size)
     });
 }
@@ -171,7 +168,7 @@ pub fn debug_test_fail() {
 fn system_call(message: SystemCall) -> SystemCall {
     let addr = task_buffer_addr();
     unsafe {
-        let buffer = unsafe { &mut *(addr as *mut TaskBuffer) };
+        let buffer = &mut *(addr as *mut TaskBuffer);
         buffer.call = Some(message);
         system_call_raw();
         buffer.call.take().unwrap()
@@ -183,12 +180,12 @@ fn system_call_put_payload<T: Any>(message: SystemCall, payload: T) -> SystemCal
     let addr = task_buffer_addr();
 
     unsafe {
-        let buffer = unsafe { &mut *(addr as *mut TaskBuffer) };
+        let buffer = &mut *(addr as *mut TaskBuffer);
         buffer.call = Some(message);
 
         buffer.payload_length = size_of::<T>();
         let payload_addr = &mut buffer.payload_data as *mut _ as *mut T;
-        let mut payload_data = &mut *payload_addr;
+        let payload_data = &mut *payload_addr;
         *payload_data = payload;
 
         system_call_raw();
@@ -201,7 +198,7 @@ fn system_call_take_payload<T: Any + Clone>(message: SystemCall) -> (SystemCall,
     let addr = task_buffer_addr();
 
     unsafe {
-        let buffer = unsafe { &mut *(addr as *mut TaskBuffer) };
+        let buffer = &mut *(addr as *mut TaskBuffer);
         buffer.call = Some(message);
 
         system_call_raw();
@@ -216,11 +213,9 @@ fn system_call_take_payload<T: Any + Clone>(message: SystemCall) -> (SystemCall,
 
 #[inline(never)]
 unsafe fn system_call_raw() {
-    unsafe {
-        asm!("int 80h"
-             ::
-             : "rax", "rbx", "rcx", "rdx",
-               "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
-             : "volatile", "intel");
-    }
+    asm!("int 80h"
+         ::
+         : "rax", "rbx", "rcx", "rdx",
+         "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
+         : "volatile", "intel");
 }

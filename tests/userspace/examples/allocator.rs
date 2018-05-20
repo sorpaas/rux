@@ -5,7 +5,6 @@
 #![feature(alloc)]
 #![no_std]
 
-#[macro_use]
 extern crate system;
 extern crate spin;
 extern crate selfalloc;
@@ -15,6 +14,7 @@ use system::{CAddr};
 
 #[lang="start"]
 #[no_mangle]
+#[allow(private_no_mangle_fns)]
 fn start(_argc: isize, _argv: *const *const u8) {
     unsafe { system::set_task_buffer_addr(0x90001000); }
     unsafe { selfalloc::setup_allocator(CAddr::from(2), CAddr::from(3), 0x1000000000); }

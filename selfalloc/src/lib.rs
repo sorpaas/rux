@@ -5,6 +5,7 @@
 #![feature(lang_items)]
 #![no_std]
 
+#[macro_use]
 extern crate system;
 extern crate spin;
 extern crate alloc;
@@ -26,7 +27,9 @@ struct WatermarkAllocator {
 }
 
 pub unsafe fn setup_allocator(untyped_cap: CAddr, pt_cap: CAddr, page_start_addr: usize) {
-    *ALLOCATOR.lock() = Some(WatermarkAllocator::new(untyped_cap, pt_cap, page_start_addr));
+    let allocator = Some(WatermarkAllocator::new(untyped_cap, pt_cap, page_start_addr));
+    let mut lock = ALLOCATOR.try_lock().unwrap();
+    *lock = allocator;
 }
 
 // http://os.phil-opp.com/kernel-heap.html#alignment

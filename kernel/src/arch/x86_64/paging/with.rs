@@ -5,7 +5,7 @@ use super::{PTEntry, PT_P, PT_RW, flush, BASE_PAGE_LENGTH};
 use arch::init::{OBJECT_POOL_PT, OBJECT_POOL_START_VADDR};
 use common::PAddr;
 
-use core::nonzero::{NonZero};
+use core::ptr::NonNull;
 use core::marker::{PhantomData, Unsize};
 use core::ops::CoerceUnsized;
 use core::fmt;
@@ -29,7 +29,7 @@ pub struct MemoryObject<T: ?Sized> {
     paddr: PAddr,
     mapping_start_index: usize,
     mapping_size: usize,
-    pointer: NonZero<*const T>,
+    pointer: NonNull<T>,
     _marker: PhantomData<T>,
 }
 
@@ -55,7 +55,7 @@ impl<T: ?Sized> MemoryObject<T> {
     }
 
     pub fn as_ptr(&self) -> *mut T {
-        self.pointer.get() as *mut T
+        self.pointer.as_ptr()
     }
 
     pub unsafe fn as_ref(&self) -> &T {
@@ -108,7 +108,7 @@ impl<T: ?Sized> MemoryObject<T> {
             paddr: paddr,
             mapping_start_index: mapping_start_index,
             mapping_size: required_page_size,
-            pointer: NonZero::new_unchecked(vaddr.into(): usize as *const T),
+            pointer: NonNull::new_unchecked(vaddr.into(): usize as *mut T),
             _marker: PhantomData
         }
     }
@@ -129,6 +129,6 @@ impl<T: ?Sized> Drop for MemoryObject<T> {
 
 impl<T: ?Sized> fmt::Pointer for MemoryObject<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Pointer::fmt(&self.pointer.get(), f)
+        fmt::Pointer::fmt(&self.pointer.as_ptr(), f)
     }
 }

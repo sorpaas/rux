@@ -21,7 +21,6 @@ pub use self::streamer::{Streamer};
 pub use spin::{Mutex, RwLock};
 
 use common::PAddr;
-use core::ops::{Deref, DerefMut};
 
 /// Align the physical address up using the alignment.
 pub fn align_up(paddr: PAddr, alignment: usize) -> PAddr {

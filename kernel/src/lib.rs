@@ -146,8 +146,12 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
                 let page_length = page.length();
                 let mut page_raw = page.write();
 
-                for i in 0..min(page_length, (p.memsz as usize) - offset) {
-                    page_raw.0[i] = bin_raw[(p.offset as usize) + offset + i];
+                for i in 0..page_length {
+                    if i < (p.filesz as usize) - offset {
+                        page_raw.0[i] = bin_raw[(p.offset as usize) + offset + i];
+                    } else {
+                        page_raw.0[i] = 0;
+                    }
                 }
 
                 offset += page_length;

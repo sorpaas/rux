@@ -11,12 +11,12 @@ extern crate spin;
 extern crate alloc;
 extern crate abi;
 
-use spin::Mutex;
+use spin::{Once, Mutex};
 use abi::CAddr;
 
 const PAGE_LENGTH: usize = 4096;
 
-static ALLOCATOR: Mutex<Option<WatermarkAllocator>> = Mutex::new(None);
+static ALLOCATOR: Once<Mutex<WatermarkAllocator>> = Once::new();
 
 struct WatermarkAllocator {
     untyped_cap: CAddr,
@@ -27,9 +27,7 @@ struct WatermarkAllocator {
 }
 
 pub unsafe fn setup_allocator(untyped_cap: CAddr, pt_cap: CAddr, page_start_addr: usize) {
-    let allocator = Some(WatermarkAllocator::new(untyped_cap, pt_cap, page_start_addr));
-    let mut lock = ALLOCATOR.try_lock().unwrap();
-    *lock = allocator;
+    ALLOCATOR.call_once(|| Mutex::new(WatermarkAllocator::new(untyped_cap, pt_cap, page_start_addr)));
 }
 
 // http://os.phil-opp.com/kernel-heap.html#alignment
@@ -95,7 +93,7 @@ struct WaterAlloc;
 
 unsafe impl<'a> GlobalAlloc for WaterAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut Opaque {
-        ALLOCATOR.lock().as_mut().unwrap().allocate(layout.size(), layout.align()) as _
+        ALLOCATOR.wait().unwrap().lock().allocate(layout.size(), layout.align()) as _
     }
 
     unsafe fn dealloc(&self, _pointer: *mut Opaque, _layout: Layout) { }

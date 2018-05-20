@@ -40,6 +40,7 @@ pub fn pt_index(addr: VAddr) -> usize {
 
 bitflags! {
     /// PML4 Entry bits description.
+    #[repr(C)]
     pub flags PML4Entry: u64 {
         /// Present; must be 1 to reference a page-directory-pointer table
         const PML4_P       = bit!(0),
@@ -98,6 +99,7 @@ impl PML4Entry {
 
 bitflags! {
     /// PDPT Entry bits description.
+    #[repr(C)]
     pub flags PDPTEntry: u64 {
         /// Present; must be 1 to map a 1-GByte page or reference a page directory.
         const PDPT_P       = bit!(0),
@@ -165,6 +167,7 @@ impl PDPTEntry {
 
 bitflags! {
     /// PD Entry bits description.
+    #[repr(C)]
     pub flags PDEntry: u64 {
         /// Present; must be 1 to map a 2-MByte page or reference a page table.
         const PD_P       = bit!(0),
@@ -239,6 +242,7 @@ impl PDEntry {
 
 bitflags! {
     /// PT Entry bits description.
+    #[repr(C)]
     pub flags PTEntry: u64 {
         /// Present; must be 1 to map a 4-KByte page.
         const PT_P       = bit!(0),

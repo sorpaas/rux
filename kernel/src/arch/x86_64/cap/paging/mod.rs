@@ -71,7 +71,7 @@ pub struct PageDescriptor<T: SetDefault + Any> {
 }
 
 /// Page capability.
-pub type PageCap<T: SetDefault + Any> = ManagedArc<RwLock<PageDescriptor<T>>>;
+pub type PageCap<T> = ManagedArc<RwLock<PageDescriptor<T>>>;
 
 macro_rules! paging_cap {
     ( $cap:ty, $desc:tt, $paging:ty, $entry:tt, $map_fn:ident, $sub_cap:ty, $access:expr ) => (

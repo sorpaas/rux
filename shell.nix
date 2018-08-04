@@ -11,7 +11,13 @@ rustChannel = rustChannelOf { date = "2018-08-04"; channel = "nightly"; };
 rustc = rustChannel.rustc;
 rust-src = "${rustChannel.rust-src}/lib/rustlib/src/rust/src";
 
+arch = "riscv32";
 target = "riscv32imac-unknown-none-elf";
+gnu-target = "rv32imac";
+gnu-abi = "ilp32";
+ld-target = "elf32lriscv";
+
+gnuToolchain = callPackage ./nix/riscv-toolchain.nix { arch = gnu-target; abi = gnu-abi; };
 
 libcore = stdenv.mkDerivation {
   name = "libcore";
@@ -55,9 +61,13 @@ stdenv.mkDerivation {
   name = "rux-shell";
   buildInputs = [
     rustc
+    gnuToolchain
   ];
 
   RUST_SRC = "${rust-src}";
+  TARGET = "${target}";
+  LD_TARGET = "${ld-target}";
+  ARCH = "${arch}";
 
   LIBCORE = "${libcore}";
   LIBCOMPILER_BUILTINS = "${libcompiler_builtins}";

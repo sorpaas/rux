@@ -1,6 +1,8 @@
+#![feature(lang_items)]
+#![feature(panic_implementation)]
+
 #![no_std]
 
-#[no_mangle]
-pub fn foo(x: u32, y: u32) -> u32 {
-    x + y
-}
+#[cfg(target_arch="riscv32")] #[path="arch/riscv32/mod.rs"]
+#[macro_use]
+pub mod arch;

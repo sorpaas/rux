@@ -3,4 +3,7 @@ name = "kernel"
 version = "0.1.0"
 authors = ["Wei Tang <hi@that.world>"]
 
+[lib]
+crate-type = ["staticlib"]
+
 [dependencies]

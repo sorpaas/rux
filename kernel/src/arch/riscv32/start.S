@@ -2,6 +2,10 @@
 #define PAGE_SHIFT 12
 #define PAGE_SIZE 4096
 #define SATP_SV32 0x10000000
+#define PTE_V 1
+#define PTE_R 2
+#define PTE_W 4
+#define PTE_X 8
 #define PTE_SIZE 4
 
 /* === Multiboot Header === */
@@ -46,7 +50,7 @@ start:
 
 reallocated:
     # setup sp
-    mv sp, a
+    mv sp, a0
     addi sp, sp, 1
     slli sp, sp, PAGE_SHIFT
     la t0, boot_kstack
@@ -59,13 +63,13 @@ reallocated:
 .section .data
 .balign PAGE_SIZE
 .globl boot_pd
-boot_pt:
+boot_pd:
     # map va 0 + 4mb to pa 0 + 4mb
-    .quad 0x00000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
-    .space (KERNEL_BASE / 4) * PTE_SIZE - (. - boot_pt)
+    .long 0x00000000 + (PTE_V | PTE_R | PTE_W | PTE_X)
+    .space (KERNEL_BASE >> 22) * PTE_SIZE - (. - boot_pd)
     # map va KERNEL_BASE + 4mb to pa 0 + 4mb
-    .quad 0x00000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
-    .space PAGE_SIZE - (. - boot_pt)
+    .long 0x00000000 + (PTE_V | PTE_R | PTE_W | PTE_X)
+    .space PAGE_SIZE - (. - boot_pd)
 
 .section .bss
 boot_kstack:

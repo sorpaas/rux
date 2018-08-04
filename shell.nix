@@ -15,6 +15,7 @@ arch = "riscv32";
 target = "riscv32imac-unknown-none-elf";
 gnu-target = "rv32imac";
 gnu-abi = "ilp32";
+gnu-prefix = "riscv32-unknown-elf";
 ld-target = "elf32lriscv";
 
 gnuToolchain = callPackage ./nix/riscv-toolchain.nix { arch = gnu-target; abi = gnu-abi; };
@@ -72,4 +73,6 @@ stdenv.mkDerivation {
   LIBCORE = "${libcore}";
   LIBCOMPILER_BUILTINS = "${libcompiler_builtins}";
   LIBALLOC = "${liballoc}";
+
+  GNU_PREFIX = "${gnu-prefix}";
 }

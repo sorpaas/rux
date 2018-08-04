@@ -2,13 +2,16 @@ version ?= debug
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 root_path := $(abspath $(mkfile_path)/../..)
 
+LD := $(GNU_PREFIX)-ld
+AS := $(GNU_PREFIX)-as
+C := $(GNU_PREFIX)-gcc
+
 kernel := $(root_path)/build/$(ARCH)/libkernel.bin
 rust_os := $(root_path)/target/$(TARGET)/$(version)/libkernel.a
 
 linker_script := src/arch/$(ARCH)/linker.ld
 linker_flags := -T $(linker_script)
 linker_flags += -m $(LD_TARGET)
-linker_flags += -Map build/$(ARCH)/map.txt
 linker_flags += --gc-sections
 linker_flags += -z max-page-size=0x1000
 
@@ -21,7 +24,7 @@ assembly_object_files := $(patsubst src/arch/$(ARCH)/%.S, \
 all: build
 
 build: cargo cargo $(assembly_object_files) $(linker_script)
-	mkdir -p $(mkfile_path)/../../build/$(ARCH)
+	@mkdir -p $(root_path)/build/$(ARCH)
 	@$(LD) $(linker_flags) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 cargo:
@@ -34,4 +37,4 @@ endif
 # compile assembly files
 $(root_path)/build/$(ARCH)/%.o: src/arch/$(ARCH)/%.S
 	@mkdir -p $(shell dirname $@)
-	@$(AS) -o $@ $<
+	@$(C) -c $^ -o $@

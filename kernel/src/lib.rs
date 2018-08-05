@@ -8,6 +8,9 @@
 
 extern crate rlibc;
 
+#[macro_use]
+mod macros;
 #[cfg(target_arch="riscv32")] #[path="arch/riscv32/mod.rs"]
 #[macro_use]
 pub mod arch;
+mod logging;

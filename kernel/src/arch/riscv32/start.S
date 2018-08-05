@@ -11,7 +11,7 @@
 .section .text, "ax", %progbits
 .globl start
 start:
-    tail kinit
+    tail kreset
 
 .section .bss
 boot_kstack:

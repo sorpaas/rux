@@ -1,6 +1,7 @@
 #![feature(lang_items)]
 #![feature(panic_implementation)]
 #![feature(asm)]
+#![feature(naked_functions)]
 
 #![no_std]
 

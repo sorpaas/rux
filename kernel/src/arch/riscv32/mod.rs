@@ -9,8 +9,12 @@ pub use self::uart16550::{putchar, getchar};
 pub fn kinit(hartid: usize, dtb: usize) -> ! {
     log!("Hello, world!");
     log!("hartid: {}, dtb: {}", hartid, dtb);
-
-    loop { }
+    loop {
+        let c = unsafe { getchar() };
+        if c.is_some() {
+            log!("getchar: {:?}", c);
+        }
+    }
 }
 
 #[no_mangle]

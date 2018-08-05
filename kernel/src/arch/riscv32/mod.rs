@@ -6,14 +6,16 @@ pub use self::uart16550::{putchar, getchar};
 
 #[lang="start"]
 #[no_mangle]
-pub fn kinit(_hartid: usize, _dtb: usize) -> ! {
+pub fn kinit(hartid: usize, dtb: usize) -> ! {
     log!("Hello, world!");
+    log!("hartid: {}, dtb: {}", hartid, dtb);
 
     loop { }
 }
 
 #[no_mangle]
 pub fn trap_handler(_regs: *mut *mut usize, _mcause: *mut usize, _mepc: *mut usize) {
+    log!("A trap happened.");
     loop { }
 }
 
@@ -24,6 +26,7 @@ pub fn abort() -> ! {
 
 #[panic_implementation]
 #[no_mangle]
-pub fn kpanic(_: &PanicInfo) -> ! {
+pub fn kpanic(info: &PanicInfo) -> ! {
+    log!("{}", info);
     loop { }
 }

@@ -21,6 +21,6 @@ pub unsafe fn putchar(ch: u8) {
     let uart_linestat: *mut u8 = UART_LINESTAT_ADDRESS as *mut u8;
     let uart_queue: *mut u8 = UART_QUEUE_ADDRESS as *mut u8;
 
-    // while *uart_linestat & UART_STATUS_TX == 0 { }
+    while *uart_linestat & UART_STATUS_TX == 0 { }
     *uart_queue = ch;
 }

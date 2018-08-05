@@ -1,9 +1,15 @@
-ENTRY(start)
-OUTPUT_ARCH(riscv)
+OUTPUT_ARCH( "riscv" )
 
-KERNEL_BASE = 0x80000000;
+ENTRY( reset_vector )
 
-SECTIONS {
+SECTIONS
+{
+
+  /*--------------------------------------------------------------------*/
+  /* Code and read-only segment                                         */
+  /*--------------------------------------------------------------------*/
+
+  /* Begining of code and text segment */
   . = 0x80000000;
   _ftext = .;
   PROVIDE( eprol = . );
@@ -13,43 +19,54 @@ SECTIONS {
     *(.text.init)
   }
 
+  /* text: Program code section */
   .text :
   {
     *(.text)
     *(.text.*)
+    *(.gnu.linkonce.t.*)
   }
 
+  /* rodata: Read-only data */
   .rodata :
   {
     *(.rdata)
     *(.rodata)
     *(.rodata.*)
+    *(.gnu.linkonce.r.*)
   }
 
+  /* End of code and read-only segment */
   PROVIDE( etext = . );
   _etext = .;
 
-  . = ALIGN(16);
-  _fdata = .;
+  /*--------------------------------------------------------------------*/
+  /* Initialized data segment                                           */
+  /*--------------------------------------------------------------------*/
 
+  /* Start of initialized data segment */
+  . = ALIGN(16);
+   _fdata = .;
+
+  /* data: Writable data */
   .data :
   {
     *(.data)
     *(.data.*)
     *(.srodata*)
-    *(.padata)
+    *(.gnu.linkonce.d.*)
     *(.comment)
   }
 
+  /* End of initialized data segment */
   . = ALIGN(4);
   PROVIDE( edata = . );
   _edata = .;
 
-  /* Start of uninitialized data segment */
-  . = .;
-  _fbss = .;
+  /*--------------------------------------------------------------------*/
+  /* Uninitialized data segment                                         */
+  /*--------------------------------------------------------------------*/
 
-  /* sbss: Uninitialized writeable small data section */
   . = .;
 
   /* bss: Uninitialized writeable data section */
@@ -60,6 +77,7 @@ SECTIONS {
     *(.bss)
     *(.bss.*)
     *(.sbss*)
+    *(.gnu.linkonce.b.*)
     *(COMMON)
   }
 

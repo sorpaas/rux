@@ -1,9 +1,11 @@
+mod uart16550;
+
 use core::panic::PanicInfo;
 
 #[lang="start"]
 #[no_mangle]
 #[naked]
-pub unsafe fn kreset() {
+pub unsafe fn kreset() -> ! {
     asm!("
       li x1, 0
       li x2, 0
@@ -14,8 +16,9 @@ pub unsafe fn kreset() {
       li x7, 0
       li x8, 0
       li x9, 0
-      li x10, 0
-      li x11, 0
+      // save a0 and a1; arguments from previous boot loader stage:
+      // li x10, 0
+      // li x11, 0
       li x12, 0
       li x13, 0
       li x14, 0
@@ -35,15 +38,35 @@ pub unsafe fn kreset() {
       li x28, 0
       li x29, 0
       li x30, 0
-      li x31, 0");
-    kinit()
+      li x31, 0
+      tail kinit");
+    ::core::intrinsics::unreachable()
 }
 
-fn kinit() {
+#[no_mangle]
+pub fn kinit(mut hartid: usize, dtb: usize) -> ! {
+    unsafe { uart16550::putchar(0x48); }
+    unsafe { uart16550::putchar(0x65); }
+    unsafe { uart16550::putchar(0x6C); }
+    unsafe { uart16550::putchar(0x6C); }
+    unsafe { uart16550::putchar(0x6F); }
+
+    // let chars = [0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21];
+
+    // for c in &chars {
+    //     unsafe { uart16550::putchar(*c); }
+    // }
+
+    loop { }
+}
+
+#[no_mangle]
+pub fn abort() -> ! {
     loop { }
 }
 
 #[panic_implementation]
+#[no_mangle]
 fn kpanic(_: &PanicInfo) -> ! {
     loop { }
 }

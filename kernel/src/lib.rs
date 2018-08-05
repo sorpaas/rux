@@ -2,8 +2,11 @@
 #![feature(panic_implementation)]
 #![feature(asm)]
 #![feature(naked_functions)]
+#![feature(core_intrinsics)]
 
 #![no_std]
+
+extern crate rlibc;
 
 #[cfg(target_arch="riscv32")] #[path="arch/riscv32/mod.rs"]
 #[macro_use]

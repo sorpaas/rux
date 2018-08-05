@@ -7,3 +7,4 @@ authors = ["Wei Tang <hi@that.world>"]
 crate-type = ["staticlib"]
 
 [dependencies]
+rlibc = "1.0.0"

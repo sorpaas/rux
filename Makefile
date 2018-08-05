@@ -12,7 +12,10 @@ kernel-release:
 	@make -C kernel version=release build
 
 run: kernel
-	@qemu-system-$(ARCH) -d in_asm -machine virt -nographic -kernel $(kernel) --no-reboot
+	@qemu-system-$(ARCH) -machine virt -nographic -kernel $(kernel) --no-reboot
+
+run-release: kernel-release
+	@qemu-system-$(ARCH) -machine virt -nographic -kernel $(kernel) --no-reboot
 
 clean:
 	@rm -rf build

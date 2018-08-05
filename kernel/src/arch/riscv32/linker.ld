@@ -1,44 +1,67 @@
 ENTRY(start)
 OUTPUT_ARCH(riscv)
 
-KERNEL_BASE = 0xF0000000;
+KERNEL_BASE = 0x80000000;
 
 SECTIONS {
+  . = 0x80000000;
+  _ftext = .;
+  PROVIDE( eprol = . );
 
-	. = 0x100000;
+  .text :
+  {
+    *(.text.init)
+  }
 
-	. += SIZEOF_HEADERS;
+  .text :
+  {
+    *(.text)
+    *(.text.*)
+  }
 
-	.init : AT(ADDR(.init)) {
-		KEEP( *(.multiboot) )
-		*(.inittext)
-	}
+  .rodata :
+  {
+    *(.rdata)
+    *(.rodata)
+    *(.rodata.*)
+  }
 
-	. += KERNEL_BASE;
+  PROVIDE( etext = . );
+  _etext = .;
 
-	.text ALIGN(0x1000) : AT(ADDR(.text) - KERNEL_BASE) {
-		*(.text .text.*)
-	}
+  . = ALIGN(16);
+  _fdata = .;
 
-	/* read-only data, page aligned to allow use of the no-execute feature */
-	.rodata ALIGN(0x1000) : AT(ADDR(.rodata) - KERNEL_BASE) {
-		*(.rodata .rodata.*)
-	}
+  .data :
+  {
+    *(.data)
+    *(.data.*)
+    *(.srodata*)
+    *(.padata)
+    *(.comment)
+  }
 
-	/* Read-write data, page aligned for the .padata section */
-	.data ALIGN(0x1000) : AT(ADDR(.data) - KERNEL_BASE) {
-		*(.padata)
-		*(.data .data.*)
-	}
+  . = ALIGN(4);
+  PROVIDE( edata = . );
+  _edata = .;
 
-	/* Zero-initialised data */
-	.bss : AT(ADDR(.bss) - KERNEL_BASE) {
-		*(.bss .bss.*)
-	}
+  /* Start of uninitialized data segment */
+  . = .;
+  _fbss = .;
 
-	kernel_end = .;
+  /* sbss: Uninitialized writeable small data section */
+  . = .;
 
-	/DISCARD/ : {
-		*(.note .note.*)
-	}
+  /* bss: Uninitialized writeable data section */
+  . = .;
+  _bss_start = .;
+  .bss :
+  {
+    *(.bss)
+    *(.bss.*)
+    *(.sbss*)
+    *(COMMON)
+  }
+
+  _end = .;
 }

@@ -104,7 +104,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
 
     let rinit_stack_vaddr = VAddr::from(0x80000000: usize);
     let rinit_child_stack_vaddr = VAddr::from(0x70000000: usize);
-    let rinit_stack_size = 4;
+    let rinit_stack_size = 16;
     let rinit_buffer_vaddr = VAddr::from(0x90001000: usize);
     let rinit_vga_vaddr = VAddr::from(0x90002000: usize);
     let rinit_child_buffer_vaddr = VAddr::from(0x90003000: usize);

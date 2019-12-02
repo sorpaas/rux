@@ -132,7 +132,7 @@ fn bootstrap_rinit_paging(archinfo: &InitInfo, cpool: &mut CPoolCap, untyped: &m
             let mut offset = 0x0;
             let end_vaddr = VAddr::from(p.vaddr + p.memsz as usize);
 
-            while next_page_vaddr <= end_vaddr {
+            while next_page_vaddr < end_vaddr {
                 use core::cmp::{min};
                 log!("mapping from: 0x{:x}", next_page_vaddr);
 
